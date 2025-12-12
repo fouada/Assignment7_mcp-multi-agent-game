@@ -1,0 +1,65 @@
+{
+  "league_manager": {
+    "name": "league_manager",
+    "host": "localhost",
+    "port": 8000,
+    "endpoint": "/mcp"
+  },
+  "referee": {
+    "name": "referee",
+    "host": "localhost",
+    "port": 8001,
+    "endpoint": "/mcp"
+  },
+  "players": {
+    "P01": {
+      "name": "player_P01",
+      "host": "localhost",
+      "port": 8101,
+      "endpoint": "/mcp"
+    },
+    "P02": {
+      "name": "player_P02",
+      "host": "localhost",
+      "port": 8102,
+      "endpoint": "/mcp"
+    },
+    "P03": {
+      "name": "player_P03",
+      "host": "localhost",
+      "port": 8103,
+      "endpoint": "/mcp"
+    },
+    "P04": {
+      "name": "player_P04",
+      "host": "localhost",
+      "port": 8104,
+      "endpoint": "/mcp"
+    }
+  },
+  "game": {
+    "game_type": "even_odd",
+    "rounds_per_match": 5,
+    "move_timeout": 30.0,
+    "min_value": 1,
+    "max_value": 5
+  },
+  "league": {
+    "league_id": "league_2024_01",
+    "min_players": 2,
+    "max_players": 100
+  },
+  "llm": {
+    "provider": "openai",
+    "model": "gpt-4",
+    "temperature": 0.7
+  },
+  "retry": {
+    "max_retries": 3,
+    "base_delay": 1.0,
+    "max_delay": 30.0
+  },
+  "log_level": "INFO",
+  "debug": false
+}
+

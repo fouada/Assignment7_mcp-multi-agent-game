@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  # League Manager - Central coordinator
+  league_manager:
+    build:
+      context: .
+      target: production
+    container_name: mcp_league_manager
+    command: python -m src.main --component league
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
+    networks:
+      - mcp_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Referee - Game management
+  referee:
+    build:
+      context: .
+      target: production
+    container_name: mcp_referee
+    command: python -m src.main --component referee
+    ports:
+      - "8001:8001"
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
+      - LEAGUE_MANAGER_URL=http://league_manager:8000/mcp
+    depends_on:
+      league_manager:
+        condition: service_healthy
+    networks:
+      - mcp_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Player 1
+  player1:
+    build:
+      context: .
+      target: production
+    container_name: mcp_player1
+    command: python -m src.main --component player --name "AlphaBot" --port 8101 --register
+    ports:
+      - "8101:8101"
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
+      - LEAGUE_MANAGER_URL=http://league_manager:8000/mcp
+    depends_on:
+      - league_manager
+      - referee
+    networks:
+      - mcp_network
+    restart: unless-stopped
+
+  # Player 2
+  player2:
+    build:
+      context: .
+      target: production
+    container_name: mcp_player2
+    command: python -m src.main --component player --name "BetaBot" --port 8102 --register
+    ports:
+      - "8102:8102"
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
+      - LEAGUE_MANAGER_URL=http://league_manager:8000/mcp
+    depends_on:
+      - league_manager
+      - referee
+    networks:
+      - mcp_network
+    restart: unless-stopped
+
+  # Player 3
+  player3:
+    build:
+      context: .
+      target: production
+    container_name: mcp_player3
+    command: python -m src.main --component player --name "GammaBot" --port 8103 --register
+    ports:
+      - "8103:8103"
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
+      - LEAGUE_MANAGER_URL=http://league_manager:8000/mcp
+    depends_on:
+      - league_manager
+      - referee
+    networks:
+      - mcp_network
+    restart: unless-stopped
+
+  # Player 4
+  player4:
+    build:
+      context: .
+      target: production
+    container_name: mcp_player4
+    command: python -m src.main --component player --name "DeltaBot" --port 8104 --register
+    ports:
+      - "8104:8104"
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
+      - LEAGUE_MANAGER_URL=http://league_manager:8000/mcp
+    depends_on:
+      - league_manager
+      - referee
+    networks:
+      - mcp_network
+    restart: unless-stopped
+
+networks:
+  mcp_network:
+    driver: bridge
+
+volumes:
+  app_logs:
+  app_data:
+
