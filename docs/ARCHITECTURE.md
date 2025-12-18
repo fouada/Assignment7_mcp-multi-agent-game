@@ -1058,12 +1058,390 @@ graph TB
 
 ---
 
+## Game Processing and Interaction
+
+### Even/Odd Game Processing Flow
+
+```mermaid
+flowchart TD
+    START([Game Start]) --> ASSIGN_ROLES
+    
+    subgraph "Role Assignment"
+        ASSIGN_ROLES[Randomly Assign Roles]
+        ASSIGN_ROLES --> P1_ODD[Player 1: ODD Role]
+        ASSIGN_ROLES --> P2_EVEN[Player 2: EVEN Role]
+    end
+    
+    P1_ODD --> ROUND_START
+    P2_EVEN --> ROUND_START
+    
+    subgraph "Round Processing"
+        ROUND_START([Round N Start])
+        ROUND_START --> REQ_MOVES[Request Moves<br/>from Both Players]
+        
+        REQ_MOVES --> P1_CHOOSE[Player 1<br/>Chooses 1-5]
+        REQ_MOVES --> P2_CHOOSE[Player 2<br/>Chooses 1-5]
+        
+        P1_CHOOSE --> COLLECT[Collect Both Moves]
+        P2_CHOOSE --> COLLECT
+        
+        COLLECT --> VALIDATE{Validate<br/>Moves}
+        
+        VALIDATE -->|Invalid| TIMEOUT_CHECK{Timeout?}
+        TIMEOUT_CHECK -->|Yes| DEFAULT_MOVE[Use Default Move = 3]
+        TIMEOUT_CHECK -->|No| ERROR[Handle Error]
+        DEFAULT_MOVE --> CALCULATE
+        
+        VALIDATE -->|Valid| CALCULATE[Calculate Sum]
+        
+        CALCULATE --> SUM_CHECK{Sum % 2}
+        
+        SUM_CHECK -->|"Odd (1,3,5,7,9)"| ODD_WINS[ODD Player<br/>Wins Round]
+        SUM_CHECK -->|"Even (2,4,6,8,10)"| EVEN_WINS[EVEN Player<br/>Wins Round]
+        
+        ODD_WINS --> UPDATE_SCORE[Update Round Score]
+        EVEN_WINS --> UPDATE_SCORE
+    end
+    
+    UPDATE_SCORE --> CHECK_WINNER{Match<br/>Winner?}
+    
+    CHECK_WINNER -->|"Not Yet<br/>(Best of 5)"| ROUND_START
+    CHECK_WINNER -->|"Winner Found<br/>(3 rounds won)"| DECLARE_WINNER[Declare Match Winner]
+    
+    DECLARE_WINNER --> REPORT[Report to League Manager]
+    REPORT --> FINISH([Game End])
+```
+
+### Game State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> INITIALIZED: Create Game
+    
+    INITIALIZED --> WAITING_FOR_PLAYERS: Start Game
+    
+    WAITING_FOR_PLAYERS --> COLLECTING_CHOICES: Both Players Ready
+    WAITING_FOR_PLAYERS --> CANCELLED: Timeout / Player Decline
+    
+    COLLECTING_CHOICES --> VALIDATING_MOVES: Moves Received
+    COLLECTING_CHOICES --> COLLECTING_CHOICES: Waiting (timeout check)
+    
+    VALIDATING_MOVES --> DRAWING_NUMBER: Moves Valid
+    VALIDATING_MOVES --> COLLECTING_CHOICES: Invalid Move (retry)
+    
+    DRAWING_NUMBER --> RESOLVING_ROUND: Calculate Sum
+    
+    RESOLVING_ROUND --> ROUND_COMPLETE: Winner Determined
+    
+    ROUND_COMPLETE --> COLLECTING_CHOICES: More Rounds Needed
+    ROUND_COMPLETE --> FINISHED: Match Winner Found
+    
+    CANCELLED --> [*]
+    FINISHED --> [*]
+    
+    note right of WAITING_FOR_PLAYERS: Both players must accept invite
+    note right of COLLECTING_CHOICES: 30s timeout per move
+    note right of DRAWING_NUMBER: sum = move1 + move2
+    note right of FINISHED: Best of 5 rounds
+```
+
+### Player Strategy Interaction
+
+```mermaid
+sequenceDiagram
+    participant REF as Referee
+    participant PLAYER as Player Agent
+    participant STRATEGY as Strategy Module
+    participant LLM as LLM Service<br/>(Optional)
+    
+    Note over REF,LLM: Move Request Processing
+    
+    REF->>PLAYER: MOVE_REQUEST<br/>{round, game_state, timeout}
+    
+    PLAYER->>STRATEGY: choose_move(game_state)
+    
+    alt Random Strategy
+        STRATEGY->>STRATEGY: random.randint(1, 5)
+        STRATEGY-->>PLAYER: move = 3
+    else Pattern Strategy
+        STRATEGY->>STRATEGY: Analyze history
+        STRATEGY->>STRATEGY: Apply pattern logic
+        STRATEGY-->>PLAYER: move = 4
+    else LLM Strategy
+        STRATEGY->>LLM: POST /v1/messages<br/>{prompt, game_history}
+        Note over LLM: Claude/GPT analyzes<br/>opponent patterns
+        LLM-->>STRATEGY: {reasoning, move: 2}
+        STRATEGY-->>PLAYER: move = 2
+    end
+    
+    PLAYER->>PLAYER: Validate move (1-5)
+    
+    PLAYER-->>REF: MOVE_RESPONSE<br/>{move, timestamp}
+```
+
+### Round Result Processing
+
+```mermaid
+flowchart LR
+    subgraph "Move Collection"
+        M1[Player 1 Move: 3]
+        M2[Player 2 Move: 4]
+    end
+    
+    subgraph "Calculation"
+        SUM["Sum = 3 + 4 = 7"]
+        CHECK["7 % 2 = 1 (ODD)"]
+    end
+    
+    subgraph "Winner Determination"
+        P1_ROLE["Player 1 Role: ODD"]
+        P2_ROLE["Player 2 Role: EVEN"]
+        WINNER["Winner: Player 1<br/>(ODD role, sum is odd)"]
+    end
+    
+    M1 --> SUM
+    M2 --> SUM
+    SUM --> CHECK
+    CHECK --> P1_ROLE
+    CHECK --> P2_ROLE
+    P1_ROLE --> WINNER
+    P2_ROLE --> WINNER
+```
+
+### Multi-Round Match Progression
+
+```mermaid
+gantt
+    title Match Progression: Player 1 (ODD) vs Player 2 (EVEN)
+    dateFormat X
+    axisFormat %s
+    
+    section Round 1
+    Move Request    :r1_req, 0, 1
+    Move Collection :r1_col, 1, 3
+    Result: P1 wins (sum=7) :milestone, r1_res, 3, 0
+    
+    section Round 2
+    Move Request    :r2_req, 4, 5
+    Move Collection :r2_col, 5, 7
+    Result: P2 wins (sum=6) :milestone, r2_res, 7, 0
+    
+    section Round 3
+    Move Request    :r3_req, 8, 9
+    Move Collection :r3_col, 9, 11
+    Result: P1 wins (sum=5) :milestone, r3_res, 11, 0
+    
+    section Round 4
+    Move Request    :r4_req, 12, 13
+    Move Collection :r4_col, 13, 15
+    Result: P2 wins (sum=8) :milestone, r4_res, 15, 0
+    
+    section Round 5 (Deciding)
+    Move Request    :r5_req, 16, 17
+    Move Collection :r5_col, 17, 19
+    Result: P1 wins (sum=9) :crit, r5_res, 19, 0
+    Match Winner: P1 (3-2) :milestone, done, 20, 0
+```
+
+### Referee-Player-Game Interaction
+
+```mermaid
+graph TB
+    subgraph "Referee Agent"
+        REF_CTRL[Match Controller]
+        REF_TIMER[Timeout Handler]
+        REF_COLLECT[Move Collector]
+    end
+    
+    subgraph "Player 1 Agent"
+        P1_SERVER[MCP Server<br/>Port 8101]
+        P1_STRATEGY[Strategy Module]
+        P1_HISTORY[Game History]
+    end
+    
+    subgraph "Player 2 Agent"
+        P2_SERVER[MCP Server<br/>Port 8102]
+        P2_STRATEGY[Strategy Module]
+        P2_HISTORY[Game History]
+    end
+    
+    subgraph "Game Logic Module"
+        VALIDATOR[Move Validator<br/>Range: 1-5]
+        CALCULATOR[Result Calculator<br/>Sum % 2]
+        SCORER[Score Tracker]
+    end
+    
+    REF_CTRL -->|"MOVE_REQUEST"| P1_SERVER
+    REF_CTRL -->|"MOVE_REQUEST"| P2_SERVER
+    
+    P1_SERVER --> P1_STRATEGY
+    P1_STRATEGY --> P1_HISTORY
+    
+    P2_SERVER --> P2_STRATEGY
+    P2_STRATEGY --> P2_HISTORY
+    
+    P1_SERVER -->|"MOVE_RESPONSE"| REF_COLLECT
+    P2_SERVER -->|"MOVE_RESPONSE"| REF_COLLECT
+    
+    REF_TIMER -->|"Check timeout"| REF_COLLECT
+    
+    REF_COLLECT --> VALIDATOR
+    VALIDATOR --> CALCULATOR
+    CALCULATOR --> SCORER
+    
+    SCORER -->|"Round result"| REF_CTRL
+    
+    REF_CTRL -->|"ROUND_RESULT"| P1_SERVER
+    REF_CTRL -->|"ROUND_RESULT"| P2_SERVER
+    
+    P1_SERVER -->|"Update"| P1_HISTORY
+    P2_SERVER -->|"Update"| P2_HISTORY
+```
+
+### Complete Game Interaction Sequence
+
+```mermaid
+sequenceDiagram
+    participant LM as League Manager
+    participant REF as Referee
+    participant P1 as Player 1 (ODD)
+    participant P2 as Player 2 (EVEN)
+    participant GAME as Game Logic
+    
+    Note over LM,GAME: Match Assignment
+    LM->>REF: MATCH_ASSIGN {P1, P2}
+    
+    Note over LM,GAME: Game Invitation
+    par
+        REF->>P1: GAME_INVITE {role: ODD}
+    and
+        REF->>P2: GAME_INVITE {role: EVEN}
+    end
+    
+    P1-->>REF: GAME_ACCEPT
+    P2-->>REF: GAME_ACCEPT
+    
+    Note over LM,GAME: Game Start
+    par
+        REF->>P1: GAME_START {opponent: P2}
+    and
+        REF->>P2: GAME_START {opponent: P1}
+    end
+    
+    rect rgb(240, 248, 255)
+        Note over REF,GAME: Round 1
+        par
+            REF->>P1: MOVE_REQUEST {round: 1}
+        and
+            REF->>P2: MOVE_REQUEST {round: 1}
+        end
+        
+        P1-->>REF: MOVE_RESPONSE {move: 3}
+        P2-->>REF: MOVE_RESPONSE {move: 4}
+        
+        REF->>GAME: calculate(3, 4)
+        GAME-->>REF: {sum: 7, winner: ODD}
+        
+        par
+            REF->>P1: ROUND_RESULT {winner: you, sum: 7}
+        and
+            REF->>P2: ROUND_RESULT {winner: opponent, sum: 7}
+        end
+    end
+    
+    rect rgb(255, 248, 240)
+        Note over REF,GAME: Round 2
+        par
+            REF->>P1: MOVE_REQUEST {round: 2}
+        and
+            REF->>P2: MOVE_REQUEST {round: 2}
+        end
+        
+        P1-->>REF: MOVE_RESPONSE {move: 2}
+        P2-->>REF: MOVE_RESPONSE {move: 2}
+        
+        REF->>GAME: calculate(2, 2)
+        GAME-->>REF: {sum: 4, winner: EVEN}
+        
+        par
+            REF->>P1: ROUND_RESULT {winner: opponent, sum: 4}
+        and
+            REF->>P2: ROUND_RESULT {winner: you, sum: 4}
+        end
+    end
+    
+    rect rgb(240, 255, 240)
+        Note over REF,GAME: Round 3 (P1 wins)
+        par
+            REF->>P1: MOVE_REQUEST {round: 3}
+        and
+            REF->>P2: MOVE_REQUEST {round: 3}
+        end
+        
+        P1-->>REF: MOVE_RESPONSE {move: 5}
+        P2-->>REF: MOVE_RESPONSE {move: 2}
+        
+        REF->>GAME: calculate(5, 2)
+        GAME-->>REF: {sum: 7, winner: ODD}
+        
+        Note over GAME: P1 wins: 2-1
+    end
+    
+    Note over LM,GAME: Continue until Best of 5 decided...
+    
+    Note over LM,GAME: Game End
+    par
+        REF->>P1: GAME_END {winner: P1, score: 3-2}
+    and
+        REF->>P2: GAME_END {winner: P1, score: 3-2}
+    end
+    
+    REF->>LM: MATCH_RESULT {winner: P1, score: 3-2}
+    LM->>LM: Update Standings
+```
+
+### LLM Strategy Decision Flow
+
+```mermaid
+flowchart TD
+    START([Move Request Received]) --> GET_HISTORY
+    
+    subgraph "Context Gathering"
+        GET_HISTORY[Get Game History]
+        GET_OPPONENT[Analyze Opponent Patterns]
+        GET_ROLE[Get Current Role<br/>ODD/EVEN]
+    end
+    
+    GET_HISTORY --> GET_OPPONENT
+    GET_OPPONENT --> GET_ROLE
+    
+    GET_ROLE --> BUILD_PROMPT
+    
+    subgraph "LLM Interaction"
+        BUILD_PROMPT[Build Prompt]
+        BUILD_PROMPT --> PROMPT_CONTENT["System: You are playing Even/Odd game<br/>Your role: {role}<br/>History: {moves}<br/>Choose move 1-5"]
+        PROMPT_CONTENT --> CALL_LLM[Call Claude/GPT API]
+        CALL_LLM --> PARSE_RESPONSE[Parse Response]
+    end
+    
+    PARSE_RESPONSE --> VALIDATE{Valid<br/>Move?}
+    
+    VALIDATE -->|"Yes (1-5)"| RETURN[Return Move]
+    VALIDATE -->|No| FALLBACK[Fallback: Random 1-5]
+    FALLBACK --> RETURN
+    
+    RETURN --> RESPOND([Send MOVE_RESPONSE])
+```
+
+---
+
 ## References
 
 - [Model Context Protocol Specification](https://spec.modelcontextprotocol.io/)
 - [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification)
 - [Assignment Requirements](../REQUIREMENTS.md)
 - [API Documentation](./API.md)
+- [Command Reference](./COMMAND_REFERENCE.md)
 
 ---
 
