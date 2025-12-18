@@ -5,8 +5,11 @@ Main Entry Point
 Orchestrates the MCP Multi-Agent Game League.
 
 Usage:
-    # Start full league with all components
-    python -m src.main
+    # Start full league with all components (random/pattern strategies)
+    python -m src.main --run --players 4
+    
+    # Start full league with LLM (Claude) strategies
+    python -m src.main --run --players 4 --strategy llm
     
     # Start only league manager
     python -m src.main --component league
@@ -14,15 +17,19 @@ Usage:
     # Start only referee
     python -m src.main --component referee
     
-    # Start a player
-    python -m src.main --component player --name "Player1" --port 8101
+    # Start a player with LLM strategy
+    python -m src.main --component player --name "ClaudeBot" --port 8101 --strategy llm --register
+    
+LLM Configuration:
+    Set ANTHROPIC_API_KEY environment variable for Claude
+    Set OPENAI_API_KEY environment variable for OpenAI
 """
 
 import asyncio
 import argparse
 import signal
 import sys
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from .common.logger import setup_logging, get_logger
 from .common.config import Config, get_config
@@ -118,9 +125,20 @@ class GameOrchestrator:
         
         return player
     
-    async def start_all(self, num_players: int = 4) -> None:
-        """Start all components."""
+    async def start_all(self, num_players: int = 4, strategy: str = "mixed") -> None:
+        """
+        Start all components.
+        
+        Args:
+            num_players: Number of players to start
+            strategy: Strategy for all players:
+                - "mixed": Alternates between random and pattern (default)
+                - "random": All players use random strategy
+                - "pattern": All players use pattern strategy  
+                - "llm": All players use LLM (Claude) strategy
+        """
         logger.info("Starting MCP Game League...")
+        logger.info(f"Strategy: {strategy} | LLM Provider: {self.config.llm.provider} | Model: {self.config.llm.model}")
         
         # Start league manager
         await self.start_league_manager()
@@ -134,14 +152,24 @@ class GameOrchestrator:
         # Wait a bit
         await asyncio.sleep(0.5)
         
+        # Determine strategies for each player
+        if strategy == "llm":
+            strategies = ["llm"] * num_players
+            logger.info(f"🧠 Using LLM strategy (Anthropic Claude) for all {num_players} players")
+        elif strategy == "random":
+            strategies = ["random"] * num_players
+        elif strategy == "pattern":
+            strategies = ["pattern"] * num_players
+        else:  # mixed
+            strategies = ["random", "pattern", "random", "pattern"]
+        
         # Start players
-        strategies = ["random", "pattern", "random", "pattern"]
         for i in range(num_players):
             name = f"Player_{i + 1}"
             port = 8101 + i
-            strategy = strategies[i % len(strategies)]
+            player_strategy = strategies[i % len(strategies)]
             
-            player = await self.start_player(name, port, strategy)
+            player = await self.start_player(name, port, player_strategy)
             
             # Register with league
             await asyncio.sleep(0.2)
@@ -260,6 +288,12 @@ async def run_component(component: str, args: argparse.Namespace) -> None:
     setup_logging(level="DEBUG" if args.debug else "INFO")
     config = get_config()
     
+    # Update LLM config if specified
+    if args.llm_provider:
+        config.llm.provider = args.llm_provider
+    if args.llm_model:
+        config.llm.model = args.llm_model
+    
     if component == "league":
         server = LeagueManager(
             league_id=config.league.league_id,
@@ -271,8 +305,19 @@ async def run_component(component: str, args: argparse.Namespace) -> None:
             port=args.port or config.referee.port,
         )
     elif component == "player":
+        # Determine strategy
+        strategy_type = getattr(args, 'strategy', 'random')
+        if strategy_type == "llm":
+            strategy = LLMStrategy(config.llm)
+            logger.info(f"Using LLM strategy: {config.llm.provider} / {config.llm.model}")
+        elif strategy_type == "pattern":
+            strategy = PatternStrategy()
+        else:
+            strategy = RandomStrategy()
+        
         server = PlayerAgent(
             player_name=args.name or "Player",
+            strategy=strategy,
             port=args.port or 8101,
         )
     else:
@@ -307,6 +352,16 @@ async def run_full_league(args: argparse.Namespace) -> None:
     setup_logging(level="DEBUG" if args.debug else "INFO")
     config = get_config()
     
+    # Update LLM config if specified via command line
+    if args.llm_provider:
+        config.llm.provider = args.llm_provider
+        # Auto-update model if not explicitly set
+        if not args.llm_model:
+            from .common.config import DEFAULT_LLM_MODELS
+            config.llm.model = DEFAULT_LLM_MODELS.get(args.llm_provider)
+    if args.llm_model:
+        config.llm.model = args.llm_model
+    
     orchestrator = GameOrchestrator(config)
     
     # Handle shutdown
@@ -319,7 +374,9 @@ async def run_full_league(args: argparse.Namespace) -> None:
         loop.add_signal_handler(sig, signal_handler)
     
     try:
-        await orchestrator.start_all(num_players=args.players)
+        # Pass strategy from command line
+        strategy = getattr(args, 'strategy', 'mixed')
+        await orchestrator.start_all(num_players=args.players, strategy=strategy)
         
         if args.run:
             await orchestrator.run_league()
@@ -334,7 +391,24 @@ async def run_full_league(args: argparse.Namespace) -> None:
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="MCP Multi-Agent Game League"
+        description="MCP Multi-Agent Game League",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Run league with random/pattern strategies (no LLM needed)
+  python -m src.main --run --players 4
+
+  # Run league with LLM (Claude) strategy
+  export ANTHROPIC_API_KEY=your-key
+  python -m src.main --run --players 4 --strategy llm
+
+  # Run league with OpenAI GPT-4
+  export OPENAI_API_KEY=your-key
+  python -m src.main --run --players 4 --strategy llm --llm-provider openai
+
+  # Start a single player with LLM strategy
+  python -m src.main --component player --name "ClaudeBot" --port 8101 --strategy llm --register
+        """
     )
     
     parser.add_argument(
@@ -363,6 +437,27 @@ def main():
         type=int,
         default=4,
         help="Number of players (for full league)",
+    )
+    
+    parser.add_argument(
+        "--strategy",
+        choices=["mixed", "random", "pattern", "llm"],
+        default="mixed",
+        help="Player strategy: mixed (default), random, pattern, or llm",
+    )
+    
+    parser.add_argument(
+        "--llm-provider",
+        choices=["anthropic", "openai"],
+        default=None,
+        help="LLM provider: anthropic (Claude) or openai (GPT). Default: anthropic",
+    )
+    
+    parser.add_argument(
+        "--llm-model",
+        type=str,
+        default=None,
+        help="LLM model name (e.g., claude-sonnet-4-20250514, gpt-4)",
     )
     
     parser.add_argument(

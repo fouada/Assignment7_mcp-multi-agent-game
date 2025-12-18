@@ -64,6 +64,9 @@ class Match:
     round_id: int = 1
     league_id: str = ""
     
+    # Assigned referee (Step 4: Round Announcement)
+    referee_id: Optional[str] = None
+    
     # Players
     player1: Optional[MatchPlayer] = None
     player2: Optional[MatchPlayer] = None

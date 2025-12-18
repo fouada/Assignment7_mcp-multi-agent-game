@@ -134,33 +134,41 @@ class PatternStrategy(Strategy):
 
 class LLMStrategy(Strategy):
     """
-    LLM-based strategy using OpenAI or Anthropic.
+    LLM-based strategy using Anthropic Claude or OpenAI.
     
     Uses an LLM to analyze the game and decide moves.
+    Default: Anthropic Claude (claude-sonnet-4-20250514)
     """
     
     def __init__(self, config: Optional[LLMConfig] = None):
         self.config = config or LLMConfig()
         self._client = None
+        logger.info(f"LLM Strategy initialized: {self.config.provider} / {self.config.model}")
     
     async def _get_client(self):
         """Get or create LLM client."""
         if self._client is not None:
             return self._client
         
-        if self.config.provider == "openai":
-            try:
-                import openai
-                self._client = openai.AsyncOpenAI(api_key=self.config.api_key)
-            except ImportError:
-                logger.warning("OpenAI not installed, falling back to random")
-                return None
-        elif self.config.provider == "anthropic":
+        if not self.config.api_key:
+            logger.warning(f"No API key for {self.config.provider}, falling back to random")
+            return None
+        
+        if self.config.provider == "anthropic":
             try:
                 import anthropic
                 self._client = anthropic.AsyncAnthropic(api_key=self.config.api_key)
+                logger.info("Anthropic Claude client initialized")
             except ImportError:
-                logger.warning("Anthropic not installed, falling back to random")
+                logger.warning("Anthropic not installed. Install with: pip install anthropic")
+                return None
+        elif self.config.provider == "openai":
+            try:
+                import openai
+                self._client = openai.AsyncOpenAI(api_key=self.config.api_key)
+                logger.info("OpenAI client initialized")
+            except ImportError:
+                logger.warning("OpenAI not installed. Install with: pip install openai")
                 return None
         
         return self._client
@@ -178,6 +186,7 @@ class LLMStrategy(Strategy):
         
         if client is None:
             # Fallback to random
+            logger.debug("No LLM client, using random move")
             return random.randint(1, 5)
         
         # Build prompt
@@ -186,7 +195,20 @@ class LLMStrategy(Strategy):
         )
         
         try:
-            if self.config.provider == "openai":
+            if self.config.provider == "anthropic":
+                # Anthropic Claude API
+                response = await client.messages.create(
+                    model=self.config.model,
+                    max_tokens=10,
+                    system="You are an expert game player. Respond with ONLY a single number from 1 to 5.",
+                    messages=[
+                        {"role": "user", "content": prompt},
+                    ],
+                )
+                answer = response.content[0].text.strip()
+                logger.debug(f"Claude response: {answer}")
+            else:
+                # OpenAI API
                 response = await client.chat.completions.create(
                     model=self.config.model,
                     messages=[
@@ -197,25 +219,21 @@ class LLMStrategy(Strategy):
                     max_tokens=10,
                 )
                 answer = response.choices[0].message.content.strip()
-            else:
-                response = await client.messages.create(
-                    model=self.config.model,
-                    max_tokens=10,
-                    messages=[
-                        {"role": "user", "content": prompt},
-                    ],
-                )
-                answer = response.content[0].text.strip()
+                logger.debug(f"OpenAI response: {answer}")
             
-            # Parse response
-            move = int(answer)
-            if 1 <= move <= 5:
+            # Parse response - extract first digit found
+            import re
+            numbers = re.findall(r'[1-5]', answer)
+            if numbers:
+                move = int(numbers[0])
+                logger.info(f"LLM decided move: {move}", game_id=game_id, round=round_number)
                 return move
             
         except Exception as e:
             logger.warning(f"LLM decision failed: {e}")
         
         # Fallback
+        logger.debug("LLM failed, using random fallback")
         return random.randint(1, 5)
     
     def _build_prompt(
@@ -313,6 +331,7 @@ class PlayerAgent(BaseGameServer):
         
         # Player state
         self.player_id: Optional[str] = None
+        self.auth_token: Optional[str] = None  # Token received after registration
         self.registered = False
         
         # Active games
@@ -342,6 +361,7 @@ class PlayerAgent(BaseGameServer):
                 "player_name": self.player_name,
                 "player_id": self.player_id,
                 "registered": self.registered,
+                "has_auth_token": self.auth_token is not None,
                 "active_games": len(self._games),
             }
         
@@ -429,8 +449,14 @@ class PlayerAgent(BaseGameServer):
             
             if data.get("status") == "ACCEPTED":
                 self.player_id = data.get("player_id")
+                self.auth_token = data.get("auth_token")
                 self.registered = True
-                logger.info(f"Registered as {self.player_id}")
+                
+                # Update message factory with auth token for subsequent messages
+                if self.auth_token:
+                    self.message_factory.set_auth_token(self.auth_token)
+                
+                logger.info(f"Registered as {self.player_id} with auth token")
                 return True
             else:
                 logger.error(f"Registration rejected: {data.get('reason')}")

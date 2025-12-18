@@ -44,8 +44,20 @@ class BaseGameServer(MCPServer):
         
         self.server_type = server_type
         self.league_id = league_id
+        
+        # Set sender format according to protocol spec (Section 2.4.4)
+        # - league_manager: "league_manager" (single instance, no ID)
+        # - referee: "referee:REF01" (type:id format)
+        # - player: "player:P01" (type:id format)
+        if server_type == "league_manager":
+            sender = "league_manager"
+        elif server_type == "referee":
+            sender = f"referee:{name}"
+        else:  # player
+            sender = f"player:{name}"
+        
         self.message_factory = MessageFactory(
-            sender=server_type if server_type != "player" else f"player:{name}",
+            sender=sender,
             league_id=league_id,
         )
         

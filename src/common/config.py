@@ -43,24 +43,45 @@ class ServerConfig:
         return f"http://{self.host}:{self.port}"
 
 
+# Default LLM models for each provider
+DEFAULT_LLM_MODELS = {
+    "anthropic": "claude-sonnet-4-20250514",
+    "openai": "gpt-4",
+}
+
+
 @dataclass
 class LLMConfig:
-    """Configuration for LLM integration."""
+    """
+    Configuration for LLM integration.
     
-    provider: str = "openai"  # openai, anthropic, or local
-    model: str = "gpt-4"
+    Supported providers:
+    - anthropic: Claude models (claude-sonnet-4-20250514, claude-3-opus, etc.)
+    - openai: GPT models (gpt-4, gpt-4-turbo, gpt-3.5-turbo, etc.)
+    
+    API keys are loaded from environment variables:
+    - ANTHROPIC_API_KEY for Anthropic
+    - OPENAI_API_KEY for OpenAI
+    """
+    
+    provider: str = "anthropic"  # "anthropic" or "openai"
+    model: Optional[str] = None  # Auto-selected based on provider if None
     api_key: Optional[str] = None
     temperature: float = 0.7
     max_tokens: int = 1000
     timeout: float = 60.0
     
     def __post_init__(self):
+        # Auto-select model based on provider if not specified
+        if self.model is None:
+            self.model = DEFAULT_LLM_MODELS.get(self.provider, "gpt-4")
+        
         # Try to get API key from environment if not provided
         if self.api_key is None:
-            if self.provider == "openai":
-                self.api_key = os.getenv("OPENAI_API_KEY")
-            elif self.provider == "anthropic":
+            if self.provider == "anthropic":
                 self.api_key = os.getenv("ANTHROPIC_API_KEY")
+            elif self.provider == "openai":
+                self.api_key = os.getenv("OPENAI_API_KEY")
 
 
 @dataclass

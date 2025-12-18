@@ -66,14 +66,16 @@ class RefereeAgent(BaseGameServer):
     
     def __init__(
         self,
+        referee_id: str = "REF01",  # Referee identifier (REF01, REF02, etc.)
         league_id: str = "league_2024_01",
         host: str = "localhost",
         port: int = 8001,
         move_timeout: float = 30.0,
         league_manager_url: Optional[str] = None,
     ):
+        self.referee_id = referee_id
         super().__init__(
-            name="referee",
+            name=referee_id,  # Use referee_id as name for sender format "referee:REF01"
             server_type="referee",
             league_id=league_id,
             host=host,
@@ -82,6 +84,10 @@ class RefereeAgent(BaseGameServer):
         
         self.move_timeout = move_timeout
         self.league_manager_url = league_manager_url or "http://localhost:8000/mcp"
+        
+        # Registration state
+        self.auth_token: Optional[str] = None
+        self.registered = False
         
         # State
         self.state = RefereeState.IDLE
@@ -182,9 +188,58 @@ class RefereeAgent(BaseGameServer):
     
     async def on_start(self) -> None:
         """Initialize referee."""
-        self._client = MCPClient(name="referee_client")
+        self._client = MCPClient(name=f"{self.referee_id}_client")
         await self._client.start()
-        logger.info("Referee agent started")
+        logger.info(f"Referee agent {self.referee_id} started")
+    
+    async def register_with_league(self) -> bool:
+        """
+        Register with the league manager (Step 1 of league flow).
+        
+        Returns:
+            True if registration successful, False otherwise
+        """
+        try:
+            # Connect to league manager
+            await self._client.connect("league_manager", self.league_manager_url)
+            
+            # Call registration tool
+            response = await self._client.call_tool(
+                server_name="league_manager",
+                tool_name="register_referee",
+                arguments={
+                    "referee_id": self.referee_id,
+                    "endpoint": self.url,
+                    "version": "1.0.0",
+                },
+            )
+            
+            # Parse response
+            result = response.get("content", [{}])[0]
+            if isinstance(result, dict):
+                text = result.get("text", "{}")
+                import json
+                data = json.loads(text)
+            else:
+                data = response
+            
+            if data.get("status") == "ACCEPTED":
+                self.auth_token = data.get("auth_token")
+                self.registered = True
+                
+                # Update message factory with auth token
+                if self.auth_token:
+                    self.message_factory.set_auth_token(self.auth_token)
+                
+                logger.info(f"Referee {self.referee_id} registered with league")
+                return True
+            else:
+                logger.error(f"Referee registration rejected: {data.get('reason')}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Referee registration failed: {e}")
+            return False
     
     async def on_stop(self) -> None:
         """Cleanup referee."""
