@@ -79,6 +79,60 @@ graph TB
 >
 > You can replace the "Odd/Even" game with Tic-Tac-Toe, Chess, or any other game - **WITHOUT changing the general protocol**.
 
+### 🔌 Host/Server Architecture: Each Agent Has Both Server and Client
+
+> **CRITICAL ARCHITECTURE CONCEPT (from MCP Protocol)**
+>
+> Each Agent in this system operates as **BOTH** an MCP Server (to receive requests) **AND** uses an MCP Client (to send requests). This enables bidirectional peer-to-peer communication between autonomous agents.
+
+```mermaid
+graph TB
+    subgraph "Each Agent Has Both"
+        direction TB
+        
+        subgraph "Agent (Single Entity)"
+            AGENT[🤖 Agent<br/>Autonomous Entity]
+            
+            subgraph "Inbound - MCP Server"
+                SERVER[📥 MCP Server<br/>Listens on port<br/>Exposes tools<br/>Handles incoming requests]
+            end
+            
+            subgraph "Outbound - MCP Client"
+                CLIENT[📤 MCP Client<br/>Connects to other servers<br/>Calls their tools<br/>Sends outgoing requests]
+            end
+        end
+    end
+    
+    AGENT --> SERVER
+    AGENT --> CLIENT
+    
+    OTHERS1[Other Agents] -->|"Call MY tools"| SERVER
+    CLIENT -->|"Call THEIR tools"| OTHERS2[Other Agents]
+```
+
+```mermaid
+graph LR
+    subgraph "League Manager Agent"
+        LM_SERVER[📥 MCP Server<br/>Port 8000]
+        LM_CLIENT[📤 MCP Client]
+    end
+    
+    subgraph "Referee Agent"
+        REF_SERVER[📥 MCP Server<br/>Port 8001]
+        REF_CLIENT[📤 MCP Client]
+    end
+    
+    subgraph "Player Agent"
+        P_SERVER[📥 MCP Server<br/>Port 8101]
+        P_CLIENT[📤 MCP Client]
+    end
+    
+    P_CLIENT -->|"register_player()"| LM_SERVER
+    REF_CLIENT -->|"GAME_INVITE"| P_SERVER
+    P_CLIENT -->|"submit_move()"| REF_SERVER
+    REF_CLIENT -->|"report_match_result()"| LM_SERVER
+```
+
 ### 🤖 Agentic AI Characteristics
 
 Each agent in this system demonstrates key agentic AI properties:

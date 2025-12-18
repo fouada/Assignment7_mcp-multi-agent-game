@@ -98,6 +98,109 @@ graph TB
     end
 ```
 
+### Host/Server Architecture: Each Agent Has Both Server AND Client
+
+> **CRITICAL DESIGN CONCEPT**: In the MCP protocol, each Agent operates as BOTH an MCP Server (to receive requests) AND uses an MCP Client (to make outgoing requests). This enables true peer-to-peer agent communication.
+
+```mermaid
+graph TB
+    subgraph "Single Agent Architecture"
+        direction TB
+        
+        AGENT[🤖 Agent<br/>Autonomous Software Entity]
+        
+        subgraph "Inbound Communication"
+            SERVER[📥 MCP Server<br/>Listens on dedicated port<br/>Exposes tools & resources<br/>Handles incoming JSON-RPC]
+        end
+        
+        subgraph "Outbound Communication"
+            CLIENT[📤 MCP Client<br/>Connects to other agents<br/>Discovers their tools<br/>Makes tool calls via JSON-RPC]
+        end
+        
+        subgraph "Business Logic"
+            LOGIC[💼 Agent Logic<br/>Strategy / Game / Management]
+        end
+    end
+    
+    AGENT --> SERVER
+    AGENT --> CLIENT
+    AGENT --> LOGIC
+    
+    SERVER --> LOGIC
+    CLIENT --> LOGIC
+    
+    EXT_CLIENT[External<br/>MCP Clients] -->|"HTTP POST /mcp<br/>JSON-RPC requests"| SERVER
+    CLIENT -->|"HTTP POST /mcp<br/>JSON-RPC requests"| EXT_SERVER[External<br/>MCP Servers]
+```
+
+### Bidirectional Agent Communication via MCP
+
+```mermaid
+graph LR
+    subgraph "League Manager Agent"
+        LM_S[📥 Server<br/>:8000]
+        LM_C[📤 Client]
+        LM_S -.-> LM_LOGIC[Logic]
+        LM_C -.-> LM_LOGIC
+    end
+    
+    subgraph "Referee Agent"
+        REF_S[📥 Server<br/>:8001]
+        REF_C[📤 Client]
+        REF_S -.-> REF_LOGIC[Logic]
+        REF_C -.-> REF_LOGIC
+    end
+    
+    subgraph "Player 1 Agent"
+        P1_S[📥 Server<br/>:8101]
+        P1_C[📤 Client]
+        P1_S -.-> P1_LOGIC[Logic]
+        P1_C -.-> P1_LOGIC
+    end
+    
+    subgraph "Player 2 Agent"
+        P2_S[📥 Server<br/>:8102]
+        P2_C[📤 Client]
+        P2_S -.-> P2_LOGIC[Logic]
+        P2_C -.-> P2_LOGIC
+    end
+    
+    %% Player registration to League Manager
+    P1_C -->|"1. register_player()"| LM_S
+    P2_C -->|"1. register_player()"| LM_S
+    
+    %% League Manager response via tool result
+    LM_S -->|"2. {token}"| P1_C
+    LM_S -->|"2. {token}"| P2_C
+    
+    %% Referee gets assignment (could be via internal queue or tool call)
+    LM_C -->|"3. assign_match()"| REF_S
+    
+    %% Referee invites players
+    REF_C -->|"4. GAME_INVITE"| P1_S
+    REF_C -->|"4. GAME_INVITE"| P2_S
+    
+    %% Players accept and submit moves
+    P1_C -->|"5. submit_move()"| REF_S
+    P2_C -->|"5. submit_move()"| REF_S
+    
+    %% Referee reports result
+    REF_C -->|"6. report_result()"| LM_S
+```
+
+### Why Both Server AND Client?
+
+| Role | MCP Server (Inbound) | MCP Client (Outbound) |
+|------|---------------------|----------------------|
+| **League Manager** | Receives `register_player()`, `report_result()` | Broadcasts status, sends match assignments |
+| **Referee** | Receives `submit_move()`, `accept_game()` | Sends `GAME_INVITE`, `MOVE_REQUEST` to players |
+| **Player** | Receives `GAME_INVITE`, `MOVE_REQUEST` | Calls `register_player()`, `submit_move()` |
+
+This dual role enables:
+1. **Autonomy** - Each agent can independently receive and send messages
+2. **Peer Communication** - Agents communicate directly without central broker
+3. **Protocol Conformance** - Follows MCP Host/Server architecture specification
+
 ### Agent Types in the League System
 
 ```mermaid
