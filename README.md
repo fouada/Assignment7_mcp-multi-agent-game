@@ -1,8 +1,8 @@
 # 🎮 MCP Multi-Agent Game League
 
-> **Production-Grade Model Context Protocol Based AI Game System**
+> **Production-Grade Agentic AI System using Model Context Protocol (MCP)**
 >
-> A sophisticated multi-agent game system implementing the Model Context Protocol (MCP) standard, featuring AI players competing in a round-robin league tournament, orchestrated by a referee agent.
+> A sophisticated multi-agent game system implementing autonomous AI agents that communicate via the Model Context Protocol (MCP) standard. Features intelligent players competing in a round-robin league tournament, with optional LLM-powered strategies using Anthropic Claude or OpenAI GPT.
 
 <div align="center">
 
@@ -78,6 +78,40 @@ graph TB
 > **IMPORTANT**: The League Layer and Referee Layer are **NOT dependent** on the specific game.
 >
 > You can replace the "Odd/Even" game with Tic-Tac-Toe, Chess, or any other game - **WITHOUT changing the general protocol**.
+
+### 🤖 Agentic AI Characteristics
+
+Each agent in this system demonstrates key agentic AI properties:
+
+| Property | Description | Implementation |
+|----------|-------------|----------------|
+| **Autonomy** | Agents operate independently | Self-registration, independent decision-making |
+| **Reactivity** | Respond to environment changes | Handle game invites, move requests, results |
+| **Proactivity** | Goal-directed behavior | Strategic planning, pattern recognition |
+| **Social Ability** | Communicate with other agents | MCP protocol, JSON-RPC 2.0 |
+
+### 🧠 LLM Integration
+
+Players can use AI-powered strategies:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Player Agent                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐    │
+│  │   Random    │  │   Pattern   │  │     LLM     │    │
+│  │  Strategy   │  │  Strategy   │  │  Strategy   │    │
+│  └─────────────┘  └─────────────┘  └──────┬──────┘    │
+│                                           │            │
+└───────────────────────────────────────────┼────────────┘
+                                            │
+                    ┌───────────────────────┼───────────────────────┐
+                    │                       │                       │
+                    ▼                       ▼                       ▼
+            ┌───────────────┐      ┌───────────────┐      ┌───────────────┐
+            │   Anthropic   │      │    OpenAI     │      │   Fallback    │
+            │    Claude     │      │     GPT       │      │    Random     │
+            └───────────────┘      └───────────────┘      └───────────────┘
+```
 
 ---
 
@@ -846,32 +880,40 @@ flowchart TD
 
 ### Command Reference
 
-```mermaid
-graph LR
-    subgraph "Setup Commands"
-        S1["./scripts/setup.sh"]
-        S2["uv sync --all-extras"]
-        S3["pip install -e '.[dev,llm]'"]
-    end
-    
-    subgraph "Run Commands"
-        R1["uv run python -m src.main --run --players 4"]
-        R2["make run-league"]
-        R3["docker-compose up"]
-    end
-    
-    subgraph "Component Commands"
-        C1["--component league"]
-        C2["--component referee"]
-        C3["--component player --name X --port Y"]
-    end
-    
-    subgraph "Options"
-        O1["--debug"]
-        O2["--register"]
-        O3["--players N"]
-    end
-```
+#### Setup Commands
+
+| Command | Description |
+|---------|-------------|
+| `./scripts/setup.sh` | Run automated setup script |
+| `uv sync --all-extras` | Install all dependencies with UV |
+| `pip install -e '.[dev,llm]'` | Install with pip (alternative) |
+
+#### Run Commands
+
+| Command | Description |
+|---------|-------------|
+| `uv run python -m src.main --run --players 4` | Run full league with 4 players |
+| `make run-league` | Run league via Makefile |
+| `docker-compose up` | Run with Docker |
+
+#### Component Commands
+
+| Option | Description |
+|--------|-------------|
+| `--component league` | Start League Manager only |
+| `--component referee` | Start Referee only |
+| `--component player --name X --port Y` | Start a Player with name and port |
+
+#### CLI Options
+
+| Option | Description |
+|--------|-------------|
+| `--debug` | Enable debug logging |
+| `--register` | Auto-register player with league |
+| `--players N` | Number of players to start |
+| `--strategy [mixed\|random\|pattern\|llm]` | Player strategy type |
+
+> **Full Command Reference:** See [docs/COMMAND_REFERENCE.md](./docs/COMMAND_REFERENCE.md) for complete details.
 
 ### Detailed Operation Steps
 
@@ -946,7 +988,7 @@ docker-compose down
 
 ---
 
-## 🎯 The Game: Odd/Even (זוגי/אי-זוגי)
+## 🎯 The Game: Odd/Even
 
 ### Game Rules Diagram
 

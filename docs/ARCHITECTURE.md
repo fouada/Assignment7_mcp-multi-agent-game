@@ -2,23 +2,128 @@
 
 > **Production-Grade MCP Multi-Agent Game League System Architecture**
 >
-> This document provides comprehensive architecture diagrams and design decisions for the MCP-based multi-agent game system.
+> This document provides comprehensive architecture diagrams and design decisions for the MCP-based multi-agent game system implementing the Model Context Protocol (MCP) specification for agentic AI communication.
 
 ---
 
 ## Table of Contents
 
+- [Agentic AI Overview](#agentic-ai-overview)
 - [System Overview](#system-overview)
 - [Three-Layer Architecture](#three-layer-architecture)
 - [MCP Client Architecture](#mcp-client-architecture)
 - [MCP Server Architecture](#mcp-server-architecture)
+- [LLM Integration](#llm-integration)
 - [Communication Protocol](#communication-protocol)
 - [Entity Communication](#entity-communication)
 - [Sequence Diagrams](#sequence-diagrams)
 - [State Machines](#state-machines)
 - [Error Handling](#error-handling)
 - [Scalability Design](#scalability-design)
+- [Game Processing and Interaction](#game-processing-and-interaction)
 - [Implementation Details](#implementation-details)
+
+---
+
+## Agentic AI Overview
+
+### What is an AI Agent?
+
+An AI Agent is an autonomous software entity that:
+- **Perceives** its environment through sensors/inputs
+- **Reasons** about the current state and goals
+- **Acts** autonomously to achieve objectives
+- **Learns** from interactions to improve behavior
+
+### Agent Characteristics in This System
+
+```mermaid
+graph TB
+    subgraph "AI Agent Characteristics"
+        direction TB
+        
+        subgraph "Autonomy"
+            A1[Self-Registration<br/>with League]
+            A2[Independent<br/>Decision Making]
+            A3[Self-Healing<br/>Recovery]
+        end
+        
+        subgraph "Reactivity"
+            R1[Respond to<br/>Game Invites]
+            R2[Process Move<br/>Requests]
+            R3[Handle Results]
+        end
+        
+        subgraph "Proactivity"
+            P1[Strategic<br/>Planning]
+            P2[Pattern<br/>Recognition]
+            P3[Goal-Oriented<br/>Behavior]
+        end
+        
+        subgraph "Social Ability"
+            S1[MCP Protocol<br/>Communication]
+            S2[Multi-Agent<br/>Coordination]
+            S3[Negotiate via<br/>Protocol]
+        end
+    end
+    
+    A1 --> A2 --> A3
+    R1 --> R2 --> R3
+    P1 --> P2 --> P3
+    S1 --> S2 --> S3
+```
+
+### MCP (Model Context Protocol) in Agentic Systems
+
+```mermaid
+graph TB
+    subgraph "MCP Role in Agent Communication"
+        direction LR
+        
+        HOST[Host Application<br/>Orchestrator]
+        CLIENT[MCP Client<br/>In Agent]
+        SERVER[MCP Server<br/>In Agent]
+        LLM[LLM<br/>Claude/GPT]
+        
+        HOST -->|"Orchestrates"| CLIENT
+        CLIENT -->|"Connects to"| SERVER
+        SERVER -->|"Exposes"| PRIMITIVES
+        CLIENT -->|"May use"| LLM
+        
+        subgraph PRIMITIVES["MCP Primitives"]
+            TOOLS[Tools<br/>Actions/Operations]
+            RESOURCES[Resources<br/>Read-only Data]
+            PROMPTS[Prompts<br/>LLM Templates]
+        end
+    end
+```
+
+### Agent Types in the League System
+
+```mermaid
+graph TB
+    subgraph "Agent Hierarchy"
+        LM[League Manager Agent<br/>Orchestrator Role]
+        REF[Referee Agent<br/>Coordinator Role]
+        PLAYER[Player Agent<br/>Participant Role]
+        
+        LM -->|"Assigns matches"| REF
+        LM -->|"Registers"| PLAYER
+        REF -->|"Manages games"| PLAYER
+        PLAYER -->|"Reports results"| REF
+        REF -->|"Reports results"| LM
+    end
+    
+    subgraph "Agent Capabilities"
+        LM_CAP[Registration<br/>Scheduling<br/>Standings]
+        REF_CAP[Game Control<br/>Move Validation<br/>Result Resolution]
+        PLAYER_CAP[Strategy Execution<br/>Move Selection<br/>State Tracking]
+    end
+    
+    LM --- LM_CAP
+    REF --- REF_CAP
+    PLAYER --- PLAYER_CAP
+```
 
 ---
 
@@ -353,6 +458,96 @@ graph TB
     BL --> STATE
 ```
 
+### MCP Primitives Detail
+
+```mermaid
+classDiagram
+    class Tool {
+        +name: str
+        +description: str
+        +handler: Callable
+        +input_schema: Dict
+        +to_dict() Dict
+    }
+    
+    class Resource {
+        +uri: str
+        +name: str
+        +description: str
+        +mime_type: str
+        +handler: Callable
+        +to_dict() Dict
+    }
+    
+    class Prompt {
+        +name: str
+        +description: str
+        +arguments: List
+        +template: str
+        +to_dict() Dict
+        +render(**kwargs) str
+    }
+    
+    class MCPServer {
+        -_tools: Dict[str, Tool]
+        -_resources: Dict[str, Resource]
+        -_prompts: Dict[str, Prompt]
+        +register_tool(tool)
+        +register_resource(resource)
+        +register_prompt(prompt)
+        +tool() decorator
+        +resource() decorator
+    }
+    
+    MCPServer "1" *-- "*" Tool
+    MCPServer "1" *-- "*" Resource
+    MCPServer "1" *-- "*" Prompt
+```
+
+### Registered Tools Per Agent
+
+```mermaid
+graph TB
+    subgraph "League Manager Tools"
+        LM_T1[register_player<br/>Register new player]
+        LM_T2[register_referee<br/>Register new referee]
+        LM_T3[get_standings<br/>Current league standings]
+        LM_T4[get_schedule<br/>Match schedule]
+        LM_T5[start_league<br/>Start competition]
+        LM_T6[report_match_result<br/>Record match result]
+        LM_T7[get_players<br/>List registered players]
+        LM_T8[get_referees<br/>List registered referees]
+    end
+    
+    subgraph "Referee Tools"
+        REF_T1[start_match<br/>Start match between players]
+        REF_T2[submit_move<br/>Submit player move]
+        REF_T3[get_game_state<br/>Current game state]
+        REF_T4[list_active_games<br/>All active games]
+    end
+    
+    subgraph "Player Tools"
+        P_T1[get_status<br/>Player status]
+        P_T2[accept_game<br/>Accept game invitation]
+        P_T3[get_game_state<br/>Game state]
+    end
+```
+
+### Registered Resources Per Agent
+
+```mermaid
+graph TB
+    subgraph "League Manager Resources"
+        LM_R1["league://standings<br/>League Standings"]
+        LM_R2["league://players<br/>Registered Players"]
+        LM_R3["league://schedule<br/>Match Schedule"]
+    end
+    
+    subgraph "Referee Resources"
+        REF_R1["game://state/{game_id}<br/>Game State"]
+    end
+```
+
 ### Request Processing Flow
 
 ```mermaid
@@ -387,6 +582,212 @@ flowchart TD
     ERR2 --> RESP
     ERR3 --> RESP
     ERR4 --> RESP
+```
+
+---
+
+## LLM Integration
+
+### LLM Strategy Architecture
+
+The system supports multiple LLM providers for intelligent move selection:
+
+```mermaid
+graph TB
+    subgraph "Player Agent"
+        PLAYER[Player Agent<br/>MCP Server + Client]
+        STRATEGY[Strategy Interface<br/>Abstract Base Class]
+        
+        PLAYER --> STRATEGY
+        
+        subgraph "Strategy Implementations"
+            RANDOM[RandomStrategy<br/>random.randint(1,5)]
+            PATTERN[PatternStrategy<br/>Analyze opponent history]
+            LLM_STRAT[LLMStrategy<br/>AI-powered decisions]
+        end
+        
+        STRATEGY --> RANDOM
+        STRATEGY --> PATTERN
+        STRATEGY --> LLM_STRAT
+    end
+    
+    subgraph "LLM Providers"
+        ANTHROPIC[Anthropic API<br/>Claude claude-sonnet-4-20250514]
+        OPENAI[OpenAI API<br/>GPT-4]
+    end
+    
+    LLM_STRAT -->|"AsyncAnthropic"| ANTHROPIC
+    LLM_STRAT -->|"AsyncOpenAI"| OPENAI
+```
+
+### LLM Decision Flow
+
+```mermaid
+sequenceDiagram
+    participant REF as Referee Agent
+    participant PLAYER as Player Agent
+    participant STRAT as LLMStrategy
+    participant CLIENT as Anthropic/OpenAI Client
+    participant LLM as Claude/GPT API
+    
+    Note over REF,LLM: Move Request with LLM Strategy
+    
+    REF->>PLAYER: MOVE_REQUEST<br/>{round, game_state, timeout}
+    
+    PLAYER->>STRAT: decide_move(game_id, round, role, scores, history)
+    
+    STRAT->>STRAT: _build_prompt()
+    Note over STRAT: Build context with:<br/>- Game rules<br/>- Current role (ODD/EVEN)<br/>- Score state<br/>- Move history<br/>- Strategy hints
+    
+    STRAT->>CLIENT: await _get_client()
+    
+    alt Anthropic Claude
+        CLIENT->>LLM: client.messages.create()<br/>model: claude-sonnet-4-20250514<br/>max_tokens: 10
+        LLM-->>CLIENT: response.content[0].text
+    else OpenAI GPT
+        CLIENT->>LLM: client.chat.completions.create()<br/>model: gpt-4<br/>max_tokens: 10
+        LLM-->>CLIENT: response.choices[0].message.content
+    end
+    
+    CLIENT-->>STRAT: "3" (move value)
+    
+    STRAT->>STRAT: Parse & validate (1-5)
+    
+    alt Valid Move
+        STRAT-->>PLAYER: move = 3
+    else Invalid/Error
+        STRAT->>STRAT: Fallback: random.randint(1, 5)
+        STRAT-->>PLAYER: move = random
+    end
+    
+    PLAYER-->>REF: MOVE_RESPONSE {move: 3}
+```
+
+### LLM Prompt Engineering
+
+```mermaid
+graph TB
+    subgraph "Prompt Construction"
+        SYSTEM[System Prompt<br/>"You are an expert game player.<br/>Respond with ONLY a number 1-5."]
+        
+        subgraph "User Prompt Components"
+            RULES[Game Rules<br/>Odd/Even mechanics]
+            ROLE[Role Assignment<br/>ODD or EVEN]
+            STATE[Current State<br/>Round, Scores]
+            HISTORY[Move History<br/>Last 5 rounds]
+            HINTS[Strategy Hints<br/>Game theory, patterns]
+        end
+        
+        USER_PROMPT[Complete User Prompt]
+        
+        RULES --> USER_PROMPT
+        ROLE --> USER_PROMPT
+        STATE --> USER_PROMPT
+        HISTORY --> USER_PROMPT
+        HINTS --> USER_PROMPT
+    end
+    
+    subgraph "LLM Response Processing"
+        RESPONSE[LLM Response Text]
+        REGEX[Regex: r'[1-5]']
+        EXTRACT[Extract First Match]
+        VALIDATE{Valid 1-5?}
+        FALLBACK[Random Fallback]
+        FINAL[Final Move]
+        
+        RESPONSE --> REGEX
+        REGEX --> EXTRACT
+        EXTRACT --> VALIDATE
+        VALIDATE -->|Yes| FINAL
+        VALIDATE -->|No| FALLBACK
+        FALLBACK --> FINAL
+    end
+    
+    SYSTEM --> RESPONSE
+    USER_PROMPT --> RESPONSE
+```
+
+### Strategy Pattern Implementation
+
+```mermaid
+classDiagram
+    class Strategy {
+        <<abstract>>
+        +decide_move(game_id, round, role, scores, history) int
+    }
+    
+    class RandomStrategy {
+        -min_value: int
+        -max_value: int
+        +decide_move() int
+    }
+    
+    class PatternStrategy {
+        -min_value: int
+        -max_value: int
+        +decide_move() int
+        -analyze_opponent(history) float
+    }
+    
+    class LLMStrategy {
+        -config: LLMConfig
+        -_client: AsyncAnthropic|AsyncOpenAI
+        +decide_move() int
+        -_get_client() Client
+        -_build_prompt() str
+    }
+    
+    class LLMConfig {
+        +provider: str
+        +model: str
+        +api_key: str
+        +temperature: float
+        +max_tokens: int
+    }
+    
+    class PlayerAgent {
+        -strategy: Strategy
+        -player_name: str
+        +make_move(game_id) int
+    }
+    
+    Strategy <|-- RandomStrategy
+    Strategy <|-- PatternStrategy
+    Strategy <|-- LLMStrategy
+    LLMStrategy --> LLMConfig
+    PlayerAgent --> Strategy
+```
+
+### Multi-Provider LLM Support
+
+```mermaid
+graph LR
+    subgraph "Configuration"
+        ENV_ANTHRO[ANTHROPIC_API_KEY]
+        ENV_OPENAI[OPENAI_API_KEY]
+        CONFIG[LLMConfig]
+    end
+    
+    subgraph "Provider Selection"
+        CHECK{config.provider}
+        
+        CHECK -->|"anthropic"| ANTHRO_CLIENT[AsyncAnthropic Client]
+        CHECK -->|"openai"| OPENAI_CLIENT[AsyncOpenAI Client]
+    end
+    
+    subgraph "API Calls"
+        ANTHRO_CLIENT -->|"messages.create()"| CLAUDE[Claude API<br/>claude-sonnet-4-20250514]
+        OPENAI_CLIENT -->|"chat.completions.create()"| GPT[OpenAI API<br/>gpt-4]
+    end
+    
+    subgraph "Response Handling"
+        CLAUDE -->|"response.content[0].text"| PARSE[Parse Move]
+        GPT -->|"response.choices[0].message.content"| PARSE
+    end
+    
+    ENV_ANTHRO --> CONFIG
+    ENV_OPENAI --> CONFIG
+    CONFIG --> CHECK
 ```
 
 ---

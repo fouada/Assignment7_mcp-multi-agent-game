@@ -2,7 +2,7 @@
 Odd/Even Game Implementation
 ============================
 
-Implementation of the Odd/Even (זוגי/אי-זוגי) game.
+Implementation of the Odd/Even game.
 
 Rules:
 - Two players each choose a number (1-5 fingers)

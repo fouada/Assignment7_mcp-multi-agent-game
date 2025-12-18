@@ -53,7 +53,7 @@ By the end of this exercise, you will know how to:
 
 **Implication**: If you build an agent that correctly speaks "the protocol language" (MCP), it will be able to participate in **any future league**, regardless of the specific game.
 
-### 🎮 The Game: Odd/Even (זוגי/אי-זוגי)
+### 🎮 The Game: Odd/Even
 
 The assignment uses the **"Odd/Even"** game as the specific game implementation. This is a simple game that allows focus on the architecture rather than complex game logic.
 
