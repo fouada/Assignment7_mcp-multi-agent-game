@@ -5,7 +5,22 @@
     "port": 8000,
     "endpoint": "/mcp"
   },
+  "referees": {
+    "REF01": {
+      "name": "referee_REF01",
+      "host": "localhost",
+      "port": 8001,
+      "endpoint": "/mcp"
+    },
+    "REF02": {
+      "name": "referee_REF02",
+      "host": "localhost",
+      "port": 8002,
+      "endpoint": "/mcp"
+    }
+  },
   "referee": {
+    "_comment": "Default referee config for backwards compatibility",
     "name": "referee",
     "host": "localhost",
     "port": 8001,
@@ -42,7 +57,8 @@
     "rounds_per_match": 5,
     "move_timeout": 30.0,
     "min_value": 1,
-    "max_value": 5
+    "max_value": 10,
+    "_comment": "Section 8.7.4: drawn_number between 1-10"
   },
   "league": {
     "league_id": "league_2024_01",

@@ -1,0 +1,8 @@
+{
+  "move_timeout": 30,
+  "game_timeout": 300,
+  "max_retries": 3,
+  "heartbeat_interval": 10,
+  "log_level": "INFO"
+}
+

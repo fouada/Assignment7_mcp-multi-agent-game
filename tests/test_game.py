@@ -23,9 +23,9 @@ class TestOddEvenRules:
         assert rules.validate_move(move) is False
     
     def test_validate_invalid_move_too_high(self):
-        """Test invalid move (too high)."""
+        """Test invalid move (too high - Section 8.7.4 allows 1-10)."""
         rules = OddEvenRules()
-        move = Move(player_id="P1", value=10)
+        move = Move(player_id="P1", value=11)  # 11 is above max_value=10
         assert rules.validate_move(move) is False
     
     def test_calculate_result_odd_wins(self):
@@ -73,18 +73,18 @@ class TestOddEvenGame:
         assert game.player1_id == "P1"
         assert game.player2_id == "P2"
         assert game.total_rounds == 5
-        assert game.phase == GamePhase.NOT_STARTED
+        assert game.phase == GamePhase.WAITING_FOR_PLAYERS
     
     def test_game_start(self):
-        """Test game start."""
+        """Test game start - transitions to COLLECTING_CHOICES."""
         game = OddEvenGame(player1_id="P1", player2_id="P2")
         game.start()
         
-        assert game.phase == GamePhase.AWAITING_MOVES
+        assert game.phase == GamePhase.COLLECTING_CHOICES
         assert game.current_round == 1
     
     def test_submit_move(self):
-        """Test move submission."""
+        """Test move submission - transitions to DRAWING_NUMBER when both submit."""
         game = OddEvenGame(player1_id="P1", player2_id="P2")
         game.start()
         
@@ -95,7 +95,7 @@ class TestOddEvenGame:
         # Second move
         both_received = game.submit_move("P2", 4)
         assert both_received is True
-        assert game.phase == GamePhase.MOVES_RECEIVED
+        assert game.phase == GamePhase.DRAWING_NUMBER
     
     def test_resolve_round(self):
         """Test round resolution."""
@@ -244,6 +244,148 @@ class TestMatch:
         
         assert match.is_active
         assert match.game is not None
+
+
+class TestGameRegistry:
+    """Test Game Registry (Section 3.8)."""
+    
+    def setup_method(self):
+        """Setup for each test - ensure registry has default games."""
+        from src.game.registry import GameRegistry, register_default_games
+        register_default_games()
+    
+    def test_default_game_registered(self):
+        """Test that even_odd game is registered by default."""
+        from src.game.registry import GameRegistry
+        
+        assert GameRegistry.is_registered("even_odd")
+    
+    def test_list_game_types(self):
+        """Test listing registered game types."""
+        from src.game.registry import GameRegistry
+        
+        types = GameRegistry.list_game_types()
+        assert len(types) >= 1
+        
+        # Find even_odd
+        even_odd = next((t for t in types if t["game_type"] == "even_odd"), None)
+        assert even_odd is not None
+        assert even_odd["display_name"] == "Even/Odd"
+        assert even_odd["min_players"] == 2
+        assert even_odd["max_players"] == 2
+    
+    def test_get_game_info(self):
+        """Test getting game type info."""
+        from src.game.registry import GameRegistry
+        
+        info = GameRegistry.get_game_info("even_odd")
+        assert info is not None
+        assert info.game_type == "even_odd"
+        assert info.min_players == 2
+    
+    def test_create_game(self):
+        """Test creating a game through the registry."""
+        from src.game.registry import GameRegistry
+        
+        game = GameRegistry.create_game(
+            "even_odd",
+            player1_id="P01",
+            player2_id="P02",
+            total_rounds=3,
+        )
+        
+        assert game is not None
+        assert game.player1_id == "P01"
+        assert game.player2_id == "P02"
+    
+    def test_create_unknown_game_raises(self):
+        """Test that creating unknown game type raises error."""
+        from src.game.registry import GameRegistry
+        
+        with pytest.raises(ValueError, match="Unknown game type"):
+            GameRegistry.create_game("unknown_game")
+    
+    def test_validate_players(self):
+        """Test player count validation."""
+        from src.game.registry import GameRegistry
+        
+        # Valid
+        is_valid, error = GameRegistry.validate_players("even_odd", 2)
+        assert is_valid is True
+        assert error is None
+        
+        # Too few
+        is_valid, error = GameRegistry.validate_players("even_odd", 1)
+        assert is_valid is False
+        assert "Minimum" in error
+        
+        # Too many
+        is_valid, error = GameRegistry.validate_players("even_odd", 3)
+        assert is_valid is False
+        assert "Maximum" in error
+    
+    def test_register_custom_game(self):
+        """Test registering a custom game type."""
+        from src.game.registry import GameRegistry
+        
+        # Simple mock game class
+        class MockGame:
+            game_type = "mock_game"
+            min_players = 2
+            max_players = 4
+            
+            def __init__(self, **kwargs):
+                pass
+        
+        GameRegistry.register(
+            game_type="mock_game",
+            display_name="Mock Game",
+            description="A mock game for testing",
+            min_players=2,
+            max_players=4,
+            factory=MockGame,
+        )
+        
+        assert GameRegistry.is_registered("mock_game")
+        
+        # Cleanup
+        GameRegistry.unregister("mock_game")
+        assert not GameRegistry.is_registered("mock_game")
+
+
+class TestGameMove:
+    """Test generic GameMove structure."""
+    
+    def test_game_move_creation(self):
+        """Test creating a GameMove."""
+        from src.game.registry import GameMove
+        
+        move = GameMove(
+            player_id="P01",
+            game_id="game_123",
+            round_number=1,
+            move_data={"value": 3},
+        )
+        
+        assert move.player_id == "P01"
+        assert move.game_id == "game_123"
+        assert move.move_data["value"] == 3
+    
+    def test_game_move_to_dict(self):
+        """Test converting GameMove to dict."""
+        from src.game.registry import GameMove
+        
+        move = GameMove(
+            player_id="P01",
+            game_id="game_123",
+            round_number=1,
+            move_data={"value": 3},
+        )
+        
+        data = move.to_dict()
+        assert data["player_id"] == "P01"
+        assert data["round_number"] == 1
+        assert "timestamp" in data
 
 
 if __name__ == "__main__":

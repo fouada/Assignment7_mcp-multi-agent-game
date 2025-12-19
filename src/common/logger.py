@@ -299,3 +299,408 @@ class PerformanceTracker:
             return (self.end_time - self.start_time) * 1000
         return None
 
+
+# ============================================================================
+# JSONL File Logging (Section 7)
+# ============================================================================
+
+class JSONLWriter:
+    """
+    JSONL file writer for structured event logging.
+    
+    Writes one JSON object per line to .log.jsonl files.
+    Used for audit logs, event history, and debugging.
+    
+    File structure per document:
+    - logs/league/<league_id>/*.log.jsonl - League events
+    - logs/agents/*.log.jsonl - Agent events
+    - logs/system/*.log.jsonl - System events
+    """
+    
+    def __init__(self, base_path: str = "logs"):
+        self.base_path = Path(base_path)
+        self._ensure_directories()
+    
+    def _ensure_directories(self) -> None:
+        """Create log directory structure."""
+        (self.base_path / "league").mkdir(parents=True, exist_ok=True)
+        (self.base_path / "agents").mkdir(parents=True, exist_ok=True)
+        (self.base_path / "system").mkdir(parents=True, exist_ok=True)
+    
+    def _write_entry(self, path: Path, entry: Dict[str, Any]) -> None:
+        """Write a single JSONL entry."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(entry, default=str, ensure_ascii=False) + '\n')
+    
+    def log_league_event(
+        self,
+        league_id: str,
+        event_type: str,
+        data: Dict[str, Any],
+        log_file: str = "events",
+    ) -> None:
+        """
+        Log a league event.
+        
+        File: logs/league/<league_id>/<log_file>.log.jsonl
+        """
+        entry = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "league_id": league_id,
+            "event_type": event_type,
+            **data,
+        }
+        path = self.base_path / "league" / league_id / f"{log_file}.log.jsonl"
+        self._write_entry(path, entry)
+    
+    def log_agent_event(
+        self,
+        agent_id: str,
+        agent_type: str,
+        event_type: str,
+        data: Dict[str, Any],
+    ) -> None:
+        """
+        Log an agent event.
+        
+        File: logs/agents/<agent_id>.log.jsonl
+        """
+        entry = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "agent_id": agent_id,
+            "agent_type": agent_type,
+            "event_type": event_type,
+            **data,
+        }
+        path = self.base_path / "agents" / f"{agent_id}.log.jsonl"
+        self._write_entry(path, entry)
+    
+    def log_system_event(
+        self,
+        event_type: str,
+        data: Dict[str, Any],
+        log_file: str = "system",
+    ) -> None:
+        """
+        Log a system event.
+        
+        File: logs/system/<log_file>.log.jsonl
+        """
+        entry = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "event_type": event_type,
+            **data,
+        }
+        path = self.base_path / "system" / f"{log_file}.log.jsonl"
+        self._write_entry(path, entry)
+    
+    def log_match_event(
+        self,
+        league_id: str,
+        match_id: str,
+        event_type: str,
+        data: Dict[str, Any],
+    ) -> None:
+        """
+        Log a match event.
+        
+        File: logs/league/<league_id>/matches/<match_id>.log.jsonl
+        """
+        entry = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "match_id": match_id,
+            "event_type": event_type,
+            **data,
+        }
+        path = self.base_path / "league" / league_id / "matches" / f"{match_id}.log.jsonl"
+        self._write_entry(path, entry)
+    
+    def read_events(
+        self,
+        path: Path,
+        limit: Optional[int] = None,
+        event_type: Optional[str] = None,
+    ) -> list[Dict[str, Any]]:
+        """Read events from a JSONL file."""
+        if not path.exists():
+            return []
+        
+        events = []
+        with open(path, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.strip():
+                    entry = json.loads(line)
+                    if event_type is None or entry.get("event_type") == event_type:
+                        events.append(entry)
+                        if limit and len(events) >= limit:
+                            break
+        return events
+
+
+class LeagueEventLogger:
+    """
+    High-level logger for league events.
+    
+    Provides structured methods for logging common league events.
+    """
+    
+    def __init__(self, league_id: str, base_path: str = "logs"):
+        self.league_id = league_id
+        self.writer = JSONLWriter(base_path)
+    
+    def player_registered(
+        self,
+        player_id: str,
+        display_name: str,
+        endpoint: str,
+    ) -> None:
+        """Log player registration event."""
+        self.writer.log_league_event(
+            self.league_id,
+            "PLAYER_REGISTERED",
+            {
+                "player_id": player_id,
+                "display_name": display_name,
+                "endpoint": endpoint,
+            },
+        )
+    
+    def referee_registered(
+        self,
+        referee_id: str,
+        endpoint: str,
+    ) -> None:
+        """Log referee registration event."""
+        self.writer.log_league_event(
+            self.league_id,
+            "REFEREE_REGISTERED",
+            {
+                "referee_id": referee_id,
+                "endpoint": endpoint,
+            },
+        )
+    
+    def round_started(
+        self,
+        round_id: int,
+        match_count: int,
+    ) -> None:
+        """Log round start event."""
+        self.writer.log_league_event(
+            self.league_id,
+            "ROUND_STARTED",
+            {
+                "round_id": round_id,
+                "match_count": match_count,
+            },
+        )
+    
+    def round_completed(
+        self,
+        round_id: int,
+        results: list[Dict[str, Any]],
+    ) -> None:
+        """Log round completion event."""
+        self.writer.log_league_event(
+            self.league_id,
+            "ROUND_COMPLETED",
+            {
+                "round_id": round_id,
+                "results": results,
+            },
+        )
+    
+    def match_started(
+        self,
+        match_id: str,
+        player_A_id: str,
+        player_B_id: str,
+        referee_id: str,
+    ) -> None:
+        """Log match start event."""
+        self.writer.log_match_event(
+            self.league_id,
+            match_id,
+            "MATCH_STARTED",
+            {
+                "player_A_id": player_A_id,
+                "player_B_id": player_B_id,
+                "referee_id": referee_id,
+            },
+        )
+    
+    def match_completed(
+        self,
+        match_id: str,
+        winner_id: Optional[str],
+        player_A_score: int,
+        player_B_score: int,
+    ) -> None:
+        """Log match completion event."""
+        self.writer.log_match_event(
+            self.league_id,
+            match_id,
+            "MATCH_COMPLETED",
+            {
+                "winner_id": winner_id,
+                "player_A_score": player_A_score,
+                "player_B_score": player_B_score,
+            },
+        )
+    
+    def move_submitted(
+        self,
+        match_id: str,
+        player_id: str,
+        round_number: int,
+        move_value: int,
+    ) -> None:
+        """Log move submission event."""
+        self.writer.log_match_event(
+            self.league_id,
+            match_id,
+            "MOVE_SUBMITTED",
+            {
+                "player_id": player_id,
+                "round_number": round_number,
+                "move_value": move_value,
+            },
+        )
+    
+    def round_result(
+        self,
+        match_id: str,
+        round_number: int,
+        player_A_move: int,
+        player_B_move: int,
+        sum_value: int,
+        winner_id: Optional[str],
+    ) -> None:
+        """Log round result event."""
+        self.writer.log_match_event(
+            self.league_id,
+            match_id,
+            "ROUND_RESULT",
+            {
+                "round_number": round_number,
+                "player_A_move": player_A_move,
+                "player_B_move": player_B_move,
+                "sum_value": sum_value,
+                "is_odd": sum_value % 2 == 1,
+                "winner_id": winner_id,
+            },
+        )
+    
+    def standings_updated(
+        self,
+        round_id: int,
+        standings: list[Dict[str, Any]],
+    ) -> None:
+        """Log standings update event."""
+        self.writer.log_league_event(
+            self.league_id,
+            "STANDINGS_UPDATED",
+            {
+                "round_id": round_id,
+                "standings": standings,
+            },
+        )
+    
+    def error_occurred(
+        self,
+        error_code: str,
+        error_message: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Log error event."""
+        self.writer.log_league_event(
+            self.league_id,
+            "ERROR",
+            {
+                "error_code": error_code,
+                "error_message": error_message,
+                "context": context or {},
+            },
+            log_file="errors",
+        )
+
+
+class AgentEventLogger:
+    """
+    High-level logger for agent events.
+    
+    Each agent logs its own events to its own file.
+    """
+    
+    def __init__(self, agent_id: str, agent_type: str, base_path: str = "logs"):
+        self.agent_id = agent_id
+        self.agent_type = agent_type
+        self.writer = JSONLWriter(base_path)
+    
+    def started(self) -> None:
+        """Log agent start event."""
+        self.writer.log_agent_event(
+            self.agent_id,
+            self.agent_type,
+            "AGENT_STARTED",
+            {},
+        )
+    
+    def stopped(self) -> None:
+        """Log agent stop event."""
+        self.writer.log_agent_event(
+            self.agent_id,
+            self.agent_type,
+            "AGENT_STOPPED",
+            {},
+        )
+    
+    def registered(self, league_id: str) -> None:
+        """Log registration event."""
+        self.writer.log_agent_event(
+            self.agent_id,
+            self.agent_type,
+            "REGISTERED",
+            {"league_id": league_id},
+        )
+    
+    def message_sent(self, message_type: str, recipient: str) -> None:
+        """Log outgoing message."""
+        self.writer.log_agent_event(
+            self.agent_id,
+            self.agent_type,
+            "MESSAGE_SENT",
+            {"message_type": message_type, "recipient": recipient},
+        )
+    
+    def message_received(self, message_type: str, sender: str) -> None:
+        """Log incoming message."""
+        self.writer.log_agent_event(
+            self.agent_id,
+            self.agent_type,
+            "MESSAGE_RECEIVED",
+            {"message_type": message_type, "sender": sender},
+        )
+    
+    def error(self, error_code: str, error_message: str) -> None:
+        """Log error event."""
+        self.writer.log_agent_event(
+            self.agent_id,
+            self.agent_type,
+            "ERROR",
+            {"error_code": error_code, "error_message": error_message},
+        )
+
+
+# Global JSONL writer instance
+_jsonl_writer: Optional[JSONLWriter] = None
+
+
+def get_jsonl_writer(base_path: str = "logs") -> JSONLWriter:
+    """Get global JSONL writer instance."""
+    global _jsonl_writer
+    if _jsonl_writer is None:
+        _jsonl_writer = JSONLWriter(base_path)
+    return _jsonl_writer
+

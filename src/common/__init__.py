@@ -19,6 +19,37 @@ from .protocol import (
     create_message,
     validate_message,
 )
+from .repositories import (
+    DataManager,
+    get_data_manager,
+    StandingsRepository,
+    RoundsRepository,
+    MatchRepository,
+    PlayerHistoryRepository,
+    StandingsData,
+    StandingsEntry,
+    RoundsData,
+    RoundEntry,
+    MatchData,
+    PlayerHistoryData,
+    PlayerHistoryEntry,
+)
+from .lifecycle import (
+    AgentLifecycleManager,
+    LifecycleEvent,
+    LifecycleRegistry,
+    StateTransition,
+    get_lifecycle_registry,
+)
+from .config_loader import (
+    ConfigLoader,
+    get_config_loader,
+    SystemConfig,
+    LeagueConfigFile,
+    GamesRegistryConfig,
+    RefereeDefaults,
+    PlayerDefaults,
+)
 
 __all__ = [
     # Config
@@ -43,5 +74,33 @@ __all__ = [
     "PlayerStatus",
     "create_message",
     "validate_message",
+    # Repositories (Section 6)
+    "DataManager",
+    "get_data_manager",
+    "StandingsRepository",
+    "RoundsRepository",
+    "MatchRepository",
+    "PlayerHistoryRepository",
+    "StandingsData",
+    "StandingsEntry",
+    "RoundsData",
+    "RoundEntry",
+    "MatchData",
+    "PlayerHistoryData",
+    "PlayerHistoryEntry",
+    # Lifecycle (Section 2.8)
+    "AgentLifecycleManager",
+    "LifecycleEvent",
+    "LifecycleRegistry",
+    "StateTransition",
+    "get_lifecycle_registry",
+    # Config Loader (Section 7)
+    "ConfigLoader",
+    "get_config_loader",
+    "SystemConfig",
+    "LeagueConfigFile",
+    "GamesRegistryConfig",
+    "RefereeDefaults",
+    "PlayerDefaults",
 ]
 

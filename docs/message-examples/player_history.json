@@ -1,0 +1,30 @@
+{
+  "description": "Section 9.4.4 - data/players/<player_id>/history.json example",
+  "example": {
+    "player_id": "P01",
+    "stats": {
+      "total_matches": 20,
+      "wins": 12,
+      "losses": 5,
+      "draws": 3
+    },
+    "matches": [
+      {
+        "match_id": "R1M1",
+        "opponent_id": "P02",
+        "result": "WIN",
+        "my_choice": "even",
+        "opponent_choice": "odd"
+      }
+    ]
+  },
+  "fields": {
+    "stats": "Aggregate statistics for all matches",
+    "matches": "Array of match results with transcript[] and final result"
+  },
+  "notes": {
+    "transcript": "All exchanged messages (message history)",
+    "result": "Final outcome (matches GAME_OVER status)"
+  }
+}
+

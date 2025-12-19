@@ -21,7 +21,6 @@ from ..client.mcp_client import MCPClient
 from ..game.odd_even import GameRole
 from ..common.logger import get_logger
 from ..common.protocol import (
-    MessageType,
     MessageFactory,
     PROTOCOL_VERSION,
 )
@@ -284,12 +283,13 @@ Reply with ONLY a number from 1 to 5:"""
 
 @dataclass
 class GameSession:
-    """Player's view of an active game."""
+    """Player's view of an active game (Section 8.7)."""
     
     game_id: str
     opponent_id: str
     my_role: GameRole
     total_rounds: int
+    match_id: str = ""  # Added for Section 8.7.2 GAME_JOIN_ACK
     current_round: int = 0
     my_score: int = 0
     opponent_score: int = 0
@@ -407,6 +407,58 @@ class PlayerAgent(BaseGameServer):
                 "opponent_score": session.opponent_score,
                 "state": session.state,
             }
+        
+        @self.tool(
+            "get_player_state",
+            "Get player state including game history (Section 8.11.2)",
+        )
+        async def get_player_state(params: Dict) -> Dict:
+            """Get comprehensive player state and history."""
+            # Compile game history
+            game_history = []
+            for game_id, session in self._games.items():
+                game_history.append({
+                    "game_id": game_id,
+                    "opponent_id": session.opponent_id,
+                    "my_role": session.my_role.value if session.my_role else None,
+                    "state": session.state,
+                    "my_score": session.my_score,
+                    "opponent_score": session.opponent_score,
+                    "rounds_played": session.current_round,
+                    "result": self._get_game_result(session),
+                })
+            
+            # Get completed games summary
+            wins = sum(1 for g in game_history if g["result"] == "win")
+            losses = sum(1 for g in game_history if g["result"] == "loss")
+            draws = sum(1 for g in game_history if g["result"] == "draw")
+            
+            return {
+                "player_id": self.player_id,
+                "player_name": self.player_name,
+                "registered": self.registered,
+                "league_id": self.league_id,
+                "strategy": self.strategy.__class__.__name__,
+                "statistics": {
+                    "total_games": len(game_history),
+                    "wins": wins,
+                    "losses": losses,
+                    "draws": draws,
+                    "active_games": sum(1 for g in game_history if g["state"] not in ("complete", "finished")),
+                },
+                "game_history": game_history,
+            }
+        
+        def _get_game_result(self, session: GameSession) -> Optional[str]:
+            """Determine game result from session."""
+            if session.state not in ("complete", "finished"):
+                return None
+            if session.my_score > session.opponent_score:
+                return "win"
+            elif session.my_score < session.opponent_score:
+                return "loss"
+            else:
+                return "draw"
     
     async def on_start(self) -> None:
         """Initialize player."""
@@ -471,25 +523,31 @@ class PlayerAgent(BaseGameServer):
         game_id: str,
         accept: bool,
     ) -> Dict[str, Any]:
-        """Respond to a game invitation."""
+        """
+        Respond to a game invitation (Section 8.7.2 - GAME_JOIN_ACK).
+        
+        Players must return GAME_JOIN_ACK within 5 seconds.
+        """
         session = self._games.get(game_id)
         if not session:
             return {"success": False, "error": "Unknown game"}
         
         session.state = "accepted" if accept else "declined"
         
-        # Send response to referee
-        response_msg = {
-            **self.message_factory._base_fields(MessageType.GAME_INVITE_RESPONSE),
-            "game_id": game_id,
-            "accepted": accept,
-        }
+        # Send GAME_JOIN_ACK to referee (Section 8.7.2)
+        # Use match_id if available, otherwise fallback to game_id
+        match_id = session.match_id if session.match_id else game_id
+        response_msg = self.message_factory.game_join_ack(
+            match_id=match_id,
+            player_id=self.player_id,
+            accept=accept,
+        )
         
         try:
             if "referee" in self._client.connected_servers:
                 await self._client.send_protocol_message("referee", response_msg)
         except Exception as e:
-            logger.error(f"Failed to send invitation response: {e}")
+            logger.error(f"Failed to send GAME_JOIN_ACK: {e}")
         
         return {"success": True, "accepted": accept}
     
@@ -518,11 +576,25 @@ class PlayerAgent(BaseGameServer):
     # ========================================================================
     
     async def _handle_game_invite(self, message: Dict) -> Dict:
-        """Handle GAME_INVITE message."""
+        """
+        Handle GAME_INVITE / GAME_INVITATION message (Section 8.7.1).
+        
+        Supports both:
+        - assigned_role: "odd" or "even" (game-specific)
+        - role_in_match: "PLAYER_A" or "PLAYER_B" (generic)
+        """
         game_id = message.get("game_id")
+        match_id = message.get("match_id", game_id)
         opponent_id = message.get("opponent_id")
-        role = message.get("assigned_role", "odd")
         rounds = message.get("rounds_to_play", 5)
+        
+        # Support both role formats
+        role = message.get("assigned_role") or message.get("role_in_match", "odd")
+        # Map PLAYER_A/B to odd/even if needed
+        if role == "PLAYER_A":
+            role = "odd"
+        elif role == "PLAYER_B":
+            role = "even"
         
         # Create game session
         session = GameSession(
@@ -530,6 +602,7 @@ class PlayerAgent(BaseGameServer):
             opponent_id=opponent_id,
             my_role=GameRole(role),
             total_rounds=rounds,
+            match_id=match_id,
             state="invited",
         )
         self._games[game_id] = session
@@ -537,11 +610,12 @@ class PlayerAgent(BaseGameServer):
         logger.info(
             f"Received game invitation",
             game_id=game_id,
+            match_id=match_id,
             opponent=opponent_id,
             role=role,
         )
         
-        # Auto-accept (can be changed to manual)
+        # Auto-accept within 5 second timeout (Section 8.7.2)
         return await self._respond_to_invitation(game_id, True)
     
     async def _handle_move_request(self, message: Dict) -> Dict:
@@ -573,6 +647,65 @@ class PlayerAgent(BaseGameServer):
             logger.error(f"Failed to send move: {e}")
         
         return {"success": True, "move": move}
+    
+    async def _handle_choose_parity_call(self, message: Dict) -> Dict:
+        """
+        Handle CHOOSE_PARITY_CALL message (Section 8.7.3).
+        
+        Responds with CHOOSE_PARITY_RESPONSE containing:
+        - parity_choice: "even" or "odd" (the player's assigned role)
+        - move: the actual number choice (1-10)
+        """
+        match_id = message.get("match_id")
+        player_id = message.get("player_id")
+        context = message.get("context", {})
+        round_id = context.get("round_id", 1)
+        
+        # Find game session by match_id
+        session = None
+        for game_id, s in self._games.items():
+            if s.match_id == match_id:
+                session = s
+                break
+        
+        if not session:
+            # Try to find by any active game
+            for s in self._games.values():
+                if s.state in ("accepted", "making_move", "awaiting_next"):
+                    session = s
+                    break
+        
+        if not session:
+            logger.error(f"No active game session found for match {match_id}")
+            return {"error": "No active game session"}
+        
+        session.current_round = round_id
+        session.state = "making_move"
+        
+        # Decide move (number 1-10)
+        move = await self.make_move(session.game_id)
+        
+        # Get player's assigned role (Section 8.7.3: parity_choice is "even" or "odd")
+        parity_choice = session.my_role.value  # "odd" or "even"
+        
+        # Send CHOOSE_PARITY_RESPONSE (Section 8.7.3)
+        response_msg = self.message_factory.choose_parity_response(
+            match_id=match_id,
+            player_id=self.player_id,
+            parity_choice=parity_choice,  # Role: "even" or "odd"
+        )
+        # Also include move in the response for the referee
+        response_msg["move"] = move
+        
+        try:
+            if "referee" in self._client.connected_servers:
+                await self._client.send_protocol_message("referee", response_msg)
+        except Exception as e:
+            logger.error(f"Failed to send CHOOSE_PARITY_RESPONSE: {e}")
+        
+        logger.info(f"Sent parity choice '{parity_choice}' with move {move} for round {round_id}")
+        
+        return {"success": True, "parity_choice": parity_choice, "move": move}
     
     async def _handle_move_result(self, message: Dict) -> Dict:
         """Handle MOVE_RESULT message."""

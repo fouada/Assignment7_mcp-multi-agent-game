@@ -36,12 +36,19 @@ class GameRole(Enum):
 
 
 class GamePhase(Enum):
-    """Current phase of the game."""
-    NOT_STARTED = "not_started"
-    AWAITING_MOVES = "awaiting_moves"
-    MOVES_RECEIVED = "moves_received"
-    ROUND_COMPLETE = "round_complete"
-    GAME_COMPLETE = "game_complete"
+    """
+    Current phase of the game (Section 3.3).
+    
+    States:
+    - WAITING_FOR_PLAYERS: Waiting for players to join/accept
+    - COLLECTING_CHOICES: Collecting move choices from players
+    - DRAWING_NUMBER: Processing moves and calculating sum
+    - FINISHED: Game/round complete
+    """
+    WAITING_FOR_PLAYERS = "waiting_for_players"
+    COLLECTING_CHOICES = "collecting_choices"
+    DRAWING_NUMBER = "drawing_number"
+    FINISHED = "finished"
 
 
 @dataclass
@@ -52,9 +59,9 @@ class Move:
     value: int  # 1-5
     timestamp: datetime = field(default_factory=datetime.utcnow)
     
-    def validate(self, min_value: int = 1, max_value: int = 5) -> None:
+    def validate(self, min_value: int = 1, max_value: int = 10) -> None:
         """
-        Validate the move.
+        Validate the move (Section 8.7.4: numbers 1-10).
         
         Raises:
             InvalidMoveError: If move is invalid
@@ -122,15 +129,16 @@ class GameResult:
 
 class OddEvenRules:
     """
-    Rules engine for Odd/Even game.
+    Rules engine for Odd/Even game (Section 8.7.4).
     
     Stateless - can be shared across games.
+    Numbers are drawn between 1-10 per specification.
     """
     
     def __init__(
         self,
         min_value: int = 1,
-        max_value: int = 5,
+        max_value: int = 10,  # Section 8.7.4: numbers 1-10
     ):
         self.min_value = min_value
         self.max_value = max_value
@@ -215,7 +223,7 @@ class OddEvenGame:
         
         # Game state
         self.current_round = 0
-        self.phase = GamePhase.NOT_STARTED
+        self.phase = GamePhase.WAITING_FOR_PLAYERS
         self.player1_score = 0
         self.player2_score = 0
         
@@ -233,13 +241,13 @@ class OddEvenGame:
         logger.bind(game_id=self.game_id)
     
     def start(self) -> None:
-        """Start the game."""
-        if self.phase != GamePhase.NOT_STARTED:
+        """Start the game - transitions from WAITING_FOR_PLAYERS to COLLECTING_CHOICES."""
+        if self.phase != GamePhase.WAITING_FOR_PLAYERS:
             raise InvalidGameStateError("Game already started")
         
         self.started_at = datetime.utcnow()
         self.current_round = 1
-        self.phase = GamePhase.AWAITING_MOVES
+        self.phase = GamePhase.COLLECTING_CHOICES
         
         logger.info(
             "Game started",
@@ -250,7 +258,7 @@ class OddEvenGame:
     
     def submit_move(self, player_id: str, value: int) -> bool:
         """
-        Submit a move for a player.
+        Submit a move for a player (Step 3: Collect Choices).
         
         Args:
             player_id: ID of the player making the move
@@ -263,7 +271,7 @@ class OddEvenGame:
             InvalidMoveError: If move is invalid
             InvalidGameStateError: If game is not in correct state
         """
-        if self.phase != GamePhase.AWAITING_MOVES:
+        if self.phase != GamePhase.COLLECTING_CHOICES:
             raise InvalidGameStateError(f"Cannot submit move in phase: {self.phase.value}")
         
         if player_id not in (self.player1_id, self.player2_id):
@@ -281,16 +289,16 @@ class OddEvenGame:
         
         logger.debug(f"Move submitted by {player_id}", value=value)
         
-        # Check if both moves received
+        # Check if both moves received - transition to DRAWING_NUMBER
         if len(self._current_moves) == 2:
-            self.phase = GamePhase.MOVES_RECEIVED
+            self.phase = GamePhase.DRAWING_NUMBER
             return True
         
         return False
     
     def resolve_round(self) -> RoundResult:
         """
-        Resolve the current round.
+        Resolve the current round (Steps 4 & 5: Draw Number and Determine Winner).
         
         Returns:
             RoundResult with round outcome
@@ -298,18 +306,18 @@ class OddEvenGame:
         Raises:
             InvalidGameStateError: If not all moves submitted
         """
-        if self.phase != GamePhase.MOVES_RECEIVED:
+        if self.phase != GamePhase.DRAWING_NUMBER:
             raise InvalidGameStateError(f"Cannot resolve round in phase: {self.phase.value}")
         
         move1 = self._current_moves[self.player1_id]
         move2 = self._current_moves[self.player2_id]
         
-        # Calculate result
+        # Step 4: Calculate sum (Draw Number)
         sum_value, is_odd, winner_id = self.rules.calculate_result(
             move1, move2, self.player1_role
         )
         
-        # Update scores
+        # Step 5: Update scores (Determine Winner)
         if winner_id == self.player1_id:
             self.player1_score += 1
         elif winner_id == self.player2_id:
@@ -340,18 +348,18 @@ class OddEvenGame:
         
         # Check if game is complete
         if self.current_round >= self.total_rounds:
-            self.phase = GamePhase.GAME_COMPLETE
+            self.phase = GamePhase.FINISHED
             self.ended_at = datetime.utcnow()
         else:
-            # Move to next round
+            # Move to next round - back to COLLECTING_CHOICES
             self.current_round += 1
-            self.phase = GamePhase.AWAITING_MOVES
+            self.phase = GamePhase.COLLECTING_CHOICES
         
         return result
     
     def get_result(self) -> GameResult:
         """
-        Get final game result.
+        Get final game result (Step 6: Report Result).
         
         Returns:
             GameResult with final scores and winner
@@ -359,7 +367,7 @@ class OddEvenGame:
         Raises:
             InvalidGameStateError: If game not complete
         """
-        if self.phase != GamePhase.GAME_COMPLETE:
+        if self.phase != GamePhase.FINISHED:
             raise InvalidGameStateError("Game is not complete")
         
         winner_id = self.rules.determine_game_winner(
@@ -395,7 +403,7 @@ class OddEvenGame:
         else:
             raise InvalidMoveError(0, f"Unknown player: {player_id}")
         
-        self.phase = GamePhase.GAME_COMPLETE
+        self.phase = GamePhase.FINISHED
         self.ended_at = datetime.utcnow()
         
         logger.info(f"Game forfeited by {player_id}")
@@ -412,7 +420,7 @@ class OddEvenGame:
     
     def timeout(self, player_id: str) -> GameResult:
         """Handle player timeout."""
-        self.phase = GamePhase.GAME_COMPLETE
+        self.phase = GamePhase.FINISHED
         self.ended_at = datetime.utcnow()
         
         if player_id == self.player1_id:
@@ -469,16 +477,16 @@ class OddEvenGame:
     
     @property
     def is_complete(self) -> bool:
-        """Check if game is complete."""
-        return self.phase == GamePhase.GAME_COMPLETE
+        """Check if game is complete (FINISHED state)."""
+        return self.phase == GamePhase.FINISHED
     
     @property
     def is_started(self) -> bool:
-        """Check if game has started."""
-        return self.phase != GamePhase.NOT_STARTED
+        """Check if game has started (not in WAITING_FOR_PLAYERS)."""
+        return self.phase != GamePhase.WAITING_FOR_PLAYERS
     
     @property
     def awaiting_moves(self) -> bool:
-        """Check if awaiting moves."""
-        return self.phase == GamePhase.AWAITING_MOVES
+        """Check if collecting choices from players."""
+        return self.phase == GamePhase.COLLECTING_CHOICES
 

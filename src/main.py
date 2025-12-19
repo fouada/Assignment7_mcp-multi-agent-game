@@ -1,15 +1,23 @@
 """
-Main Entry Point
-================
+Main Entry Point - League System Runner (Section 8)
+===================================================
 
 Orchestrates the MCP Multi-Agent Game League.
 
+Section 8 Default Configuration:
+    - 1 League Manager (port 8000)
+    - 2 Referees (ports 8001, 8002)  
+    - 4 Players (ports 8101-8104)
+
 Usage:
-    # Start full league with all components (random/pattern strategies)
-    python -m src.main --run --players 4
+    # Start full league with Section 8 defaults (1 LM, 2 Refs, 4 Players)
+    python -m src.main --run
+    
+    # Custom configuration
+    python -m src.main --run --players 6 --referees 3
     
     # Start full league with LLM (Claude) strategies
-    python -m src.main --run --players 4 --strategy llm
+    python -m src.main --run --strategy llm
     
     # Start only league manager
     python -m src.main --component league
@@ -42,12 +50,17 @@ logger = get_logger(__name__)
 
 class GameOrchestrator:
     """
-    Orchestrates the full game league.
+    Orchestrates the full game league (Section 8).
     
     Manages:
-    - League Manager
-    - Referee
-    - Multiple Players
+    - League Manager (1)
+    - Multiple Referees (configurable, default 2)
+    - Multiple Players (configurable, default 4)
+    
+    Example configuration (Section 8):
+        - 1 League Manager on port 8000
+        - 2 Referees on ports 8001, 8002
+        - 4 Players on ports 8101-8104
     """
     
     def __init__(self, config: Config):
@@ -55,12 +68,20 @@ class GameOrchestrator:
         
         # Components
         self.league_manager: Optional[LeagueManager] = None
-        self.referee: Optional[RefereeAgent] = None
+        self.referees: List[RefereeAgent] = []  # Support multiple referees
         self.players: List[PlayerAgent] = []
+        
+        # Backward compatibility
+        @property
+        def referee(self) -> Optional[RefereeAgent]:
+            return self.referees[0] if self.referees else None
         
         # State
         self._running = False
         self._shutdown_event = asyncio.Event()
+        
+        # Referee round-robin assignment
+        self._referee_index = 0
     
     async def start_league_manager(self) -> LeagueManager:
         """Start the league manager."""
@@ -77,20 +98,42 @@ class GameOrchestrator:
         
         return self.league_manager
     
-    async def start_referee(self) -> RefereeAgent:
-        """Start the referee."""
-        self.referee = RefereeAgent(
+    async def start_referee(self, referee_id: str = "REF01", port: int = None) -> RefereeAgent:
+        """Start a referee agent."""
+        if port is None:
+            port = self.config.referee.port + len(self.referees)
+        
+        referee = RefereeAgent(
+            referee_id=referee_id,
             league_id=self.config.league.league_id,
             host=self.config.referee.host,
-            port=self.config.referee.port,
+            port=port,
             move_timeout=self.config.game.move_timeout,
             league_manager_url=self.config.league_manager.url,
         )
         
-        await self.referee.start()
-        logger.info(f"Referee started at {self.referee.url}")
+        await referee.start()
+        self.referees.append(referee)
+        logger.info(f"Referee {referee_id} started at {referee.url}")
         
-        return self.referee
+        return referee
+    
+    async def start_referees(self, num_referees: int = 2) -> List[RefereeAgent]:
+        """Start multiple referees (Section 8 requirement)."""
+        for i in range(num_referees):
+            referee_id = f"REF{i + 1:02d}"
+            port = self.config.referee.port + i
+            await self.start_referee(referee_id=referee_id, port=port)
+        
+        return self.referees
+    
+    def get_next_referee(self) -> RefereeAgent:
+        """Get the next referee in round-robin fashion."""
+        if not self.referees:
+            raise RuntimeError("No referees available")
+        referee = self.referees[self._referee_index % len(self.referees)]
+        self._referee_index += 1
+        return referee
     
     async def start_player(
         self,
@@ -125,20 +168,34 @@ class GameOrchestrator:
         
         return player
     
-    async def start_all(self, num_players: int = 4, strategy: str = "mixed") -> None:
+    async def start_all(
+        self, 
+        num_players: int = 4, 
+        num_referees: int = 2,
+        strategy: str = "mixed",
+    ) -> None:
         """
-        Start all components.
+        Start all components (Section 8 configuration).
         
         Args:
-            num_players: Number of players to start
+            num_players: Number of players to start (default: 4)
+            num_referees: Number of referees to start (default: 2)
             strategy: Strategy for all players:
                 - "mixed": Alternates between random and pattern (default)
                 - "random": All players use random strategy
                 - "pattern": All players use pattern strategy  
                 - "llm": All players use LLM (Claude) strategy
         """
-        logger.info("Starting MCP Game League...")
-        logger.info(f"Strategy: {strategy} | LLM Provider: {self.config.llm.provider} | Model: {self.config.llm.model}")
+        logger.info("="*60)
+        logger.info("Starting MCP Game League (Section 8 Configuration)")
+        logger.info("="*60)
+        logger.info(f"  League Manager: 1")
+        logger.info(f"  Referees: {num_referees}")
+        logger.info(f"  Players: {num_players}")
+        logger.info(f"  Strategy: {strategy}")
+        if strategy == "llm":
+            logger.info(f"  LLM: {self.config.llm.provider} / {self.config.llm.model}")
+        logger.info("="*60)
         
         # Start league manager
         await self.start_league_manager()
@@ -146,11 +203,16 @@ class GameOrchestrator:
         # Wait a bit for league manager to be ready
         await asyncio.sleep(0.5)
         
-        # Start referee
-        await self.start_referee()
+        # Start referees (Section 8: 2 referees)
+        await self.start_referees(num_referees)
         
         # Wait a bit
         await asyncio.sleep(0.5)
+        
+        # Register all referees with league manager (Step 1: Referee Registration)
+        for referee in self.referees:
+            await referee.register_with_league()
+            logger.info(f"Referee {referee.referee_id} registered with league manager")
         
         # Determine strategies for each player
         if strategy == "llm":
@@ -236,14 +298,23 @@ class GameOrchestrator:
             logger.info(f"  {entry['rank']}. {entry['display_name']}: {entry['points']} pts ({entry['wins']}W-{entry['losses']}L)")
     
     async def _run_match(self, match_data: Dict) -> None:
-        """Run a single match through the referee."""
+        """Run a single match through a referee (round-robin assignment)."""
         try:
-            result = await self.referee._start_match({
+            # Get referee in round-robin fashion
+            referee = self.get_next_referee()
+            
+            # Get player IDs from match data
+            player_a_id = match_data.get("player_A_id")
+            player_b_id = match_data.get("player_B_id")
+            
+            logger.info(f"Match {match_data.get('match_id')}: {player_a_id} vs {player_b_id} (Referee: {referee.referee_id})")
+            
+            result = await referee._start_match({
                 "match_id": match_data.get("match_id"),
-                "player1_id": match_data.get("player1", {}).get("player_id"),
-                "player1_endpoint": match_data.get("player1", {}).get("endpoint"),
-                "player2_id": match_data.get("player2", {}).get("player_id"),
-                "player2_endpoint": match_data.get("player2", {}).get("endpoint"),
+                "player1_id": player_a_id,
+                "player1_endpoint": match_data.get("_player_A_endpoint"),
+                "player2_id": player_b_id,
+                "player2_endpoint": match_data.get("_player_B_endpoint"),
                 "rounds": self.config.game.rounds_per_match,
             })
             
@@ -261,10 +332,10 @@ class GameOrchestrator:
             await player.stop()
         self.players.clear()
         
-        # Stop referee
-        if self.referee:
-            await self.referee.stop()
-            self.referee = None
+        # Stop all referees
+        for referee in self.referees:
+            await referee.stop()
+        self.referees.clear()
         
         # Stop league manager
         if self.league_manager:
@@ -338,13 +409,61 @@ async def run_component(component: str, args: argparse.Namespace) -> None:
         await server.start()
         logger.info(f"{component} started at {server.url}")
         
-        if component == "player" and args.register:
-            await server.register_with_league()
+        # Auto-register with league if requested
+        if args.register:
+            if component == "player":
+                await server.register_with_league()
+            elif component == "referee":
+                await server.register_with_league()
         
         await shutdown_event.wait()
         
     finally:
         await server.stop()
+
+
+async def send_league_command(command: str, arguments: dict = None) -> None:
+    """Send a command to the running league manager."""
+    import httpx
+    import json
+    
+    setup_logging(level="INFO")
+    config = get_config()
+    
+    url = config.league_manager.url
+    
+    request = {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+            "name": command,
+            "arguments": arguments or {}
+        },
+        "id": 1
+    }
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=request, timeout=30.0)
+            result = response.json()
+            
+            if "result" in result:
+                content = result["result"].get("content", [])
+                if content and len(content) > 0:
+                    text = content[0].get("text", "{}")
+                    data = json.loads(text)
+                    print(json.dumps(data, indent=2))
+            elif "error" in result:
+                print(f"Error: {result['error']}")
+            else:
+                print(json.dumps(result, indent=2))
+                
+    except httpx.ConnectError:
+        print(f"Error: Could not connect to league manager at {url}")
+        print("Make sure the league manager is running:")
+        print("  uv run python -m src.main --component league")
+    except Exception as e:
+        print(f"Error: {e}")
 
 
 async def run_full_league(args: argparse.Namespace) -> None:
@@ -374,9 +493,14 @@ async def run_full_league(args: argparse.Namespace) -> None:
         loop.add_signal_handler(sig, signal_handler)
     
     try:
-        # Pass strategy from command line
+        # Pass strategy and referee count from command line
         strategy = getattr(args, 'strategy', 'mixed')
-        await orchestrator.start_all(num_players=args.players, strategy=strategy)
+        num_referees = getattr(args, 'referees', 2)
+        await orchestrator.start_all(
+            num_players=args.players, 
+            num_referees=num_referees,
+            strategy=strategy,
+        )
         
         if args.run:
             await orchestrator.run_league()
@@ -408,6 +532,18 @@ Examples:
 
   # Start a single player with LLM strategy
   python -m src.main --component player --name "ClaudeBot" --port 8101 --strategy llm --register
+
+  # Start league (after components are running)
+  python -m src.main --start-league
+
+  # Run next round
+  python -m src.main --run-round
+
+  # Run all rounds automatically
+  python -m src.main --run-all-rounds
+
+  # Get current standings
+  python -m src.main --get-standings
         """
     )
     
@@ -436,7 +572,14 @@ Examples:
         "--players",
         type=int,
         default=4,
-        help="Number of players (for full league)",
+        help="Number of players (default: 4, Section 8)",
+    )
+    
+    parser.add_argument(
+        "--referees",
+        type=int,
+        default=2,
+        help="Number of referees (default: 2, Section 8)",
     )
     
     parser.add_argument(
@@ -478,9 +621,42 @@ Examples:
         help="Enable debug logging",
     )
     
+    parser.add_argument(
+        "--start-league",
+        action="store_true",
+        help="Send start_league command to running league manager",
+    )
+    
+    parser.add_argument(
+        "--get-standings",
+        action="store_true",
+        help="Get current league standings",
+    )
+    
+    parser.add_argument(
+        "--run-round",
+        action="store_true",
+        help="Run the next round of matches",
+    )
+    
+    parser.add_argument(
+        "--run-all-rounds",
+        action="store_true",
+        help="Run all remaining rounds automatically",
+    )
+    
     args = parser.parse_args()
     
-    if args.component == "all":
+    # Handle utility commands first
+    if args.start_league:
+        asyncio.run(send_league_command("start_league"))
+    elif args.get_standings:
+        asyncio.run(send_league_command("get_standings"))
+    elif args.run_round:
+        asyncio.run(send_league_command("start_next_round"))
+    elif args.run_all_rounds:
+        asyncio.run(send_league_command("run_all_rounds"))
+    elif args.component == "all":
         asyncio.run(run_full_league(args))
     else:
         asyncio.run(run_component(args.component, args))

@@ -1,0 +1,26 @@
+{
+  "description": "Round Result (Section 3.2.5)",
+  "message": {
+    "protocol": "league.v2",
+    "message_id": "bb0e8400-e29b-41d4-a716-446655440001",
+    "type": "ROUND_RESULT",
+    "sender": "referee:REF01",
+    "timestamp": "2025-01-15T11:02:35.000Z",
+    "payload": {
+      "game_id": "game_001",
+      "round_number": 1,
+      "player_A_choice": 3,
+      "player_B_choice": 4,
+      "sum": 7,
+      "sum_is_odd": true,
+      "winner_id": "P01",
+      "winner_role": "ODD",
+      "current_score": {
+        "P01": 1,
+        "P02": 0
+      },
+      "rounds_remaining": 4
+    }
+  }
+}
+

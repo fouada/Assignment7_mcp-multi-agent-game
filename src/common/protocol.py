@@ -14,7 +14,7 @@ import uuid
 import json
 
 # Protocol version - MUST be exactly this value
-PROTOCOL_VERSION = "league.v1"
+PROTOCOL_VERSION = "league.v2"
 
 
 # ============================================================================
@@ -48,6 +48,8 @@ class Timeouts:
             "GAME_JOIN_ACK": cls.GAME_JOIN_ACK,
             "GAME_INVITE_RESPONSE": cls.GAME_JOIN_ACK,
             "CHOOSE_PARITY": cls.CHOOSE_PARITY,
+            "CHOOSE_PARITY_CALL": cls.CHOOSE_PARITY,
+            "CHOOSE_PARITY_RESPONSE": cls.CHOOSE_PARITY,
             "MOVE_REQUEST": cls.CHOOSE_PARITY,
             "MOVE_RESPONSE": cls.CHOOSE_PARITY,
             "GAME_OVER": cls.GAME_OVER,
@@ -107,15 +109,20 @@ class MessageType(str, Enum):
     MOVE_RESPONSE = "MOVE_RESPONSE"
     MOVE_RESULT = "MOVE_RESULT"
     CHOOSE_PARITY = "CHOOSE_PARITY"  # Choose odd/even (30 sec timeout)
+    CHOOSE_PARITY_CALL = "CHOOSE_PARITY_CALL"  # Referee requests parity choice (Section 8.7.3)
+    CHOOSE_PARITY_RESPONSE = "CHOOSE_PARITY_RESPONSE"  # Player responds with choice (Section 8.7.3)
     
     # Round management
     ROUND_ANNOUNCEMENT = "ROUND_ANNOUNCEMENT"  # Step 4: Announce round with matches & referees
     ROUND_START = "ROUND_START"
     ROUND_END = "ROUND_END"
     ROUND_RESULT = "ROUND_RESULT"
+    ROUND_COMPLETED = "ROUND_COMPLETED"  # Section 8.9: Round finished notification
     
     # League management
-    STANDINGS_UPDATE = "STANDINGS_UPDATE"
+    STANDINGS_UPDATE = "STANDINGS_UPDATE"  # Alias for backwards compatibility
+    LEAGUE_STANDINGS_UPDATE = "LEAGUE_STANDINGS_UPDATE"
+    LEAGUE_COMPLETED = "LEAGUE_COMPLETED"  # Section 8.9: League finished with champion
     MATCH_SCHEDULE = "MATCH_SCHEDULE"
     MATCH_RESULT_REPORT = "MATCH_RESULT_REPORT"  # Report result to league (10 sec timeout)
     LEAGUE_QUERY = "LEAGUE_QUERY"  # Query league info (10 sec timeout)
@@ -660,15 +667,30 @@ class MessageFactory:
         self,
         referee_id: str,
         endpoint: str,
+        display_name: Optional[str] = None,
         version: str = "1.0.0",
+        game_types: Optional[List[str]] = None,
+        max_concurrent_matches: int = 2,
     ) -> Dict[str, Any]:
-        """Create a referee registration request message (Step 1 of league flow)."""
+        """
+        Create a referee registration request message (Section 8.3.1).
+        
+        Args:
+            referee_id: Unique referee identifier
+            endpoint: Contact endpoint URL
+            display_name: Human-readable name (e.g., "Referee_Alpha")
+            version: Protocol version
+            game_types: List of supported game types (e.g., ["even_odd"])
+            max_concurrent_matches: Max matches referee can handle simultaneously
+        """
         return {
             **self._base_fields(MessageType.REFEREE_REGISTER_REQUEST),
             "referee_meta": {
-                "referee_id": referee_id,
+                "display_name": display_name or f"Referee_{referee_id}",
                 "version": version,
+                "game_types": game_types or ["even_odd"],
                 "contact_endpoint": endpoint,
+                "max_concurrent_matches": max_concurrent_matches,
             }
         }
     
@@ -676,17 +698,28 @@ class MessageFactory:
         self,
         status: str,
         referee_id: str,
+        league_id: Optional[str] = None,
         reason: Optional[str] = None,
         auth_token: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Create a referee registration response message."""
+        """
+        Create a referee registration response message (Section 8.3.2).
+        
+        Args:
+            status: "ACCEPTED" or "REJECTED"
+            referee_id: Assigned referee ID (e.g., "REF01")
+            league_id: League identifier
+            reason: Rejection reason (null if accepted)
+            auth_token: Authentication token for subsequent requests
+        """
         msg = {
             **self._base_fields(MessageType.REFEREE_REGISTER_RESPONSE),
             "status": status,
             "referee_id": referee_id,
+            "reason": reason,  # Always include, null if accepted
         }
-        if reason:
-            msg["reason"] = reason
+        if league_id:
+            msg["league_id"] = league_id
         if auth_token:
             msg["auth_token"] = auth_token
         return msg
@@ -721,7 +754,7 @@ class MessageFactory:
         rounds: int = 5,
         match_id: str = None,
     ) -> Dict[str, Any]:
-        """Create a game invitation message."""
+        """Create a game invitation message (Section 4.3)."""
         msg = {
             **self._base_fields(MessageType.GAME_INVITE),
             "game_id": game_id,
@@ -732,6 +765,97 @@ class MessageFactory:
         if match_id:
             msg["match_id"] = match_id
         return msg
+    
+    def game_invite_response(
+        self,
+        game_id: str,
+        accepted: bool,
+        reason: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Create a game invitation response message (Section 4.3)."""
+        msg = {
+            **self._base_fields(MessageType.GAME_INVITE_RESPONSE),
+            "game_id": game_id,
+            "accepted": accepted,
+        }
+        if reason:
+            msg["reason"] = reason
+        return msg
+    
+    def game_invitation(
+        self,
+        match_id: str,
+        game_type: str,
+        role_in_match: str,
+        opponent_id: str,
+        round_id: int = 1,
+    ) -> Dict[str, Any]:
+        """
+        Create a GAME_INVITATION message (Section 8.7.1).
+        
+        Alternative to game_invite() using Section 8 terminology.
+        
+        Args:
+            match_id: Match identifier (e.g., "R1M1")
+            game_type: Type of game (e.g., "even_odd")
+            role_in_match: "PLAYER_A" or "PLAYER_B"
+            opponent_id: Opponent's player ID
+            round_id: Current round number
+        """
+        return {
+            **self._base_fields(MessageType.GAME_INVITE),
+            "match_id": match_id,
+            "game_type": game_type,
+            "role_in_match": role_in_match,
+            "opponent_id": opponent_id,
+            "round_id": round_id,
+        }
+    
+    def game_join_ack(
+        self,
+        match_id: str,
+        player_id: str,
+        accept: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Create a GAME_JOIN_ACK message (Section 8.7.2).
+        
+        Players must return this within 5 seconds of receiving GAME_INVITATION.
+        
+        Args:
+            match_id: Match identifier
+            player_id: Responding player ID
+            accept: Whether player accepts the game invitation
+        """
+        return {
+            **self._base_fields(MessageType.GAME_JOIN_ACK),
+            "match_id": match_id,
+            "player_id": player_id,
+            "arrival_timestamp": datetime.utcnow().isoformat() + "Z",
+            "accept": accept,
+        }
+    
+    def game_start(
+        self,
+        game_id: str,
+        match_id: str,
+        player_A_id: str,
+        player_B_id: str,
+        player_A_role: str,
+        player_B_role: str,
+        total_rounds: int = 5,
+    ) -> Dict[str, Any]:
+        """Create a game start notification message."""
+        return {
+            **self._base_fields(MessageType.GAME_START),
+            "game_id": game_id,
+            "match_id": match_id,
+            "player_A_id": player_A_id,
+            "player_B_id": player_B_id,
+            "player_A_role": player_A_role,
+            "player_B_role": player_B_role,
+            "total_rounds": total_rounds,
+        }
     
     def move_request(
         self,
@@ -763,6 +887,66 @@ class MessageFactory:
             "game_id": game_id,
             "round_number": round_number,
             "move": move,
+        }
+    
+    def choose_parity_call(
+        self,
+        match_id: str,
+        player_id: str,
+        game_type: str,
+        opponent_id: str,
+        round_id: int,
+        your_standings: Dict[str, int],
+        deadline: str,
+    ) -> Dict[str, Any]:
+        """
+        Create a CHOOSE_PARITY_CALL message (Section 8.7.3).
+        
+        Sent by referee to request player's parity choice (even/odd).
+        
+        Args:
+            match_id: Match identifier
+            player_id: Target player ID
+            game_type: Type of game (e.g., "even_odd")
+            opponent_id: Opponent's player ID
+            round_id: Current round number
+            your_standings: Player's current standings (wins, losses, draws)
+            deadline: ISO timestamp deadline for response
+        """
+        return {
+            **self._base_fields(MessageType.CHOOSE_PARITY_CALL),
+            "match_id": match_id,
+            "player_id": player_id,
+            "game_type": game_type,
+            "context": {
+                "opponent_id": opponent_id,
+                "round_id": round_id,
+                "your_standings": your_standings,
+            },
+            "deadline": deadline,
+        }
+    
+    def choose_parity_response(
+        self,
+        match_id: str,
+        player_id: str,
+        parity_choice: str,
+    ) -> Dict[str, Any]:
+        """
+        Create a CHOOSE_PARITY_RESPONSE message (Section 8.7.3).
+        
+        Sent by player in response to CHOOSE_PARITY_CALL.
+        
+        Args:
+            match_id: Match identifier
+            player_id: Responding player ID
+            parity_choice: "even" or "odd"
+        """
+        return {
+            **self._base_fields(MessageType.CHOOSE_PARITY_RESPONSE),
+            "match_id": match_id,
+            "player_id": player_id,
+            "parity_choice": parity_choice,
         }
     
     def move_result(
@@ -797,7 +981,7 @@ class MessageFactory:
         final_score: Dict[str, int],
         reason: str = "completed",
     ) -> Dict[str, Any]:
-        """Create a game end message."""
+        """Create a game end message (Section 4.5)."""
         return {
             **self._base_fields(MessageType.GAME_END),
             "game_id": game_id,
@@ -806,9 +990,112 @@ class MessageFactory:
             "reason": reason,
         }
     
+    def game_over(
+        self,
+        match_id: str,
+        game_type: str,
+        status: str,
+        winner_player_id: Optional[str],
+        drawn_number: int,
+        number_parity: str,
+        choices: Dict[str, str],
+        reason: str,
+    ) -> Dict[str, Any]:
+        """
+        Create a GAME_OVER message (Section 8.7.5).
+        
+        Sent by referee to both players when game ends.
+        
+        Args:
+            match_id: Match identifier
+            game_type: Type of game (e.g., "even_odd")
+            status: Game status ("WIN", "DRAW", "FORFEIT")
+            winner_player_id: ID of winning player (None for draw)
+            drawn_number: The random number drawn
+            number_parity: "even" or "odd"
+            choices: Map of player_id to their choice ("even"/"odd")
+            reason: Human-readable explanation
+        """
+        return {
+            **self._base_fields(MessageType.GAME_OVER),
+            "match_id": match_id,
+            "game_type": game_type,
+            "game_result": {
+                "status": status,
+                "winner_player_id": winner_player_id,
+                "drawn_number": drawn_number,
+                "number_parity": number_parity,
+                "choices": choices,
+                "reason": reason,
+            },
+        }
+    
+    def match_result_report(
+        self,
+        league_id: str,
+        round_id: int,
+        match_id: str,
+        game_type: str,
+        winner_id: Optional[str],
+        score: Dict[str, int],
+        details: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Create a MATCH_RESULT_REPORT message (Section 8.7.6).
+        
+        Sent by referee to league manager after game completion.
+        
+        Args:
+            league_id: League identifier
+            round_id: Round number
+            match_id: Match identifier
+            game_type: Type of game (e.g., "even_odd")
+            winner_id: ID of winning player (None for draw)
+            score: Map of player_id to their score
+            details: Additional game details (drawn_number, choices, etc.)
+        """
+        msg = {
+            **self._base_fields(MessageType.MATCH_RESULT_REPORT),
+            "league_id": league_id,
+            "round_id": round_id,
+            "match_id": match_id,
+            "game_type": game_type,
+            "result": {
+                "winner": winner_id,
+                "score": score,
+            },
+        }
+        if details:
+            msg["result"]["details"] = details
+        return msg
+    
+    def match_result(
+        self,
+        match_id: str,
+        winner_id: Optional[str],
+        player_A_score: int,
+        player_B_score: int,
+        player_A_id: str,
+        player_B_id: str,
+        rounds_played: int,
+        reason: str = "completed",
+    ) -> Dict[str, Any]:
+        """Create a match result report message (legacy format, referee → league_manager)."""
+        return {
+            **self._base_fields(MessageType.MATCH_RESULT_REPORT),
+            "match_id": match_id,
+            "winner_id": winner_id,
+            "player_A_id": player_A_id,
+            "player_A_score": player_A_score,
+            "player_B_id": player_B_id,
+            "player_B_score": player_B_score,
+            "rounds_played": rounds_played,
+            "reason": reason,
+        }
+    
     def round_announcement(
         self,
-        round_number: int,
+        round_id: int,
         matches: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
         """
@@ -816,25 +1103,24 @@ class MessageFactory:
         
         Each match in the list should include:
         - match_id: str
-        - player1_id: str
-        - player2_id: str
-        - referee_id: str (assigned referee)
+        - game_type: str (e.g., "even_odd")
+        - player_A_id: str
+        - player_B_id: str
+        - referee_endpoint: str (e.g., "http://localhost:8001/mcp")
         """
         return {
             **self._base_fields(MessageType.ROUND_ANNOUNCEMENT),
-            "round_number": round_number,
+            "round_id": round_id,
             "matches": matches,
-            "total_matches": len(matches),
         }
     
     def standings_update(
         self,
-        round_number: int,
-        total_rounds: int,
+        round_id: int,
         standings: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
         """
-        Create a standings update message (Step 6 of league flow).
+        Create a LEAGUE_STANDINGS_UPDATE message (Step 6 of league flow).
         
         Published to all players after each round completes.
         
@@ -842,16 +1128,124 @@ class MessageFactory:
         - rank: int
         - player_id: str
         - display_name: str
+        - played: int (games played)
         - wins: int
-        - losses: int
         - draws: int
+        - losses: int
         - points: int
         """
         return {
-            **self._base_fields(MessageType.STANDINGS_UPDATE),
-            "round_number": round_number,
-            "total_rounds": total_rounds,
+            **self._base_fields(MessageType.LEAGUE_STANDINGS_UPDATE),
+            "round_id": round_id,
             "standings": standings,
+        }
+    
+    def round_start(
+        self,
+        round_id: int,
+        total_rounds: int,
+        matches: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """
+        Create a ROUND_START message (Section 4.3).
+        
+        Sent to all players when a round begins.
+        """
+        return {
+            **self._base_fields(MessageType.ROUND_START),
+            "round_id": round_id,
+            "total_rounds": total_rounds,
+            "matches": matches,
+        }
+    
+    def round_end(
+        self,
+        round_id: int,
+        results: List[Dict[str, Any]],
+        next_round_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Create a ROUND_END message (Section 4.3).
+        
+        Sent to all players when a round completes.
+        Each result should include:
+        - match_id: str
+        - winner_id: Optional[str]
+        - player_A_score: int
+        - player_B_score: int
+        """
+        msg = {
+            **self._base_fields(MessageType.ROUND_END),
+            "round_id": round_id,
+            "results": results,
+        }
+        if next_round_id is not None:
+            msg["next_round_id"] = next_round_id
+        return msg
+    
+    def round_result(
+        self,
+        round_id: int,
+        match_results: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """
+        Create a ROUND_RESULT message with all match results for a round.
+        """
+        return {
+            **self._base_fields(MessageType.ROUND_RESULT),
+            "round_id": round_id,
+            "results": match_results,
+        }
+    
+    def round_completed(
+        self,
+        round_id: int,
+        matches_played: int,
+        next_round_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Create a ROUND_COMPLETED message (Section 8.9).
+        
+        Sent after standings update to mark round end.
+        
+        Args:
+            round_id: Completed round number
+            matches_played: Number of matches in this round
+            next_round_id: Next round number (None if league complete)
+        """
+        msg = {
+            **self._base_fields(MessageType.ROUND_COMPLETED),
+            "round_id": round_id,
+            "matches_played": matches_played,
+        }
+        if next_round_id is not None:
+            msg["next_round_id"] = next_round_id
+        return msg
+    
+    def league_completed(
+        self,
+        total_rounds: int,
+        total_matches: int,
+        champion: Dict[str, Any],
+        final_standings: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """
+        Create a LEAGUE_COMPLETED message (Section 8.9).
+        
+        Sent when all rounds are finished.
+        
+        Args:
+            total_rounds: Total number of rounds played
+            total_matches: Total number of matches played
+            champion: Winner info with player_id, display_name, points
+            final_standings: List with rank, player_id, points for each player
+        """
+        return {
+            **self._base_fields(MessageType.LEAGUE_COMPLETED),
+            "total_rounds": total_rounds,
+            "total_matches": total_matches,
+            "champion": champion,
+            "final_standings": final_standings,
         }
     
     def heartbeat(self) -> Dict[str, Any]:
@@ -865,6 +1259,38 @@ class MessageFactory:
             "status": "alive",
             "uptime_seconds": uptime,
         }
+    
+    def league_query(
+        self,
+        league_id: str,
+        query_type: str,
+        conversation_id: Optional[str] = None,
+        auth_token: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Create a LEAGUE_QUERY message (Section 8.11.1).
+        
+        Sent by players to query league information like standings.
+        
+        Args:
+            league_id: Target league ID
+            query_type: Type of query (GET_STANDINGS, GET_SCHEDULE, etc.)
+            conversation_id: Optional conversation/correlation ID
+            auth_token: Player's auth token
+        
+        Returns:
+            LEAGUE_QUERY message payload
+        """
+        msg = {
+            **self._base_fields(MessageType.LEAGUE_QUERY),
+            "league_id": league_id,
+            "query_type": query_type,
+        }
+        if conversation_id:
+            msg["conversation_id"] = conversation_id
+        if auth_token:
+            msg["auth_token"] = auth_token
+        return msg
     
     def error(
         self,
@@ -907,30 +1333,38 @@ class MessageFactory:
     def game_error(
         self,
         error_code: str,
-        error_name: str,
         error_description: str,
         match_id: str,
-        player_id: str,
-        game_state: str,
-        retryable: bool = True,
+        affected_player: str,
+        action_required: str,
         retry_count: int = 0,
         max_retries: int = 3,
+        consequence: str = "",
     ) -> Dict[str, Any]:
         """
-        Create a GAME_ERROR message (Section 2.9.2).
+        Create a GAME_ERROR message (Section 8.10.2).
         
-        Sent by referee for game-level errors.
+        Sent by referee for game-level errors like timeouts.
+        
+        Args:
+            error_code: Error code (e.g., "E001")
+            error_description: Error type (e.g., "TIMEOUT_ERROR")
+            match_id: Match identifier
+            affected_player: Player who caused/affected by error
+            action_required: Expected response type (e.g., "CHOOSE_PARITY_RESPONSE")
+            retry_count: Current retry attempt
+            max_retries: Maximum retry attempts
+            consequence: What happens if not resolved
         """
         return {
             **self._base_fields(MessageType.GAME_ERROR),
             "match_id": match_id,
-            "player_id": player_id,
             "error_code": error_code,
-            "error_name": error_name,
             "error_description": error_description,
-            "game_state": game_state,
-            "retryable": retryable,
+            "affected_player": affected_player,
+            "action_required": action_required,
             "retry_count": retry_count,
             "max_retries": max_retries,
+            "consequence": consequence or f"Technical loss if no response after {max_retries} retries",
         }
 

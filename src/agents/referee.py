@@ -32,13 +32,13 @@ logger = get_logger(__name__)
 
 
 class RefereeState(Enum):
-    """Referee state."""
+    """Referee state matching game states."""
     
     IDLE = "idle"
-    PREPARING_MATCH = "preparing_match"
     WAITING_FOR_PLAYERS = "waiting_for_players"
-    RUNNING_GAME = "running_game"
-    GAME_COMPLETE = "game_complete"
+    COLLECTING_CHOICES = "collecting_choices"
+    DRAWING_NUMBER = "drawing_number"
+    FINISHED = "finished"
 
 
 @dataclass
@@ -173,6 +173,48 @@ class RefereeAgent(BaseGameServer):
                     for session in self._sessions.values()
                 ]
             }
+        
+        @self.tool(
+            "get_match_state",
+            "Get current match state for debugging (Section 8.11.2)",
+            {
+                "type": "object",
+                "properties": {
+                    "match_id": {"type": "string"},
+                },
+                "required": ["match_id"],
+            }
+        )
+        async def get_match_state(params: Dict) -> Dict:
+            """Get match state including game details."""
+            match_id = params.get("match_id")
+            
+            # Find session by match_id
+            for session in self._sessions.values():
+                if session.match.match_id == match_id:
+                    game = session.game
+                    return {
+                        "match_id": match_id,
+                        "game_id": game.game_id,
+                        "state": session.state,
+                        "game_phase": game.phase.value if hasattr(game.phase, 'value') else str(game.phase),
+                        "current_round": game.current_round,
+                        "total_rounds": game.total_rounds,
+                        "is_complete": game.is_complete,
+                        "player1": {
+                            "id": game.player1_id,
+                            "role": game.player1_role.value if game.player1_role else None,
+                            "score": game.player1_score,
+                        },
+                        "player2": {
+                            "id": game.player2_id,
+                            "role": game.player2_role.value if game.player2_role else None,
+                            "score": game.player2_score,
+                        },
+                        "round_history": [r.to_dict() for r in game.history] if hasattr(game, 'history') else [],
+                    }
+            
+            return {"error": f"Match {match_id} not found", "active_matches": list(self._sessions.keys())}
     
     def _register_resources(self) -> None:
         """Register referee resources."""
@@ -203,14 +245,17 @@ class RefereeAgent(BaseGameServer):
             # Connect to league manager
             await self._client.connect("league_manager", self.league_manager_url)
             
-            # Call registration tool
+            # Call registration tool (Section 8.3.1)
             response = await self._client.call_tool(
                 server_name="league_manager",
                 tool_name="register_referee",
                 arguments={
                     "referee_id": self.referee_id,
                     "endpoint": self.url,
+                    "display_name": f"Referee_{self.referee_id}",
                     "version": "1.0.0",
+                    "game_types": ["even_odd"],
+                    "max_concurrent_matches": 2,
                 },
             )
             
@@ -294,20 +339,44 @@ class RefereeAgent(BaseGameServer):
             player2=player2_id,
         )
         
-        # Send invitations to players
-        await self._send_game_invitations(session)
+        # Send invitations and run the full game
+        await self._run_full_game(session)
         
         return {
             "success": True,
             "match_id": match_id,
             "game_id": game.game_id,
-            "state": "invitations_sent",
+            "state": "complete",
+            "result": session.match.get_result() if session.match.state.value == "complete" else None,
         }
     
-    async def _send_game_invitations(self, session: GameSession) -> None:
-        """Send game invitations to both players."""
+    async def _run_full_game(self, session: GameSession) -> None:
+        """Run the complete game flow: invitations → rounds → result."""
+        # Step 1: Send invitations and collect acceptances
+        both_accepted = await self._send_game_invitations(session)
+        
+        if not both_accepted:
+            logger.error(f"Not all players accepted game {session.game.game_id}")
+            session.state = "cancelled"
+            return
+        
+        # Step 2: Start the game (match.start() internally calls game.start())
+        session.match.start()
+        session.state = "running"
+        logger.info(f"Game started: {session.game.game_id}")
+        
+        # Step 3: Run all rounds
+        while not session.game.is_complete:
+            await self._run_round(session)
+        
+        # Step 4: Complete the game
+        await self._complete_game(session)
+    
+    async def _send_game_invitations(self, session: GameSession) -> bool:
+        """Send game invitations to both players and return True if both accept."""
         match = session.match
         game = session.game
+        accepted_count = 0
         
         for player_id in [game.player1_id, game.player2_id]:
             endpoint = self._player_connections.get(player_id)
@@ -330,14 +399,84 @@ class RefereeAgent(BaseGameServer):
                 if player_id not in self._client.connected_servers:
                     await self._client.connect(player_id, endpoint)
                 
-                # Send invitation
-                await self._client.send_protocol_message(player_id, invite)
-                logger.debug(f"Sent game invitation to {player_id}")
+                # Send invitation and wait for response
+                response = await self._client.send_protocol_message(player_id, invite)
+                logger.debug(f"Invitation response from {player_id}: {response}")
+                
+                # Check acceptance
+                if response.get("success") and response.get("accepted", True):
+                    match.mark_player_ready(player_id)
+                    accepted_count += 1
                 
             except Exception as e:
                 logger.error(f"Failed to send invitation to {player_id}: {e}")
         
-        session.state = "waiting_for_acceptance"
+        session.state = "both_accepted" if accepted_count == 2 else "waiting_for_acceptance"
+        return accepted_count == 2
+    
+    async def _run_round(self, session: GameSession) -> None:
+        """
+        Run a single round of the game (Section 8.7.3 - Collecting Parity Choices).
+        
+        Uses CHOOSE_PARITY_CALL to request player choices.
+        """
+        game = session.game
+        match = session.match
+        moves = {}
+        
+        # Calculate deadline (30 seconds from now)
+        from datetime import datetime, timedelta
+        deadline = (datetime.utcnow() + timedelta(seconds=self.move_timeout)).isoformat() + "Z"
+        
+        # Request parity choices from both players (Section 8.7.3)
+        for player_id in [game.player1_id, game.player2_id]:
+            opponent_id = game.get_opponent_id(player_id)
+            
+            # Build CHOOSE_PARITY_CALL message (Section 8.7.3)
+            parity_call = self.message_factory.choose_parity_call(
+                match_id=match.match_id,
+                player_id=player_id,
+                game_type="even_odd",
+                opponent_id=opponent_id,
+                round_id=game.current_round,
+                your_standings={
+                    "wins": game.get_player_score(player_id),
+                    "losses": game.get_opponent_score(player_id),
+                    "draws": 0,  # Track draws if needed
+                },
+                deadline=deadline,
+            )
+            
+            try:
+                if player_id in self._client.connected_servers:
+                    response = await self._client.send_protocol_message(player_id, parity_call)
+                    # CHOOSE_PARITY_RESPONSE contains parity_choice (the move number)
+                    move = response.get("parity_choice") or response.get("move")
+                    if move is not None:
+                        moves[player_id] = int(move)
+                        logger.debug(f"Received parity choice from {player_id}: {move}")
+            except Exception as e:
+                logger.error(f"Failed to get parity choice from {player_id}: {e}")
+                # Default move on error
+                moves[player_id] = 3
+        
+        # Play the round
+        if game.player1_id in moves and game.player2_id in moves:
+            # Submit both moves
+            game.submit_move(game.player1_id, moves[game.player1_id])
+            game.submit_move(game.player2_id, moves[game.player2_id])
+            
+            # Resolve the round
+            round_result = game.resolve_round()
+            
+            logger.info(
+                f"Round {round_result.round_number}: "
+                f"P1={round_result.player1_move} P2={round_result.player2_move} "
+                f"Sum={round_result.sum_value} Winner={round_result.winner_id or 'draw'}"
+            )
+            
+            # Send round results to players
+            await self._send_round_results(session, round_result)
     
     async def handle_game_acceptance(
         self,
@@ -507,52 +646,97 @@ class RefereeAgent(BaseGameServer):
                 logger.error(f"Failed to send result to {player_id}: {e}")
     
     async def _complete_game(self, session: GameSession) -> None:
-        """Complete the game and report results."""
+        """
+        Complete the game and report results (Section 8.7.5-8.7.6).
+        
+        Step 5.5: Send GAME_OVER to both players
+        Step 5.6: Send MATCH_RESULT_REPORT to league manager
+        """
         game = session.game
+        match = session.match
         game_result = game.get_result()
         
         session.state = "complete"
-        session.match.complete(game_result)
+        match.complete(game_result)
+        
+        # Calculate final drawn_number (sum of last round's moves or total score)
+        last_round = game_result.rounds[-1] if game_result.rounds else None
+        drawn_number = last_round.sum_value if last_round else 0
+        number_parity = "even" if drawn_number % 2 == 0 else "odd"
+        
+        # Build choices map (each player's role)
+        choices = {
+            game.player1_id: game.player1_role.value,  # "odd" or "even"
+            game.player2_id: game.player2_role.value,
+        }
+        
+        # Determine status and reason
+        if game_result.winner_id:
+            status = "WIN"
+            winner_role = choices.get(game_result.winner_id, "unknown")
+            reason = f"{game_result.winner_id} chose {winner_role}, number was {drawn_number} ({number_parity})"
+        else:
+            status = "DRAW"
+            reason = "Game ended in a draw"
         
         logger.info(
             f"Game completed",
             game_id=game.game_id,
             winner=game_result.winner_id,
             score=f"{game_result.player1_score}-{game_result.player2_score}",
+            drawn_number=drawn_number,
         )
         
-        # Send game end to players
+        # Step 5.5: Send GAME_OVER to both players (Section 8.7.5)
         for player_id in [game.player1_id, game.player2_id]:
-            end_msg = self.message_factory.game_end(
-                game_id=game.game_id,
-                winner_id=game_result.winner_id,
-                final_score={
-                    game.player1_id: game_result.player1_score,
-                    game.player2_id: game_result.player2_score,
-                },
+            game_over_msg = self.message_factory.game_over(
+                match_id=match.match_id,
+                game_type="even_odd",
+                status=status,
+                winner_player_id=game_result.winner_id,
+                drawn_number=drawn_number,
+                number_parity=number_parity,
+                choices=choices,
+                reason=reason,
             )
             
             try:
                 if player_id in self._client.connected_servers:
-                    await self._client.send_protocol_message(player_id, end_msg)
+                    await self._client.send_protocol_message(player_id, game_over_msg)
             except Exception as e:
-                logger.error(f"Failed to send game end to {player_id}: {e}")
+                logger.error(f"Failed to send GAME_OVER to {player_id}: {e}")
         
-        # Report to league manager
-        await self._report_to_league(session, game_result)
+        # Step 5.6: Report to league manager (Section 8.7.6)
+        await self._report_to_league(session, game_result, drawn_number, choices)
     
     async def _report_to_league(
         self,
         session: GameSession,
         result: GameResult,
+        drawn_number: int = 0,
+        choices: Dict[str, str] = None,
     ) -> None:
-        """Report game result to league manager."""
+        """
+        Report game result to league manager (Section 8.7.6 - MATCH_RESULT_REPORT).
+        
+        Args:
+            session: Game session
+            result: Game result
+            drawn_number: The final drawn number (sum)
+            choices: Map of player_id to their parity choice
+        """
         try:
             # Connect to league manager if not connected
             if "league_manager" not in self._client.connected_servers:
                 await self._client.connect("league_manager", self.league_manager_url)
             
-            # Call report tool
+            # Build details (Section 8.7.6)
+            details = {
+                "drawn_number": drawn_number,
+                "choices": choices or {},
+            }
+            
+            # Call report tool with Section 8.7.6 format
             await self._client.call_tool(
                 server_name="league_manager",
                 tool_name="report_match_result",
@@ -561,10 +745,16 @@ class RefereeAgent(BaseGameServer):
                     "winner_id": result.winner_id,
                     "player1_score": result.player1_score,
                     "player2_score": result.player2_score,
+                    "details": details,  # Section 8.7.6: includes drawn_number and choices
                 },
             )
             
-            logger.info(f"Reported result to league manager")
+            logger.info(
+                f"Reported result to league manager",
+                match_id=session.match.match_id,
+                winner=result.winner_id,
+                drawn_number=drawn_number,
+            )
             
         except Exception as e:
             logger.error(f"Failed to report to league manager: {e}")
@@ -604,5 +794,51 @@ class RefereeAgent(BaseGameServer):
             "game_id": game_id,
             "player_id": player_id,
             "move": move,
+        })
+    
+    async def _handle_choose_parity_response(self, message: Dict) -> Dict:
+        """
+        Handle CHOOSE_PARITY_RESPONSE message (Section 8.7.3).
+        
+        The response contains:
+        - parity_choice: "even" or "odd" (player's role confirmation)
+        - move: the actual number choice (1-10)
+        """
+        match_id = message.get("match_id")
+        player_id = message.get("player_id", "").replace("player:", "")
+        parity_choice = message.get("parity_choice")  # "even" or "odd"
+        move = message.get("move")  # Actual number move
+        
+        # Find the game session by match_id
+        session = None
+        game_id = None
+        for gid, s in self._sessions.items():
+            if s.match.match_id == match_id:
+                session = s
+                game_id = gid
+                break
+        
+        if not session:
+            return {"success": False, "error": f"Unknown match: {match_id}"}
+        
+        # Extract move value
+        if move is not None:
+            try:
+                move_value = int(move)
+            except (TypeError, ValueError):
+                move_value = 3  # Default
+        else:
+            # Fallback: try parsing parity_choice as number (backward compat)
+            try:
+                move_value = int(parity_choice)
+            except (TypeError, ValueError):
+                move_value = 3  # Default
+        
+        logger.debug(f"Player {player_id} chose parity '{parity_choice}' with move {move_value}")
+        
+        return await self._handle_move_submission({
+            "game_id": game_id,
+            "player_id": player_id,
+            "move": move_value,
         })
 

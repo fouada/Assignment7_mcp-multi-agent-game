@@ -1,0 +1,23 @@
+{
+  "description": "Game Start Message",
+  "message": {
+    "protocol": "league.v2",
+    "message_id": "990e8400-e29b-41d4-a716-446655440001",
+    "type": "GAME_START",
+    "sender": "referee:REF01",
+    "timestamp": "2025-01-15T11:02:00.000Z",
+    "payload": {
+      "game_id": "game_001",
+      "match_id": "match_001",
+      "game_type": "even_odd",
+      "players": ["P01", "P02"],
+      "roles": {
+        "P01": "ODD",
+        "P02": "EVEN"
+      },
+      "total_rounds": 5,
+      "current_round": 1
+    }
+  }
+}
+

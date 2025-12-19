@@ -1,0 +1,25 @@
+{
+  "description": "Match Result reported to League Manager",
+  "message": {
+    "protocol": "league.v2",
+    "message_id": "dd0e8400-e29b-41d4-a716-446655440001",
+    "type": "MATCH_RESULT",
+    "sender": "referee:REF01",
+    "timestamp": "2025-01-15T11:10:05.000Z",
+    "payload": {
+      "match_id": "match_001",
+      "league_id": "league_2025_even_odd",
+      "round_id": 1,
+      "game_type": "even_odd",
+      "player_A_id": "P01",
+      "player_B_id": "P02",
+      "winner_id": "P01",
+      "player_A_score": 3,
+      "player_B_score": 2,
+      "rounds_played": 5,
+      "status": "COMPLETE",
+      "completed_at": "2025-01-15T11:10:00.000Z"
+    }
+  }
+}
+

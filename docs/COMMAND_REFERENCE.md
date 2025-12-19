@@ -169,36 +169,58 @@ uv run python -m src.main --run --players 4 --strategy llm
 
 Start each component separately for testing or development.
 
+**IMPORTANT: Follow this order per PDF Section 2.5 League Flow:**
+
+1. Start League Manager
+2. Start Referee and register (Step 1)
+3. Start Players and register (Step 2)
+4. Start League to create schedule (Step 3)
+5. Run rounds (Steps 4-6)
+
 **Terminal 1 - Start League Manager:**
 ```bash
-uv run python -m src.main --component league
+uv run python -m src.main --component league --debug
 # Starts on http://localhost:8000/mcp
 ```
 
-**Terminal 2 - Start Referee:**
+**Terminal 2 - Start Referee (with --register for Step 1):**
 ```bash
-uv run python -m src.main --component referee
+uv run python -m src.main --component referee --debug --register
 # Starts on http://localhost:8001/mcp
+# Auto-registers with League Manager (Step 1: Referee Registration)
 ```
 
-**Terminal 3 - Start Player 1:**
+**Terminal 3 - Start Player 1 (Step 2):**
 ```bash
 uv run python -m src.main --component player --name "AlphaBot" --port 8101 --register
 ```
 
-**Terminal 4 - Start Player 2:**
+**Terminal 4 - Start Player 2 (Step 2):**
 ```bash
 uv run python -m src.main --component player --name "BetaBot" --port 8102 --register
 ```
 
-**Terminal 5 - Start Player 3:**
+**Terminal 5 - Start Player 3 (Step 2):**
 ```bash
 uv run python -m src.main --component player --name "GammaBot" --port 8103 --register
 ```
 
-**Terminal 6 - Start Player 4:**
+**Terminal 6 - Start Player 4 (Step 2):**
 ```bash
 uv run python -m src.main --component player --name "DeltaBot" --port 8104 --register
+```
+
+**Terminal 7 - Control Commands (Steps 3-6):**
+```bash
+# Step 3: Start League (creates schedule)
+uv run python -m src.main --start-league
+
+# Step 4-5: Run rounds (executes matches)
+uv run python -m src.main --run-round       # Run next round
+uv run python -m src.main --run-all-rounds  # Run all rounds
+
+# Step 6: Get standings
+uv run python -m src.main --get-standings
 ```
 
 ### Mode 3: Docker Compose

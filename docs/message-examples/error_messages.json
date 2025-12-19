@@ -1,0 +1,56 @@
+{
+  "description": "Error Messages (Section 2.9)",
+  "league_error": {
+    "protocol": "league.v2",
+    "message_id": "ff0e8400-e29b-41d4-a716-446655440001",
+    "type": "LEAGUE_ERROR",
+    "sender": "league_manager:league_2025_even_odd",
+    "timestamp": "2025-01-15T10:05:00.000Z",
+    "payload": {
+      "error_code": "L002",
+      "error_name": "LEAGUE_FULL",
+      "message": "Maximum players (100) reached",
+      "details": {
+        "max_players": 100,
+        "current_players": 100
+      }
+    }
+  },
+  "game_error": {
+    "protocol": "league.v2",
+    "message_id": "ff0e8400-e29b-41d4-a716-446655440002",
+    "type": "GAME_ERROR",
+    "sender": "referee:REF01",
+    "timestamp": "2025-01-15T11:03:00.000Z",
+    "payload": {
+      "error_code": "G001",
+      "error_name": "INVALID_MOVE",
+      "message": "Choice must be between 1 and 5",
+      "game_id": "game_001",
+      "player_id": "P01",
+      "details": {
+        "submitted_value": 7,
+        "valid_range": [1, 5]
+      }
+    }
+  },
+  "timeout_error": {
+    "protocol": "league.v2",
+    "message_id": "ff0e8400-e29b-41d4-a716-446655440003",
+    "type": "GAME_ERROR",
+    "sender": "referee:REF01",
+    "timestamp": "2025-01-15T11:03:30.000Z",
+    "payload": {
+      "error_code": "G002",
+      "error_name": "TIMEOUT",
+      "message": "Player P01 did not respond within 30 seconds",
+      "game_id": "game_001",
+      "player_id": "P01",
+      "details": {
+        "timeout_seconds": 30,
+        "operation": "move_request"
+      }
+    }
+  }
+}
+

@@ -1,0 +1,31 @@
+{
+  "description": "Round Announcement (Section 4.3)",
+  "message": {
+    "protocol": "league.v2",
+    "message_id": "770e8400-e29b-41d4-a716-446655440001",
+    "type": "ROUND_ANNOUNCEMENT",
+    "sender": "league_manager:league_2025_even_odd",
+    "timestamp": "2025-01-15T11:00:00.000Z",
+    "payload": {
+      "league_id": "league_2025_even_odd",
+      "round_id": 1,
+      "matches": [
+        {
+          "match_id": "match_001",
+          "game_type": "even_odd",
+          "player_A_id": "P01",
+          "player_B_id": "P02",
+          "referee_endpoint": "http://localhost:8001/mcp"
+        },
+        {
+          "match_id": "match_002",
+          "game_type": "even_odd",
+          "player_A_id": "P03",
+          "player_B_id": "P04",
+          "referee_endpoint": "http://localhost:8001/mcp"
+        }
+      ]
+    }
+  }
+}
+

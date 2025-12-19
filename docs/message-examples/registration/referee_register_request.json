@@ -1,0 +1,36 @@
+{
+  "description": "Referee Registration Request/Response",
+  "request": {
+    "protocol": "league.v2",
+    "message_id": "550e8400-e29b-41d4-a716-446655440001",
+    "type": "REFEREE_REGISTER_REQUEST",
+    "sender": "referee:REF01",
+    "timestamp": "2025-01-15T10:00:00.000Z",
+    "payload": {
+      "referee_id": "REF01",
+      "display_name": "Primary Referee",
+      "endpoint": "http://localhost:8001/mcp",
+      "supported_games": ["even_odd"],
+      "capabilities": ["multi_game", "timeout_handling"]
+    }
+  },
+  "response": {
+    "protocol": "league.v2",
+    "message_id": "550e8400-e29b-41d4-a716-446655440002",
+    "type": "REFEREE_REGISTER_RESPONSE",
+    "sender": "league_manager:league_2025_even_odd",
+    "timestamp": "2025-01-15T10:00:00.100Z",
+    "correlation_id": "550e8400-e29b-41d4-a716-446655440001",
+    "payload": {
+      "status": "ACCEPTED",
+      "referee_id": "REF01",
+      "auth_token": "ref_token_abc123",
+      "league_info": {
+        "league_id": "league_2025_even_odd",
+        "name": "Even/Odd League 2025",
+        "game_type": "even_odd"
+      }
+    }
+  }
+}
+

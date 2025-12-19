@@ -1,0 +1,46 @@
+{
+  "description": "Game Invitation and Response (Section 3.2)",
+  "invite": {
+    "protocol": "league.v2",
+    "message_id": "880e8400-e29b-41d4-a716-446655440001",
+    "type": "GAME_INVITE",
+    "sender": "referee:REF01",
+    "timestamp": "2025-01-15T11:01:00.000Z",
+    "payload": {
+      "game_id": "game_001",
+      "match_id": "match_001",
+      "game_type": "even_odd",
+      "opponent_id": "P02",
+      "your_role": "ODD",
+      "total_rounds": 5
+    }
+  },
+  "response_accept": {
+    "protocol": "league.v2",
+    "message_id": "880e8400-e29b-41d4-a716-446655440002",
+    "type": "GAME_INVITE_RESPONSE",
+    "sender": "player:P01",
+    "timestamp": "2025-01-15T11:01:00.500Z",
+    "correlation_id": "880e8400-e29b-41d4-a716-446655440001",
+    "payload": {
+      "game_id": "game_001",
+      "accepted": true,
+      "player_id": "P01"
+    }
+  },
+  "response_decline": {
+    "protocol": "league.v2",
+    "message_id": "880e8400-e29b-41d4-a716-446655440003",
+    "type": "GAME_INVITE_RESPONSE",
+    "sender": "player:P01",
+    "timestamp": "2025-01-15T11:01:00.500Z",
+    "correlation_id": "880e8400-e29b-41d4-a716-446655440001",
+    "payload": {
+      "game_id": "game_001",
+      "accepted": false,
+      "player_id": "P01",
+      "reason": "Player unavailable"
+    }
+  }
+}
+

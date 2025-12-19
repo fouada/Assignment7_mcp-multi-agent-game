@@ -1,0 +1,65 @@
+{
+  "description": "CHOOSE_PARITY_CALL and CHOOSE_PARITY_RESPONSE (Section 8.7.3)",
+  "request_to_P01": {
+    "jsonrpc": "2.0",
+    "method": "choose_parity",
+    "params": {
+      "protocol": "league.v2",
+      "message_type": "CHOOSE_PARITY_CALL",
+      "sender": "referee:REF01",
+      "timestamp": "2025-01-15T10:15:05Z",
+      "conversation_id": "conv-r1m1-001",
+      "auth_token": "tok-ref01-abc123",
+      "match_id": "R1M1",
+      "player_id": "P01",
+      "game_type": "even_odd",
+      "context": {
+        "opponent_id": "P02",
+        "round_id": 1,
+        "your_standings": {
+          "wins": 0,
+          "losses": 0,
+          "draws": 0
+        }
+      },
+      "deadline": "2025-01-15T10:15:35Z"
+    },
+    "id": 1101
+  },
+  "response_from_P01": {
+    "jsonrpc": "2.0",
+    "result": {
+      "protocol": "league.v2",
+      "message_type": "CHOOSE_PARITY_RESPONSE",
+      "sender": "player:P01",
+      "timestamp": "2025-01-15T10:15:10Z",
+      "conversation_id": "conv-r1m1-001",
+      "auth_token": "tok-p01-xyz789",
+      "match_id": "R1M1",
+      "player_id": "P01",
+      "parity_choice": "even"
+    },
+    "id": 1101
+  },
+  "response_from_P02": {
+    "jsonrpc": "2.0",
+    "result": {
+      "protocol": "league.v2",
+      "message_type": "CHOOSE_PARITY_RESPONSE",
+      "sender": "player:P02",
+      "timestamp": "2025-01-15T10:15:12Z",
+      "conversation_id": "conv-r1m1-001",
+      "auth_token": "tok-p02-def456",
+      "match_id": "R1M1",
+      "player_id": "P02",
+      "parity_choice": "odd"
+    },
+    "id": 1102
+  },
+  "flow_notes": {
+    "timeout": "30 seconds",
+    "valid_choices": ["even", "odd"],
+    "next_step": "After both responses received, move to DRAWING_NUMBER state"
+  }
+}
+

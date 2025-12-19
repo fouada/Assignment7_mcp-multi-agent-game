@@ -17,12 +17,12 @@ class TestProtocol:
     
     def test_protocol_version(self):
         """Test protocol version constant."""
-        assert PROTOCOL_VERSION == "league.v1"
+        assert PROTOCOL_VERSION == "league.v2"
     
     def test_validate_valid_message(self):
         """Test validation of valid message."""
         message = {
-            "protocol": "league.v1",
+            "protocol": "league.v2",
             "message_type": "GAME_START",
             "league_id": "test_league",
             "conversation_id": "123",
@@ -37,7 +37,7 @@ class TestProtocol:
     def test_validate_invalid_protocol(self):
         """Test validation with wrong protocol version."""
         message = {
-            "protocol": "league.v2",
+            "protocol": "league.v1",  # Old version should be invalid
             "message_type": "GAME_START",
             "league_id": "test_league",
             "conversation_id": "123",
@@ -47,12 +47,12 @@ class TestProtocol:
         
         is_valid, error = validate_message(message)
         assert is_valid is False
-        assert "league.v1" in error
+        assert "league.v2" in error  # Should mention expected version
     
     def test_validate_missing_field(self):
         """Test validation with missing required field."""
         message = {
-            "protocol": "league.v1",
+            "protocol": "league.v2",
             "message_type": "GAME_START",
             # Missing league_id, conversation_id, sender, timestamp
         }
@@ -63,7 +63,7 @@ class TestProtocol:
     def test_validate_invalid_message_type(self):
         """Test validation with invalid message type."""
         message = {
-            "protocol": "league.v1",
+            "protocol": "league.v2",
             "message_type": "INVALID_TYPE",
             "league_id": "test_league",
             "conversation_id": "123",
@@ -197,6 +197,247 @@ class TestMessageFactory:
         assert msg["message_type"] == "ERROR"
         assert msg["error_code"] == "INVALID_MOVE"
         assert msg["recoverable"] is True
+    
+    def test_game_invite_response(self):
+        """Test game invite response creation."""
+        msg = self.factory.game_invite_response(
+            game_id="game_123",
+            accepted=True,
+        )
+        
+        assert msg["message_type"] == "GAME_INVITE_RESPONSE"
+        assert msg["game_id"] == "game_123"
+        assert msg["accepted"] is True
+    
+    def test_game_invite_response_declined(self):
+        """Test game invite response declined."""
+        msg = self.factory.game_invite_response(
+            game_id="game_123",
+            accepted=False,
+            reason="Player busy",
+        )
+        
+        assert msg["message_type"] == "GAME_INVITE_RESPONSE"
+        assert msg["accepted"] is False
+        assert msg["reason"] == "Player busy"
+    
+    def test_match_result(self):
+        """Test match result creation (legacy format)."""
+        msg = self.factory.match_result(
+            match_id="R1M1",
+            winner_id="P01",
+            player_A_id="P01",
+            player_A_score=3,
+            player_B_id="P02",
+            player_B_score=2,
+            rounds_played=5,
+        )
+        
+        assert msg["message_type"] == "MATCH_RESULT_REPORT"
+        assert msg["match_id"] == "R1M1"
+        assert msg["winner_id"] == "P01"
+        assert msg["player_A_score"] == 3
+        assert msg["player_B_score"] == 2
+    
+    def test_game_over(self):
+        """Test GAME_OVER message creation (Section 8.7.5)."""
+        msg = self.factory.game_over(
+            match_id="R1M1",
+            game_type="even_odd",
+            status="WIN",
+            winner_player_id="P01",
+            drawn_number=8,
+            number_parity="even",
+            choices={"P01": "even", "P02": "odd"},
+            reason="P01 chose even, number was 8 (even)",
+        )
+        
+        assert msg["message_type"] == "GAME_OVER"
+        assert msg["match_id"] == "R1M1"
+        assert msg["game_type"] == "even_odd"
+        assert msg["game_result"]["status"] == "WIN"
+        assert msg["game_result"]["winner_player_id"] == "P01"
+        assert msg["game_result"]["drawn_number"] == 8
+        assert msg["game_result"]["number_parity"] == "even"
+        assert msg["game_result"]["choices"]["P01"] == "even"
+    
+    def test_match_result_report(self):
+        """Test MATCH_RESULT_REPORT message creation (Section 8.7.6)."""
+        msg = self.factory.match_result_report(
+            league_id="league_2025_even_odd",
+            round_id=1,
+            match_id="R1M1",
+            game_type="even_odd",
+            winner_id="P01",
+            score={"P01": 3, "P02": 0},
+            details={"drawn_number": 8, "choices": {"P01": "even", "P02": "odd"}},
+        )
+        
+        assert msg["message_type"] == "MATCH_RESULT_REPORT"
+        assert msg["league_id"] == "league_2025_even_odd"
+        assert msg["round_id"] == 1
+        assert msg["match_id"] == "R1M1"
+        assert msg["game_type"] == "even_odd"
+        assert msg["result"]["winner"] == "P01"
+        assert msg["result"]["score"]["P01"] == 3
+        assert msg["result"]["details"]["drawn_number"] == 8
+    
+    def test_round_announcement(self):
+        """Test round announcement creation."""
+        matches = [
+            {
+                "match_id": "R1M1",
+                "game_type": "even_odd",
+                "player_A_id": "P01",
+                "player_B_id": "P02",
+                "referee_endpoint": "http://localhost:8001/mcp",
+            }
+        ]
+        msg = self.factory.round_announcement(
+            round_id=1,
+            matches=matches,
+        )
+        
+        assert msg["message_type"] == "ROUND_ANNOUNCEMENT"
+        assert msg["round_id"] == 1
+        assert len(msg["matches"]) == 1
+        assert msg["matches"][0]["game_type"] == "even_odd"
+    
+    def test_standings_update(self):
+        """Test standings update creation."""
+        standings = [
+            {
+                "rank": 1,
+                "player_id": "P01",
+                "display_name": "Player 1",
+                "played": 2,
+                "wins": 2,
+                "draws": 0,
+                "losses": 0,
+                "points": 6,
+            }
+        ]
+        msg = self.factory.standings_update(
+            round_id=1,
+            standings=standings,
+        )
+        
+        assert msg["message_type"] == "LEAGUE_STANDINGS_UPDATE"
+        assert msg["round_id"] == 1
+        assert len(msg["standings"]) == 1
+        assert msg["standings"][0]["played"] == 2
+    
+    def test_league_query(self):
+        """Test league query message creation (Section 8.11.1)."""
+        msg = self.factory.league_query(
+            league_id="league_2025_even_odd",
+            query_type="GET_STANDINGS",
+            conversation_id="conv-001",
+            auth_token="tok-xyz",
+        )
+        
+        assert msg["message_type"] == "LEAGUE_QUERY"
+        assert msg["league_id"] == "league_2025_even_odd"
+        assert msg["query_type"] == "GET_STANDINGS"
+        assert msg["conversation_id"] == "conv-001"
+        assert msg["auth_token"] == "tok-xyz"
+    
+    def test_league_query_minimal(self):
+        """Test league query with minimal params."""
+        msg = self.factory.league_query(
+            league_id="league_2025",
+            query_type="GET_SCHEDULE",
+        )
+        
+        assert msg["message_type"] == "LEAGUE_QUERY"
+        assert msg["league_id"] == "league_2025"
+        assert msg["query_type"] == "GET_SCHEDULE"
+        # conversation_id is generated by _base_fields
+        assert "conversation_id" in msg
+        assert "auth_token" not in msg
+    
+    def test_league_error(self):
+        """Test league error message creation."""
+        msg = self.factory.league_error(
+            error_code="E007",
+            error_name="ALREADY_REGISTERED",
+            error_description="Player already registered",
+            retryable=False,
+        )
+        
+        assert msg["message_type"] == "LEAGUE_ERROR"
+        assert msg["error_code"] == "E007"
+        assert msg["error_name"] == "ALREADY_REGISTERED"
+        assert msg["retryable"] is False
+    
+    def test_game_error(self):
+        """Test game error message creation (Section 8.10.2)."""
+        msg = self.factory.game_error(
+            error_code="E001",
+            error_description="TIMEOUT_ERROR",
+            match_id="R1M1",
+            affected_player="P02",
+            action_required="CHOOSE_PARITY_RESPONSE",
+            retry_count=0,
+            max_retries=3,
+            consequence="Technical loss if no response after retries",
+        )
+        
+        assert msg["message_type"] == "GAME_ERROR"
+        assert msg["error_code"] == "E001"
+        assert msg["error_description"] == "TIMEOUT_ERROR"
+        assert msg["match_id"] == "R1M1"
+        assert msg["affected_player"] == "P02"
+        assert msg["action_required"] == "CHOOSE_PARITY_RESPONSE"
+        assert msg["retry_count"] == 0
+        assert msg["max_retries"] == 3
+    
+    def test_round_start(self):
+        """Test round start message creation (Section 4.3)."""
+        matches = [
+            {"match_id": "R1M1", "player_A_id": "P01", "player_B_id": "P02"},
+        ]
+        msg = self.factory.round_start(
+            round_id=1,
+            total_rounds=3,
+            matches=matches,
+        )
+        
+        assert msg["message_type"] == "ROUND_START"
+        assert msg["round_id"] == 1
+        assert msg["total_rounds"] == 3
+        assert len(msg["matches"]) == 1
+    
+    def test_round_end(self):
+        """Test round end message creation (Section 4.3)."""
+        results = [
+            {"match_id": "R1M1", "winner_id": "P01", "player_A_score": 3, "player_B_score": 2},
+        ]
+        msg = self.factory.round_end(
+            round_id=1,
+            results=results,
+            next_round_id=2,
+        )
+        
+        assert msg["message_type"] == "ROUND_END"
+        assert msg["round_id"] == 1
+        assert len(msg["results"]) == 1
+        assert msg["next_round_id"] == 2
+    
+    def test_round_result(self):
+        """Test round result message creation."""
+        results = [
+            {"match_id": "R1M1", "winner_id": "P01"},
+            {"match_id": "R1M2", "winner_id": "P04"},
+        ]
+        msg = self.factory.round_result(
+            round_id=1,
+            match_results=results,
+        )
+        
+        assert msg["message_type"] == "ROUND_RESULT"
+        assert msg["round_id"] == 1
+        assert len(msg["results"]) == 2
 
 
 class TestCreateMessage:

@@ -929,8 +929,9 @@ flowchart TD
     RUN_MODE -->|Docker| DOCKER["docker-compose up --build"]
     
     MANUAL --> T1["Terminal 1:<br/>--component league"]
-    MANUAL --> T2["Terminal 2:<br/>--component referee"]
+    MANUAL --> T2["Terminal 2:<br/>--component referee --register"]
     MANUAL --> T3["Terminal 3-N:<br/>--component player --register"]
+    T3 --> CTRL["Terminal 7:<br/>--start-league<br/>--run-all-rounds"]
     
     FULL --> WATCH[📊 Watch League Progress]
     T1 --> WATCH
@@ -1004,24 +1005,32 @@ uv run python -m src.main --run --players 4
 
 #### Option 2: Manual (Multi-Terminal)
 
+**Follow this order per PDF Section 2.5 (League Flow):**
+
 ```bash
 # Terminal 1: Start League Manager
 uv run python -m src.main --component league --debug
 
-# Terminal 2: Start Referee
-uv run python -m src.main --component referee --debug
+# Terminal 2: Start Referee (Step 1: Referee Registration)
+uv run python -m src.main --component referee --debug --register
 
-# Terminal 3: Start Player 1
+# Terminal 3: Start Player 1 (Step 2: Player Registration)
 uv run python -m src.main --component player --name "AlphaBot" --port 8101 --register
 
-# Terminal 4: Start Player 2
+# Terminal 4: Start Player 2 (Step 2: Player Registration)
 uv run python -m src.main --component player --name "BetaBot" --port 8102 --register
 
-# Terminal 5: Start Player 3
+# Terminal 5: Start Player 3 (Step 2: Player Registration)
 uv run python -m src.main --component player --name "GammaBot" --port 8103 --register
 
-# Terminal 6: Start Player 4
+# Terminal 6: Start Player 4 (Step 2: Player Registration)
 uv run python -m src.main --component player --name "DeltaBot" --port 8104 --register
+
+# Terminal 7: Control Commands (Steps 3-6)
+uv run python -m src.main --start-league      # Step 3: Create Schedule
+uv run python -m src.main --run-round         # Step 4-5: Run Next Round
+uv run python -m src.main --run-all-rounds    # Run All Remaining Rounds
+uv run python -m src.main --get-standings     # Step 6: Get Standings
 ```
 
 #### Option 3: Docker

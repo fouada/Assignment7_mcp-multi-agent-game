@@ -1,0 +1,57 @@
+{
+  "description": "League Standings Update (Section 2.5.6)",
+  "message": {
+    "protocol": "league.v2",
+    "message_id": "ee0e8400-e29b-41d4-a716-446655440001",
+    "type": "LEAGUE_STANDINGS_UPDATE",
+    "sender": "league_manager:league_2025_even_odd",
+    "timestamp": "2025-01-15T12:00:00.000Z",
+    "payload": {
+      "league_id": "league_2025_even_odd",
+      "round_id": 1,
+      "standings": [
+        {
+          "rank": 1,
+          "player_id": "P01",
+          "display_name": "Alice",
+          "played": 1,
+          "wins": 1,
+          "draws": 0,
+          "losses": 0,
+          "points": 3
+        },
+        {
+          "rank": 2,
+          "player_id": "P03",
+          "display_name": "Charlie",
+          "played": 1,
+          "wins": 1,
+          "draws": 0,
+          "losses": 0,
+          "points": 3
+        },
+        {
+          "rank": 3,
+          "player_id": "P02",
+          "display_name": "Bob",
+          "played": 1,
+          "wins": 0,
+          "draws": 0,
+          "losses": 1,
+          "points": 0
+        },
+        {
+          "rank": 4,
+          "player_id": "P04",
+          "display_name": "Diana",
+          "played": 1,
+          "wins": 0,
+          "draws": 0,
+          "losses": 1,
+          "points": 0
+        }
+      ]
+    }
+  }
+}
+

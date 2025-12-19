@@ -175,26 +175,40 @@ class Config:
             data = json.load(f)
         return cls.from_dict(data)
     
+    @staticmethod
+    def _filter_config_data(data: dict, config_class: type) -> dict:
+        """Filter config data to only include fields that the config class accepts."""
+        import dataclasses
+        valid_fields = {f.name for f in dataclasses.fields(config_class)}
+        return {k: v for k, v in data.items() if k in valid_fields}
+    
     @classmethod
     def from_dict(cls, data: dict) -> "Config":
         """Create config from dictionary."""
         config = cls()
         
         if "league_manager" in data:
-            config.league_manager = ServerConfig(**data["league_manager"])
+            filtered = cls._filter_config_data(data["league_manager"], ServerConfig)
+            config.league_manager = ServerConfig(**filtered)
         if "referee" in data:
-            config.referee = ServerConfig(**data["referee"])
+            filtered = cls._filter_config_data(data["referee"], ServerConfig)
+            config.referee = ServerConfig(**filtered)
         if "players" in data:
             for pid, pdata in data["players"].items():
-                config.players[pid] = ServerConfig(**pdata)
+                filtered = cls._filter_config_data(pdata, ServerConfig)
+                config.players[pid] = ServerConfig(**filtered)
         if "llm" in data:
-            config.llm = LLMConfig(**data["llm"])
+            filtered = cls._filter_config_data(data["llm"], LLMConfig)
+            config.llm = LLMConfig(**filtered)
         if "game" in data:
-            config.game = GameConfig(**data["game"])
+            filtered = cls._filter_config_data(data["game"], GameConfig)
+            config.game = GameConfig(**filtered)
         if "league" in data:
-            config.league = LeagueConfig(**data["league"])
+            filtered = cls._filter_config_data(data["league"], LeagueConfig)
+            config.league = LeagueConfig(**filtered)
         if "retry" in data:
-            config.retry = RetryConfig(**data["retry"])
+            filtered = cls._filter_config_data(data["retry"], RetryConfig)
+            config.retry = RetryConfig(**filtered)
         if "log_level" in data:
             config.log_level = data["log_level"]
         if "debug" in data:

@@ -1,0 +1,36 @@
+{
+  "description": "Player Registration Request/Response",
+  "request": {
+    "protocol": "league.v2",
+    "message_id": "660e8400-e29b-41d4-a716-446655440001",
+    "type": "PLAYER_REGISTER_REQUEST",
+    "sender": "player:P01",
+    "timestamp": "2025-01-15T10:05:00.000Z",
+    "payload": {
+      "player_id": "P01",
+      "display_name": "Alice",
+      "endpoint": "http://localhost:8100/mcp",
+      "strategy": "random"
+    }
+  },
+  "response": {
+    "protocol": "league.v2",
+    "message_id": "660e8400-e29b-41d4-a716-446655440002",
+    "type": "PLAYER_REGISTER_RESPONSE",
+    "sender": "league_manager:league_2025_even_odd",
+    "timestamp": "2025-01-15T10:05:00.150Z",
+    "correlation_id": "660e8400-e29b-41d4-a716-446655440001",
+    "payload": {
+      "status": "ACCEPTED",
+      "player_id": "P01",
+      "auth_token": "player_token_xyz789",
+      "league_info": {
+        "league_id": "league_2025_even_odd",
+        "name": "Even/Odd League 2025",
+        "game_type": "even_odd",
+        "total_players": 1
+      }
+    }
+  }
+}
+

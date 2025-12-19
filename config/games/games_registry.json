@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "games": {
+    "even_odd": {
+      "game_type": "even_odd",
+      "display_name": "Even/Odd",
+      "description": "Two players choose numbers 1-10. Sum determines winner based on odd/even role (Section 8.7.4).",
+      "rules_module": "src.game.odd_even",
+      "max_round_time_sec": 30,
+      "min_players": 2,
+      "max_players": 2,
+      "version": "1.0.0",
+      "rules": {
+        "min_value": 1,
+        "max_value": 10,
+        "roles": ["odd", "even"]
+      }
+    }
+  },
+  "default_game": "even_odd"
+}

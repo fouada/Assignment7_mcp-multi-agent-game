@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0.0",
+  "league_manager": {
+    "host": "localhost",
+    "port": 8000,
+    "endpoint": "/mcp",
+    "description": "Central league management server",
+    "capabilities": ["registration", "scheduling", "standings"]
+  },
+  "referees": {
+    "REF01": {
+      "referee_id": "REF01",
+      "display_name": "Primary Referee",
+      "host": "localhost",
+      "port": 8001,
+      "endpoint": "/mcp",
+      "game_types": ["even_odd"],
+      "max_concurrent_matches": 2
+    },
+    "REF02": {
+      "referee_id": "REF02",
+      "display_name": "Secondary Referee",
+      "host": "localhost",
+      "port": 8002,
+      "endpoint": "/mcp",
+      "game_types": ["even_odd"],
+      "max_concurrent_matches": 2
+    }
+  },
+  "players": {
+    "port_range": {
+      "start": 8100,
+      "end": 8199
+    },
+    "defaults": {
+      "endpoint": "/mcp",
+      "strategy": "random",
+      "game_types": ["even_odd"]
+    },
+    "registered": {
+      "P01": {
+        "player_id": "P01",
+        "display_name": "Player_1",
+        "port": 8101
+      },
+      "P02": {
+        "player_id": "P02",
+        "display_name": "Player_2",
+        "port": 8102
+      },
+      "P03": {
+        "player_id": "P03",
+        "display_name": "Player_3",
+        "port": 8103
+      },
+      "P04": {
+        "player_id": "P04",
+        "display_name": "Player_4",
+        "port": 8104
+      }
+    }
+  }
+}

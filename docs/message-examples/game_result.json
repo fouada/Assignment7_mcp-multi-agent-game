@@ -1,0 +1,59 @@
+{
+  "description": "Game Result (Section 3.2.6)",
+  "message": {
+    "protocol": "league.v2",
+    "message_id": "cc0e8400-e29b-41d4-a716-446655440001",
+    "type": "GAME_RESULT",
+    "sender": "referee:REF01",
+    "timestamp": "2025-01-15T11:10:00.000Z",
+    "payload": {
+      "game_id": "game_001",
+      "match_id": "match_001",
+      "status": "COMPLETE",
+      "winner_id": "P01",
+      "final_score": {
+        "P01": 3,
+        "P02": 2
+      },
+      "rounds_played": 5,
+      "history": [
+        {
+          "round": 1,
+          "player_A_choice": 3,
+          "player_B_choice": 4,
+          "sum": 7,
+          "winner": "P01"
+        },
+        {
+          "round": 2,
+          "player_A_choice": 2,
+          "player_B_choice": 2,
+          "sum": 4,
+          "winner": "P02"
+        },
+        {
+          "round": 3,
+          "player_A_choice": 5,
+          "player_B_choice": 4,
+          "sum": 9,
+          "winner": "P01"
+        },
+        {
+          "round": 4,
+          "player_A_choice": 1,
+          "player_B_choice": 3,
+          "sum": 4,
+          "winner": "P02"
+        },
+        {
+          "round": 5,
+          "player_A_choice": 4,
+          "player_B_choice": 5,
+          "sum": 9,
+          "winner": "P01"
+        }
+      ]
+    }
+  }
+}
+

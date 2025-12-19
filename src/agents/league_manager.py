@@ -46,19 +46,25 @@ class LeagueState(Enum):
 
 @dataclass
 class RegisteredReferee:
-    """A registered referee in the league."""
+    """A registered referee in the league (Section 8.3.1)."""
     
     referee_id: str
     endpoint: str
+    display_name: str = ""  # Human-readable name (e.g., "Referee_Alpha")
     auth_token: str = ""  # Authentication token for this referee
     version: str = "1.0.0"
+    game_types: List[str] = field(default_factory=lambda: ["even_odd"])
+    max_concurrent_matches: int = 2  # Max matches referee can handle
     registered_at: datetime = field(default_factory=datetime.utcnow)
     is_available: bool = True  # Available to referee matches
     
     def to_dict(self) -> Dict[str, Any]:
         return {
             "referee_id": self.referee_id,
+            "display_name": self.display_name,
             "endpoint": self.endpoint,
+            "game_types": self.game_types,
+            "max_concurrent_matches": self.max_concurrent_matches,
             "is_available": self.is_available,
         }
 
@@ -76,9 +82,10 @@ class RegisteredPlayer:
     registered_at: datetime = field(default_factory=datetime.utcnow)
     
     # Stats
+    played: int = 0  # Games played
     wins: int = 0
-    losses: int = 0
     draws: int = 0
+    losses: int = 0
     points: int = 0
     
     def to_dict(self) -> Dict[str, Any]:
@@ -86,20 +93,24 @@ class RegisteredPlayer:
             "player_id": self.player_id,
             "display_name": self.display_name,
             "endpoint": self.endpoint,
+            "played": self.played,
             "wins": self.wins,
-            "losses": self.losses,
             "draws": self.draws,
+            "losses": self.losses,
             "points": self.points,
         }
     
     def record_win(self) -> None:
+        self.played += 1
         self.wins += 1
         self.points += 3
     
     def record_loss(self) -> None:
+        self.played += 1
         self.losses += 1
     
     def record_draw(self) -> None:
+        self.played += 1
         self.draws += 1
         self.points += 1
 
@@ -202,6 +213,20 @@ class LeagueManager(BaseGameServer):
             return await self._start_league()
         
         @self.tool(
+            "start_next_round",
+            "Start the next round of matches",
+        )
+        async def start_next_round_tool(params: Dict) -> Dict:
+            return await self.start_next_round()
+        
+        @self.tool(
+            "run_all_rounds",
+            "Run all remaining rounds automatically",
+        )
+        async def run_all_rounds_tool(params: Dict) -> Dict:
+            return await self._run_all_rounds()
+        
+        @self.tool(
             "report_match_result",
             "Report match result from referee",
             {
@@ -224,6 +249,42 @@ class LeagueManager(BaseGameServer):
         )
         async def get_players(params: Dict) -> Dict:
             return {"players": [p.to_dict() for p in self._players.values()]}
+        
+        @self.tool(
+            "get_player_info",
+            "Get info for a specific player (Section 8.11 - GET_PLAYER_INFO)",
+            {
+                "type": "object",
+                "properties": {
+                    "player_id": {"type": "string"},
+                },
+                "required": ["player_id"],
+            }
+        )
+        async def get_player_info(params: Dict) -> Dict:
+            player_id = params.get("player_id")
+            player = self._players.get(player_id)
+            if not player:
+                return {"error": f"Player {player_id} not found"}
+            return {"player": player.to_dict()}
+        
+        @self.tool(
+            "get_round_status",
+            "Get current round status (Section 8.11 - GET_ROUND_STATUS)",
+        )
+        async def get_round_status(params: Dict) -> Dict:
+            return {
+                "league_id": self.league_id,
+                "state": self.state.value,
+                "current_round": self.current_round,
+                "total_rounds": len(self._schedule),
+                "rounds_completed": self.current_round - 1 if self.current_round > 0 else 0,
+                "current_round_matches": len(self._current_round_matches),
+                "matches_completed": sum(
+                    1 for m in self._current_round_matches 
+                    if m.state == MatchState.COMPLETED
+                ),
+            }
         
         @self.tool(
             "register_referee",
@@ -291,17 +352,21 @@ class LeagueManager(BaseGameServer):
             return self._get_schedule()
     
     async def _handle_referee_registration(self, params: Dict) -> Dict:
-        """Handle referee registration (Step 1 of league flow)."""
+        """Handle referee registration (Section 8.3 - Step 1 of league flow)."""
         referee_id = params.get("referee_id", "")
         endpoint = params.get("endpoint", "")
+        display_name = params.get("display_name", f"Referee_{referee_id}")
         version = params.get("version", "1.0.0")
+        game_types = params.get("game_types", ["even_odd"])
+        max_concurrent_matches = params.get("max_concurrent_matches", 2)
         
-        # Validate state
-        if self.state != LeagueState.REGISTRATION:
+        # Allow referee registration during REGISTRATION, READY, or IN_PROGRESS states
+        # (Referees are essential for running matches)
+        if self.state == LeagueState.COMPLETED:
             return self.message_factory.referee_register_response(
                 status=RegistrationStatus.REJECTED.value,
                 referee_id="",
-                reason="League registration is closed",
+                reason="League has completed",
             )
         
         # Check if referee already registered
@@ -315,25 +380,31 @@ class LeagueManager(BaseGameServer):
         # Generate auth token for referee
         auth_token = generate_auth_token(referee_id, self.league_id)
         
-        # Create referee
+        # Create referee (Section 8.3.1)
         referee = RegisteredReferee(
             referee_id=referee_id,
             endpoint=endpoint,
+            display_name=display_name,
             auth_token=auth_token,
             version=version,
+            game_types=game_types,
+            max_concurrent_matches=max_concurrent_matches,
         )
         
         self._referees[referee_id] = referee
         
         logger.info(
-            f"Referee registered: {referee_id}",
+            f"Referee registered: {referee_id} ({display_name})",
             endpoint=endpoint,
+            game_types=game_types,
+            max_concurrent_matches=max_concurrent_matches,
         )
         
         return self.message_factory.referee_register_response(
             status=RegistrationStatus.ACCEPTED.value,
             referee_id=referee_id,
             auth_token=auth_token,
+            league_id=self.league_id,
         )
     
     async def _handle_registration(self, params: Dict) -> Dict:
@@ -492,6 +563,7 @@ class LeagueManager(BaseGameServer):
             # Assign referee
             referee_id = self._assign_referee_to_match(i)
             match.referee_id = referee_id
+            referee_endpoint = self._referees[referee_id].endpoint if referee_id else None
             
             # Store match
             self._matches[match.match_id] = match
@@ -499,25 +571,36 @@ class LeagueManager(BaseGameServer):
             # Prepare match info for announcement
             round_matches_info.append({
                 "match_id": match.match_id,
-                "player1_id": match.player1.player_id,
-                "player1_name": match.player1.name,
-                "player2_id": match.player2.player_id,
-                "player2_name": match.player2.name,
-                "referee_id": referee_id,
-                "referee_endpoint": self._referees[referee_id].endpoint if referee_id else None,
+                "game_type": "even_odd",
+                "player_A_id": match.player1.player_id,
+                "player_B_id": match.player2.player_id,
+                "referee_endpoint": referee_endpoint,
+                # Also include detailed info for internal use
+                "_player_A_endpoint": match.player1.endpoint,
+                "_player_B_endpoint": match.player2.endpoint,
+                "_player_A_name": match.player1.display_name,
+                "_player_B_name": match.player2.display_name,
             })
         
         logger.info(
             f"Round {self.current_round} announced",
             matches=len(self._current_round_matches),
-            referees_assigned=len([m for m in round_matches_info if m["referee_id"]]),
+            referees_assigned=len([m for m in round_matches_info if m["referee_endpoint"]]),
         )
         
         # Create ROUND_ANNOUNCEMENT message
         announcement = self.message_factory.round_announcement(
-            round_number=self.current_round,
+            round_id=self.current_round,
             matches=round_matches_info,
         )
+        
+        # Execute matches through referee (Step 5: Game Management)
+        import asyncio
+        for match_info in round_matches_info:
+            await self._send_match_to_referee(match_info)
+        
+        # Wait for matches to complete
+        await asyncio.sleep(2)
         
         return {
             "success": True,
@@ -525,6 +608,135 @@ class LeagueManager(BaseGameServer):
             "announcement": announcement,
             "matches": round_matches_info,
         }
+    
+    async def _run_all_rounds(self) -> Dict[str, Any]:
+        """
+        Run all remaining rounds automatically.
+        
+        This orchestrates the full league competition by:
+        1. Starting each round
+        2. Sending match assignments to referee
+        3. Waiting for match completion
+        4. Moving to next round
+        """
+        import asyncio
+        
+        results = []
+        rounds_completed = 0
+        
+        while self.current_round < len(self._schedule):
+            # Start next round
+            round_result = await self.start_next_round()
+            
+            if not round_result.get("success"):
+                if round_result.get("league_complete"):
+                    break
+                return {
+                    "success": False,
+                    "error": f"Failed to start round: {round_result.get('error')}",
+                    "rounds_completed": rounds_completed,
+                }
+            
+            # Execute matches through referee
+            matches = round_result.get("matches", [])
+            for match_info in matches:
+                await self._send_match_to_referee(match_info)
+            
+            # Wait for matches to complete (simple timeout-based approach)
+            await asyncio.sleep(2)
+            
+            rounds_completed += 1
+            results.append({
+                "round": round_result.get("round"),
+                "matches": len(matches),
+            })
+        
+        self.state = LeagueState.COMPLETED
+        
+        # Get final standings
+        final_standings = self._get_standings()
+        
+        # Determine champion (rank 1)
+        champion = None
+        simplified_standings = []
+        for standing in final_standings["standings"]:
+            simplified_standings.append({
+                "rank": standing["rank"],
+                "player_id": standing["player_id"],
+                "points": standing["points"],
+            })
+            if standing["rank"] == 1:
+                champion = {
+                    "player_id": standing["player_id"],
+                    "display_name": standing["display_name"],
+                    "points": standing["points"],
+                }
+        
+        # Calculate total matches
+        total_matches = sum(len(r) for r in self._schedule)
+        
+        # Create LEAGUE_COMPLETED message (Section 8.9)
+        league_completed_message = self.message_factory.league_completed(
+            total_rounds=len(self._schedule),
+            total_matches=total_matches,
+            champion=champion or {"player_id": "unknown", "display_name": "Unknown", "points": 0},
+            final_standings=simplified_standings,
+        )
+        
+        logger.info(
+            f"League completed",
+            total_rounds=len(self._schedule),
+            total_matches=total_matches,
+            champion=champion,
+        )
+        
+        return {
+            "success": True,
+            "rounds_completed": rounds_completed,
+            "total_rounds": len(self._schedule),
+            "total_matches": total_matches,
+            "results": results,
+            "standings": final_standings,
+            "champion": champion,
+            "league_completed_message": league_completed_message,
+        }
+    
+    async def _send_match_to_referee(self, match_info: Dict) -> None:
+        """Send match assignment to referee."""
+        referee_endpoint = match_info.get("referee_endpoint")
+        if not referee_endpoint:
+            logger.warning(f"No referee assigned for match {match_info.get('match_id')}")
+            return
+        
+        # Get player IDs from match info
+        player_a_id = match_info.get("player_A_id")
+        player_b_id = match_info.get("player_B_id")
+        
+        try:
+            # Use MCP client to call referee's start_match tool
+            await self._client.connect("referee", referee_endpoint)
+            
+            result = await self._client.call_tool(
+                "referee",
+                "start_match",
+                {
+                    "match_id": match_info.get("match_id"),
+                    "player1_id": player_a_id,
+                    "player1_endpoint": self._players[player_a_id].endpoint,
+                    "player2_id": player_b_id,
+                    "player2_endpoint": self._players[player_b_id].endpoint,
+                    "rounds": 5,
+                }
+            )
+            
+            logger.info(
+                f"Match sent to referee",
+                match_id=match_info.get("match_id"),
+                referee_endpoint=referee_endpoint,
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to send match to referee: {e}")
     
     async def _handle_match_result(self, params: Dict) -> Dict[str, Any]:
         """Handle match result from referee."""
@@ -591,21 +803,33 @@ class LeagueManager(BaseGameServer):
         """
         Step 6: Publish standings update to all players after round completion.
         
-        Creates and returns a STANDINGS_UPDATE message that should be
-        broadcast to all registered players.
+        Creates LEAGUE_STANDINGS_UPDATE and ROUND_COMPLETED messages (Section 8.8-8.9).
         """
         standings = self._get_standings()
         
-        # Create STANDINGS_UPDATE message
+        # Create LEAGUE_STANDINGS_UPDATE message (Section 8.8)
         standings_message = self.message_factory.standings_update(
-            round_number=self.current_round,
-            total_rounds=len(self._schedule),
+            round_id=self.current_round,
             standings=standings["standings"],
         )
         
+        # Determine next round
+        next_round_id = None
+        if self.current_round < len(self._schedule):
+            next_round_id = self.current_round + 1
+        
+        # Create ROUND_COMPLETED message (Section 8.9)
+        round_completed_message = self.message_factory.round_completed(
+            round_id=self.current_round,
+            matches_played=len(self._current_round_matches),
+            next_round_id=next_round_id,
+        )
+        
         logger.info(
-            f"Publishing standings update",
-            round=self.current_round,
+            f"Publishing standings update and round completed",
+            round_id=self.current_round,
+            matches_played=len(self._current_round_matches),
+            next_round_id=next_round_id,
             total_players=len(self._players),
         )
         
@@ -613,7 +837,10 @@ class LeagueManager(BaseGameServer):
         # via their registered endpoints. For now, we return the message
         # for the caller to handle distribution.
         
-        return standings_message
+        return {
+            "standings_update": standings_message,
+            "round_completed": round_completed_message,
+        }
     
     def _get_standings(self) -> Dict[str, Any]:
         """Get current standings."""
@@ -624,16 +851,24 @@ class LeagueManager(BaseGameServer):
             reverse=True
         )
         
+        # Build standings
+        standings = []
+        for i, p in enumerate(sorted_players):
+            standings.append({
+                "rank": i + 1,
+                "player_id": p.player_id,
+                "display_name": p.display_name,
+                "played": p.played,
+                "wins": p.wins,
+                "draws": p.draws,
+                "losses": p.losses,
+                "points": p.points,
+            })
+        
         return {
-            "round": self.current_round,
+            "round_id": self.current_round,
             "total_rounds": len(self._schedule),
-            "standings": [
-                {
-                    "rank": i + 1,
-                    **p.to_dict()
-                }
-                for i, p in enumerate(sorted_players)
-            ]
+            "standings": standings,
         }
     
     def _get_schedule(self) -> Dict[str, Any]:

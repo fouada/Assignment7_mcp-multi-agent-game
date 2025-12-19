@@ -1,0 +1,27 @@
+{
+  "description": "Section 9.4.1 - data/leagues/<league_id>/standings.json example",
+  "example": {
+    "schema_version": "1.0.0",
+    "league_id": "league_2025_even_odd",
+    "version": 12,
+    "rounds_completed": 3,
+    "standings": [
+      {
+        "rank": 1,
+        "player_id": "P01",
+        "display_name": "Agent_Alpha",
+        "wins": 4,
+        "draws": 1,
+        "losses": 1,
+        "points": 13
+      }
+    ]
+  },
+  "fields": {
+    "schema_version": "Version for schema migrations",
+    "version": "Incremented after each MATCH_RESULT_REPORT",
+    "rounds_completed": "Number of completed rounds",
+    "standings": "Array of player standings sorted by rank"
+  }
+}
+
