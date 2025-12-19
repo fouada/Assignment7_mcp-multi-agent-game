@@ -1,5 +1,5 @@
 {
-  "description": "GAME_OVER - Referee notifies players of game end (Section 8.7.5)",
+  "description": "GAME_OVER - Referee notifies players of game end",
   "message": {
     "jsonrpc": "2.0",
     "method": "notify_match_result",

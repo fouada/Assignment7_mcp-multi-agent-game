@@ -74,7 +74,7 @@ __all__ = [
     "PlayerStatus",
     "create_message",
     "validate_message",
-    # Repositories (Section 6)
+    # Repositories
     "DataManager",
     "get_data_manager",
     "StandingsRepository",
@@ -88,13 +88,13 @@ __all__ = [
     "MatchData",
     "PlayerHistoryData",
     "PlayerHistoryEntry",
-    # Lifecycle (Section 2.8)
+    # Lifecycle
     "AgentLifecycleManager",
     "LifecycleEvent",
     "LifecycleRegistry",
     "StateTransition",
     "get_lifecycle_registry",
-    # Config Loader (Section 7)
+    # Config Loader
     "ConfigLoader",
     "get_config_loader",
     "SystemConfig",

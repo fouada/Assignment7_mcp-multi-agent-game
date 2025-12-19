@@ -53,7 +53,7 @@ This document provides a complete reference for operating and executing the MCP 
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Clone and setup
-cd Assignment_7_MCP_Multi_Agent_Game
+cd MCP_Multi_Agent_Game
 
 # Run setup script
 ./scripts/setup.sh
@@ -169,7 +169,7 @@ uv run python -m src.main --run --players 4 --strategy llm
 
 Start each component separately for testing or development.
 
-**IMPORTANT: Follow this order per PDF Section 2.5 League Flow:**
+**IMPORTANT: Follow this order for proper League Flow:**
 
 1. Start League Manager
 2. Start Referee and register (Step 1)

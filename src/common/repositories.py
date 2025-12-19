@@ -2,7 +2,7 @@
 Data Repositories
 ==================
 
-Persistence layer for league data (Section 6).
+Persistence layer for league data.
 
 File access permissions:
 - config/*: Read-only for agents, write by system admin

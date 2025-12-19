@@ -21,7 +21,7 @@ protocol: "league.v2"
 | Referee | Manages games | 8001-8099 |
 | Player | Participates in games | 8100-8199 |
 
-## Message Envelope (Section 2.4)
+## Message Envelope
 
 All messages follow this structure:
 
@@ -90,7 +90,7 @@ All messages follow this structure:
 - `LEAGUE_ERROR` - League-level error
 - `GAME_ERROR` - Game-level error
 
-## Agent Lifecycle (Section 2.8)
+## Agent Lifecycle
 
 ### States
 
@@ -114,7 +114,7 @@ SUSPENDED ──[recover]────────► ACTIVE
 SUSPENDED ──[max_fails]──────► SHUTDOWN
 ```
 
-## Game States (Section 3.3)
+## Game States
 
 The Even/Odd game progresses through these states:
 
@@ -125,7 +125,7 @@ The Even/Odd game progresses through these states:
 | DRAWING_NUMBER | System draws random number |
 | FINISHED | Game complete |
 
-## Timeouts (Section 2.7)
+## Timeouts
 
 | Operation | Timeout (seconds) |
 |-----------|-------------------|
@@ -137,7 +137,7 @@ The Even/Odd game progresses through these states:
 | match_result_report | 10 |
 | default | 10 |
 
-## Error Codes (Section 2.9)
+## Error Codes
 
 ### League Errors
 
@@ -159,7 +159,7 @@ The Even/Odd game progresses through these states:
 | G004 | NOT_YOUR_TURN | Move submitted out of turn |
 | G005 | GAME_ALREADY_STARTED | Cannot join started game |
 
-## Scoring (Section 3.4)
+## Scoring
 
 ### Per Match
 

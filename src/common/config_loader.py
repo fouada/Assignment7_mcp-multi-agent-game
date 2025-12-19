@@ -1,5 +1,5 @@
 """
-Configuration Loader (Section 7)
+Configuration Loader
 ================================
 
 Loads configuration from JSON files in the config/ directory.

@@ -22,7 +22,7 @@ __all__ = [
     # Match management
     "Match",
     "MatchState",
-    # Game Registry (Section 3.8)
+    # Game Registry
     "GameRegistry",
     "GameInterface",
     "GameTypeInfo",

@@ -1,5 +1,5 @@
 """
-Tests for Agent Lifecycle Management (Section 2.8).
+Tests for Agent Lifecycle Management.
 """
 
 import pytest

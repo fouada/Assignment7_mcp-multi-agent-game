@@ -1,5 +1,5 @@
 """
-Tests for data repositories (Section 6).
+Tests for data repositories.
 """
 
 import pytest

@@ -58,7 +58,7 @@
     "move_timeout": 30.0,
     "min_value": 1,
     "max_value": 10,
-    "_comment": "Section 8.7.4: drawn_number between 1-10"
+    "_comment": "drawn_number between 1-10"
   },
   "league": {
     "league_id": "league_2024_01",

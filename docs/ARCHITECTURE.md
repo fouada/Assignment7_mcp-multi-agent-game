@@ -924,39 +924,41 @@ graph LR
     subgraph "Registration Messages"
         REG_REQ[LEAGUE_REGISTER_REQUEST]
         REG_RES[LEAGUE_REGISTER_RESPONSE]
-        REF_REG[REFEREE_REGISTER]
+        REF_REG[REFEREE_REGISTER_REQUEST]
+        REF_RES[REFEREE_REGISTER_RESPONSE]
     end
     
     subgraph "Game Setup Messages"
-        MATCH[MATCH_ASSIGN]
+        ROUND_ANN[ROUND_ANNOUNCEMENT]
         INVITE[GAME_INVITE]
-        ACCEPT[GAME_ACCEPT]
-        START[GAME_START]
+        ACCEPT[GAME_JOIN_ACK]
     end
     
     subgraph "Gameplay Messages"
-        MOVE_REQ[MOVE_REQUEST]
-        MOVE_RES[MOVE_RESPONSE]
+        PARITY_CALL[CHOOSE_PARITY_CALL]
+        PARITY_RES[CHOOSE_PARITY_RESPONSE]
         ROUND[ROUND_RESULT]
     end
     
     subgraph "Completion Messages"
-        GAME_END[GAME_END]
-        MATCH_RES[MATCH_RESULT]
-        STANDINGS[STANDINGS_UPDATE]
+        GAME_END[GAME_OVER]
+        MATCH_RES[MATCH_RESULT_REPORT]
+        STANDINGS[LEAGUE_STANDINGS_UPDATE]
+        COMPLETE[LEAGUE_COMPLETED]
     end
     
     REG_REQ --> REG_RES
-    REG_RES --> MATCH
-    MATCH --> INVITE
+    REF_REG --> REF_RES
+    REG_RES --> ROUND_ANN
+    ROUND_ANN --> INVITE
     INVITE --> ACCEPT
-    ACCEPT --> START
-    START --> MOVE_REQ
-    MOVE_REQ --> MOVE_RES
-    MOVE_RES --> ROUND
+    ACCEPT --> PARITY_CALL
+    PARITY_CALL --> PARITY_RES
+    PARITY_RES --> ROUND
     ROUND --> GAME_END
     GAME_END --> MATCH_RES
     MATCH_RES --> STANDINGS
+    STANDINGS --> COMPLETE
 ```
 
 ### JSON-RPC Message Structure
@@ -983,7 +985,7 @@ classDiagram
     }
     
     class GameMessage {
-        +string protocol = "league.v1"
+        +string protocol = "league.v2"
         +string message_type
         +string league_id
         +string conversation_id
@@ -1943,7 +1945,7 @@ flowchart TD
 
 - [Model Context Protocol Specification](https://spec.modelcontextprotocol.io/)
 - [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification)
-- [Assignment Requirements](../REQUIREMENTS.md)
+- [Project Requirements](../REQUIREMENTS.md)
 - [API Documentation](./API.md)
 - [Command Reference](./COMMAND_REFERENCE.md)
 

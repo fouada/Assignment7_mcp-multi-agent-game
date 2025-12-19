@@ -1,5 +1,5 @@
 {
-  "description": "Section 9.4.4 - data/players/<player_id>/history.json example",
+  "description": "Player history file example - data/players/<player_id>/history.json",
   "example": {
     "player_id": "P01",
     "stats": {

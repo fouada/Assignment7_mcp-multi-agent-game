@@ -301,7 +301,7 @@ class PerformanceTracker:
 
 
 # ============================================================================
-# JSONL File Logging (Section 7)
+# JSONL File Logging
 # ============================================================================
 
 class JSONLWriter:

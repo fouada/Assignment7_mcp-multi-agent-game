@@ -1,5 +1,5 @@
 {
-  "description": "MATCH_RESULT_REPORT - Referee reports to League Manager (Section 8.7.6)",
+  "description": "MATCH_RESULT_REPORT - Referee reports to League Manager",
   "message": {
     "jsonrpc": "2.0",
     "method": "report_match_result",

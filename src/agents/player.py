@@ -283,13 +283,13 @@ Reply with ONLY a number from 1 to 5:"""
 
 @dataclass
 class GameSession:
-    """Player's view of an active game (Section 8.7)."""
+    """Player's view of an active game."""
     
     game_id: str
     opponent_id: str
     my_role: GameRole
     total_rounds: int
-    match_id: str = ""  # Added for Section 8.7.2 GAME_JOIN_ACK
+    match_id: str = ""  # Added for  GAME_JOIN_ACK
     current_round: int = 0
     my_score: int = 0
     opponent_score: int = 0
@@ -410,7 +410,7 @@ class PlayerAgent(BaseGameServer):
         
         @self.tool(
             "get_player_state",
-            "Get player state including game history (Section 8.11.2)",
+            "Get player state including game history",
         )
         async def get_player_state(params: Dict) -> Dict:
             """Get comprehensive player state and history."""
@@ -524,7 +524,7 @@ class PlayerAgent(BaseGameServer):
         accept: bool,
     ) -> Dict[str, Any]:
         """
-        Respond to a game invitation (Section 8.7.2 - GAME_JOIN_ACK).
+        Respond to a game invitation.
         
         Players must return GAME_JOIN_ACK within 5 seconds.
         """
@@ -534,7 +534,7 @@ class PlayerAgent(BaseGameServer):
         
         session.state = "accepted" if accept else "declined"
         
-        # Send GAME_JOIN_ACK to referee (Section 8.7.2)
+        # Send GAME_JOIN_ACK to referee
         # Use match_id if available, otherwise fallback to game_id
         match_id = session.match_id if session.match_id else game_id
         response_msg = self.message_factory.game_join_ack(
@@ -577,7 +577,7 @@ class PlayerAgent(BaseGameServer):
     
     async def _handle_game_invite(self, message: Dict) -> Dict:
         """
-        Handle GAME_INVITE / GAME_INVITATION message (Section 8.7.1).
+        Handle GAME_INVITE / GAME_INVITATION message.
         
         Supports both:
         - assigned_role: "odd" or "even" (game-specific)
@@ -615,7 +615,7 @@ class PlayerAgent(BaseGameServer):
             role=role,
         )
         
-        # Auto-accept within 5 second timeout (Section 8.7.2)
+        # Auto-accept within 5 second timeout
         return await self._respond_to_invitation(game_id, True)
     
     async def _handle_move_request(self, message: Dict) -> Dict:
@@ -650,7 +650,7 @@ class PlayerAgent(BaseGameServer):
     
     async def _handle_choose_parity_call(self, message: Dict) -> Dict:
         """
-        Handle CHOOSE_PARITY_CALL message (Section 8.7.3).
+        Handle CHOOSE_PARITY_CALL message.
         
         Responds with CHOOSE_PARITY_RESPONSE containing:
         - parity_choice: "even" or "odd" (the player's assigned role)
@@ -685,10 +685,10 @@ class PlayerAgent(BaseGameServer):
         # Decide move (number 1-10)
         move = await self.make_move(session.game_id)
         
-        # Get player's assigned role (Section 8.7.3: parity_choice is "even" or "odd")
+        # Get player's assigned role
         parity_choice = session.my_role.value  # "odd" or "even"
         
-        # Send CHOOSE_PARITY_RESPONSE (Section 8.7.3)
+        # Send CHOOSE_PARITY_RESPONSE
         response_msg = self.message_factory.choose_parity_response(
             match_id=match_id,
             player_id=self.player_id,

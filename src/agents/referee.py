@@ -176,7 +176,7 @@ class RefereeAgent(BaseGameServer):
         
         @self.tool(
             "get_match_state",
-            "Get current match state for debugging (Section 8.11.2)",
+            "Get current match state for debugging",
             {
                 "type": "object",
                 "properties": {
@@ -245,7 +245,7 @@ class RefereeAgent(BaseGameServer):
             # Connect to league manager
             await self._client.connect("league_manager", self.league_manager_url)
             
-            # Call registration tool (Section 8.3.1)
+            # Call registration tool
             response = await self._client.call_tool(
                 server_name="league_manager",
                 tool_name="register_referee",
@@ -416,7 +416,7 @@ class RefereeAgent(BaseGameServer):
     
     async def _run_round(self, session: GameSession) -> None:
         """
-        Run a single round of the game (Section 8.7.3 - Collecting Parity Choices).
+        Run a single round of the game.
         
         Uses CHOOSE_PARITY_CALL to request player choices.
         """
@@ -428,11 +428,11 @@ class RefereeAgent(BaseGameServer):
         from datetime import datetime, timedelta
         deadline = (datetime.utcnow() + timedelta(seconds=self.move_timeout)).isoformat() + "Z"
         
-        # Request parity choices from both players (Section 8.7.3)
+        # Request parity choices from both players
         for player_id in [game.player1_id, game.player2_id]:
             opponent_id = game.get_opponent_id(player_id)
             
-            # Build CHOOSE_PARITY_CALL message (Section 8.7.3)
+            # Build CHOOSE_PARITY_CALL message
             parity_call = self.message_factory.choose_parity_call(
                 match_id=match.match_id,
                 player_id=player_id,
@@ -647,7 +647,7 @@ class RefereeAgent(BaseGameServer):
     
     async def _complete_game(self, session: GameSession) -> None:
         """
-        Complete the game and report results (Section 8.7.5-8.7.6).
+        Complete the game and report results.
         
         Step 5.5: Send GAME_OVER to both players
         Step 5.6: Send MATCH_RESULT_REPORT to league manager
@@ -687,7 +687,7 @@ class RefereeAgent(BaseGameServer):
             drawn_number=drawn_number,
         )
         
-        # Step 5.5: Send GAME_OVER to both players (Section 8.7.5)
+        # Step 5.5: Send GAME_OVER to both players
         for player_id in [game.player1_id, game.player2_id]:
             game_over_msg = self.message_factory.game_over(
                 match_id=match.match_id,
@@ -706,7 +706,7 @@ class RefereeAgent(BaseGameServer):
             except Exception as e:
                 logger.error(f"Failed to send GAME_OVER to {player_id}: {e}")
         
-        # Step 5.6: Report to league manager (Section 8.7.6)
+        # Step 5.6: Report to league manager
         await self._report_to_league(session, game_result, drawn_number, choices)
     
     async def _report_to_league(
@@ -717,7 +717,7 @@ class RefereeAgent(BaseGameServer):
         choices: Dict[str, str] = None,
     ) -> None:
         """
-        Report game result to league manager (Section 8.7.6 - MATCH_RESULT_REPORT).
+        Report game result to league manager.
         
         Args:
             session: Game session
@@ -730,13 +730,13 @@ class RefereeAgent(BaseGameServer):
             if "league_manager" not in self._client.connected_servers:
                 await self._client.connect("league_manager", self.league_manager_url)
             
-            # Build details (Section 8.7.6)
+            # Build details
             details = {
                 "drawn_number": drawn_number,
                 "choices": choices or {},
             }
             
-            # Call report tool with Section 8.7.6 format
+            # Call report tool with  format
             await self._client.call_tool(
                 server_name="league_manager",
                 tool_name="report_match_result",
@@ -745,7 +745,7 @@ class RefereeAgent(BaseGameServer):
                     "winner_id": result.winner_id,
                     "player1_score": result.player1_score,
                     "player2_score": result.player2_score,
-                    "details": details,  # Section 8.7.6: includes drawn_number and choices
+                    "details": details,  # includes drawn_number and choices
                 },
             )
             
@@ -798,7 +798,7 @@ class RefereeAgent(BaseGameServer):
     
     async def _handle_choose_parity_response(self, message: Dict) -> Dict:
         """
-        Handle CHOOSE_PARITY_RESPONSE message (Section 8.7.3).
+        Handle CHOOSE_PARITY_RESPONSE message.
         
         The response contains:
         - parity_choice: "even" or "odd" (player's role confirmation)

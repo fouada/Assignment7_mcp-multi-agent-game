@@ -18,7 +18,7 @@ PROTOCOL_VERSION = "league.v2"
 
 
 # ============================================================================
-# Timeouts (Section 2.7) - Response time limits per message type
+# Timeouts - Response time limits per message type
 # ============================================================================
 
 class Timeouts:
@@ -109,20 +109,20 @@ class MessageType(str, Enum):
     MOVE_RESPONSE = "MOVE_RESPONSE"
     MOVE_RESULT = "MOVE_RESULT"
     CHOOSE_PARITY = "CHOOSE_PARITY"  # Choose odd/even (30 sec timeout)
-    CHOOSE_PARITY_CALL = "CHOOSE_PARITY_CALL"  # Referee requests parity choice (Section 8.7.3)
-    CHOOSE_PARITY_RESPONSE = "CHOOSE_PARITY_RESPONSE"  # Player responds with choice (Section 8.7.3)
+    CHOOSE_PARITY_CALL = "CHOOSE_PARITY_CALL"  # Referee requests parity choice
+    CHOOSE_PARITY_RESPONSE = "CHOOSE_PARITY_RESPONSE"  # Player responds with choice
     
     # Round management
     ROUND_ANNOUNCEMENT = "ROUND_ANNOUNCEMENT"  # Step 4: Announce round with matches & referees
     ROUND_START = "ROUND_START"
     ROUND_END = "ROUND_END"
     ROUND_RESULT = "ROUND_RESULT"
-    ROUND_COMPLETED = "ROUND_COMPLETED"  # Section 8.9: Round finished notification
+    ROUND_COMPLETED = "ROUND_COMPLETED"  # Round finished notification
     
     # League management
     STANDINGS_UPDATE = "STANDINGS_UPDATE"  # Alias for backwards compatibility
     LEAGUE_STANDINGS_UPDATE = "LEAGUE_STANDINGS_UPDATE"
-    LEAGUE_COMPLETED = "LEAGUE_COMPLETED"  # Section 8.9: League finished with champion
+    LEAGUE_COMPLETED = "LEAGUE_COMPLETED"  # League finished with champion
     MATCH_SCHEDULE = "MATCH_SCHEDULE"
     MATCH_RESULT_REPORT = "MATCH_RESULT_REPORT"  # Report result to league (10 sec timeout)
     LEAGUE_QUERY = "LEAGUE_QUERY"  # Query league info (10 sec timeout)
@@ -133,7 +133,7 @@ class MessageType(str, Enum):
     ERROR = "ERROR"
     ACK = "ACK"
     
-    # Error types (Section 2.9)
+    # Error types
     LEAGUE_ERROR = "LEAGUE_ERROR"  # League-level errors from league_manager
     GAME_ERROR = "GAME_ERROR"      # Game-level errors from referee
 
@@ -151,7 +151,7 @@ class GameStatus(str, Enum):
 
 class AgentState(str, Enum):
     """
-    Agent lifecycle states (Section 2.8).
+    Agent lifecycle states.
     
     State transitions:
     - INIT → REGISTERED (register)
@@ -209,7 +209,7 @@ class MoveValidity(str, Enum):
 
 class ErrorCode(str, Enum):
     """
-    Standard error codes (Section 2.9).
+    Standard error codes.
     
     E0xx - Timeout errors
     E1xx - Registration errors
@@ -673,7 +673,7 @@ class MessageFactory:
         max_concurrent_matches: int = 2,
     ) -> Dict[str, Any]:
         """
-        Create a referee registration request message (Section 8.3.1).
+        Create a referee registration request message.
         
         Args:
             referee_id: Unique referee identifier
@@ -703,7 +703,7 @@ class MessageFactory:
         auth_token: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Create a referee registration response message (Section 8.3.2).
+        Create a referee registration response message.
         
         Args:
             status: "ACCEPTED" or "REJECTED"
@@ -754,7 +754,7 @@ class MessageFactory:
         rounds: int = 5,
         match_id: str = None,
     ) -> Dict[str, Any]:
-        """Create a game invitation message (Section 4.3)."""
+        """Create a game invitation message."""
         msg = {
             **self._base_fields(MessageType.GAME_INVITE),
             "game_id": game_id,
@@ -772,7 +772,7 @@ class MessageFactory:
         accepted: bool,
         reason: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Create a game invitation response message (Section 4.3)."""
+        """Create a game invitation response message."""
         msg = {
             **self._base_fields(MessageType.GAME_INVITE_RESPONSE),
             "game_id": game_id,
@@ -791,9 +791,9 @@ class MessageFactory:
         round_id: int = 1,
     ) -> Dict[str, Any]:
         """
-        Create a GAME_INVITATION message (Section 8.7.1).
+        Create a GAME_INVITATION message.
         
-        Alternative to game_invite() using Section 8 terminology.
+        Alternative to game_invite() using  terminology.
         
         Args:
             match_id: Match identifier (e.g., "R1M1")
@@ -818,7 +818,7 @@ class MessageFactory:
         accept: bool = True,
     ) -> Dict[str, Any]:
         """
-        Create a GAME_JOIN_ACK message (Section 8.7.2).
+        Create a GAME_JOIN_ACK message.
         
         Players must return this within 5 seconds of receiving GAME_INVITATION.
         
@@ -900,7 +900,7 @@ class MessageFactory:
         deadline: str,
     ) -> Dict[str, Any]:
         """
-        Create a CHOOSE_PARITY_CALL message (Section 8.7.3).
+        Create a CHOOSE_PARITY_CALL message.
         
         Sent by referee to request player's parity choice (even/odd).
         
@@ -933,7 +933,7 @@ class MessageFactory:
         parity_choice: str,
     ) -> Dict[str, Any]:
         """
-        Create a CHOOSE_PARITY_RESPONSE message (Section 8.7.3).
+        Create a CHOOSE_PARITY_RESPONSE message.
         
         Sent by player in response to CHOOSE_PARITY_CALL.
         
@@ -981,7 +981,7 @@ class MessageFactory:
         final_score: Dict[str, int],
         reason: str = "completed",
     ) -> Dict[str, Any]:
-        """Create a game end message (Section 4.5)."""
+        """Create a game end message."""
         return {
             **self._base_fields(MessageType.GAME_END),
             "game_id": game_id,
@@ -1002,7 +1002,7 @@ class MessageFactory:
         reason: str,
     ) -> Dict[str, Any]:
         """
-        Create a GAME_OVER message (Section 8.7.5).
+        Create a GAME_OVER message.
         
         Sent by referee to both players when game ends.
         
@@ -1041,7 +1041,7 @@ class MessageFactory:
         details: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        Create a MATCH_RESULT_REPORT message (Section 8.7.6).
+        Create a MATCH_RESULT_REPORT message.
         
         Sent by referee to league manager after game completion.
         
@@ -1147,7 +1147,7 @@ class MessageFactory:
         matches: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
         """
-        Create a ROUND_START message (Section 4.3).
+        Create a ROUND_START message.
         
         Sent to all players when a round begins.
         """
@@ -1165,7 +1165,7 @@ class MessageFactory:
         next_round_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
-        Create a ROUND_END message (Section 4.3).
+        Create a ROUND_END message.
         
         Sent to all players when a round completes.
         Each result should include:
@@ -1204,7 +1204,7 @@ class MessageFactory:
         next_round_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
-        Create a ROUND_COMPLETED message (Section 8.9).
+        Create a ROUND_COMPLETED message.
         
         Sent after standings update to mark round end.
         
@@ -1230,7 +1230,7 @@ class MessageFactory:
         final_standings: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
         """
-        Create a LEAGUE_COMPLETED message (Section 8.9).
+        Create a LEAGUE_COMPLETED message.
         
         Sent when all rounds are finished.
         
@@ -1268,7 +1268,7 @@ class MessageFactory:
         auth_token: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Create a LEAGUE_QUERY message (Section 8.11.1).
+        Create a LEAGUE_QUERY message.
         
         Sent by players to query league information like standings.
         
@@ -1315,7 +1315,7 @@ class MessageFactory:
         retryable: bool = False,
     ) -> Dict[str, Any]:
         """
-        Create a LEAGUE_ERROR message (Section 2.9.1).
+        Create a LEAGUE_ERROR message.
         
         Sent by league_manager for league-level errors.
         """
@@ -1342,7 +1342,7 @@ class MessageFactory:
         consequence: str = "",
     ) -> Dict[str, Any]:
         """
-        Create a GAME_ERROR message (Section 8.10.2).
+        Create a GAME_ERROR message.
         
         Sent by referee for game-level errors like timeouts.
         

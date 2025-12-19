@@ -37,7 +37,7 @@ class GameRole(Enum):
 
 class GamePhase(Enum):
     """
-    Current phase of the game (Section 3.3).
+    Current phase of the game.
     
     States:
     - WAITING_FOR_PLAYERS: Waiting for players to join/accept
@@ -61,7 +61,7 @@ class Move:
     
     def validate(self, min_value: int = 1, max_value: int = 10) -> None:
         """
-        Validate the move (Section 8.7.4: numbers 1-10).
+        Validate the move.
         
         Raises:
             InvalidMoveError: If move is invalid
@@ -129,7 +129,7 @@ class GameResult:
 
 class OddEvenRules:
     """
-    Rules engine for Odd/Even game (Section 8.7.4).
+    Rules engine for Odd/Even game.
     
     Stateless - can be shared across games.
     Numbers are drawn between 1-10 per specification.
@@ -138,7 +138,7 @@ class OddEvenRules:
     def __init__(
         self,
         min_value: int = 1,
-        max_value: int = 10,  # Section 8.7.4: numbers 1-10
+        max_value: int = 10,  # numbers 1-10
     ):
         self.min_value = min_value
         self.max_value = max_value

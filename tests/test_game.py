@@ -23,7 +23,7 @@ class TestOddEvenRules:
         assert rules.validate_move(move) is False
     
     def test_validate_invalid_move_too_high(self):
-        """Test invalid move (too high - Section 8.7.4 allows 1-10)."""
+        """Test invalid move (too high allows 1-10)."""
         rules = OddEvenRules()
         move = Move(player_id="P1", value=11)  # 11 is above max_value=10
         assert rules.validate_move(move) is False
@@ -247,7 +247,7 @@ class TestMatch:
 
 
 class TestGameRegistry:
-    """Test Game Registry (Section 3.8)."""
+    """Test Game Registry."""
     
     def setup_method(self):
         """Setup for each test - ensure registry has default games."""

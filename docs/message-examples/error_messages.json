@@ -1,5 +1,5 @@
 {
-  "description": "Error Messages (Section 2.9)",
+  "description": "Error Messages",
   "league_error": {
     "protocol": "league.v2",
     "message_id": "ff0e8400-e29b-41d4-a716-446655440001",

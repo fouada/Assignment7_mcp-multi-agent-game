@@ -2,7 +2,7 @@
 Game Registry
 =============
 
-Registry for game types to support extensibility (Section 3.8).
+Registry for game types to support extensibility.
 
 The registry allows adding new game types without modifying existing code.
 Each game type must implement the GameInterface protocol.
@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 @dataclass
 class GameMove:
     """
-    Generic game move structure (Section 3.8.1).
+    Generic game move structure.
     
     Base class for all game-specific moves.
     Allows uniform handling of moves across different game types.
@@ -78,7 +78,7 @@ class GameRoundResult:
 
 class GameInterface(ABC):
     """
-    Abstract interface for game implementations (Section 3.7.1).
+    Abstract interface for game implementations.
     
     All game types must implement this interface to be registered
     in the game registry.
@@ -163,7 +163,7 @@ class GameTypeInfo:
 
 class GameRegistry:
     """
-    Registry for game types (Section 3.8.2).
+    Registry for game types.
     
     Singleton pattern to ensure single registry instance.
     

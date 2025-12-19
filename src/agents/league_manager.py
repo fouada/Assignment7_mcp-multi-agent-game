@@ -46,7 +46,7 @@ class LeagueState(Enum):
 
 @dataclass
 class RegisteredReferee:
-    """A registered referee in the league (Section 8.3.1)."""
+    """A registered referee in the league."""
     
     referee_id: str
     endpoint: str
@@ -252,7 +252,7 @@ class LeagueManager(BaseGameServer):
         
         @self.tool(
             "get_player_info",
-            "Get info for a specific player (Section 8.11 - GET_PLAYER_INFO)",
+            "Get info for a specific player",
             {
                 "type": "object",
                 "properties": {
@@ -270,7 +270,7 @@ class LeagueManager(BaseGameServer):
         
         @self.tool(
             "get_round_status",
-            "Get current round status (Section 8.11 - GET_ROUND_STATUS)",
+            "Get current round status",
         )
         async def get_round_status(params: Dict) -> Dict:
             return {
@@ -352,7 +352,7 @@ class LeagueManager(BaseGameServer):
             return self._get_schedule()
     
     async def _handle_referee_registration(self, params: Dict) -> Dict:
-        """Handle referee registration (Section 8.3 - Step 1 of league flow)."""
+        """Handle referee registration."""
         referee_id = params.get("referee_id", "")
         endpoint = params.get("endpoint", "")
         display_name = params.get("display_name", f"Referee_{referee_id}")
@@ -380,7 +380,7 @@ class LeagueManager(BaseGameServer):
         # Generate auth token for referee
         auth_token = generate_auth_token(referee_id, self.league_id)
         
-        # Create referee (Section 8.3.1)
+        # Create referee
         referee = RegisteredReferee(
             referee_id=referee_id,
             endpoint=endpoint,
@@ -675,7 +675,7 @@ class LeagueManager(BaseGameServer):
         # Calculate total matches
         total_matches = sum(len(r) for r in self._schedule)
         
-        # Create LEAGUE_COMPLETED message (Section 8.9)
+        # Create LEAGUE_COMPLETED message
         league_completed_message = self.message_factory.league_completed(
             total_rounds=len(self._schedule),
             total_matches=total_matches,
@@ -803,11 +803,11 @@ class LeagueManager(BaseGameServer):
         """
         Step 6: Publish standings update to all players after round completion.
         
-        Creates LEAGUE_STANDINGS_UPDATE and ROUND_COMPLETED messages (Section 8.8-8.9).
+        Creates LEAGUE_STANDINGS_UPDATE and ROUND_COMPLETED messages.
         """
         standings = self._get_standings()
         
-        # Create LEAGUE_STANDINGS_UPDATE message (Section 8.8)
+        # Create LEAGUE_STANDINGS_UPDATE message
         standings_message = self.message_factory.standings_update(
             round_id=self.current_round,
             standings=standings["standings"],
@@ -818,7 +818,7 @@ class LeagueManager(BaseGameServer):
         if self.current_round < len(self._schedule):
             next_round_id = self.current_round + 1
         
-        # Create ROUND_COMPLETED message (Section 8.9)
+        # Create ROUND_COMPLETED message
         round_completed_message = self.message_factory.round_completed(
             round_id=self.current_round,
             matches_played=len(self._current_round_matches),

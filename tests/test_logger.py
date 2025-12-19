@@ -1,5 +1,5 @@
 """
-Tests for logging system (Section 7).
+Tests for logging system.
 """
 
 import pytest

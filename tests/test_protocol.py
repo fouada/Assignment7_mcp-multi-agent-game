@@ -240,7 +240,7 @@ class TestMessageFactory:
         assert msg["player_B_score"] == 2
     
     def test_game_over(self):
-        """Test GAME_OVER message creation (Section 8.7.5)."""
+        """Test GAME_OVER message creation."""
         msg = self.factory.game_over(
             match_id="R1M1",
             game_type="even_odd",
@@ -262,7 +262,7 @@ class TestMessageFactory:
         assert msg["game_result"]["choices"]["P01"] == "even"
     
     def test_match_result_report(self):
-        """Test MATCH_RESULT_REPORT message creation (Section 8.7.6)."""
+        """Test MATCH_RESULT_REPORT message creation."""
         msg = self.factory.match_result_report(
             league_id="league_2025_even_odd",
             round_id=1,
@@ -328,7 +328,7 @@ class TestMessageFactory:
         assert msg["standings"][0]["played"] == 2
     
     def test_league_query(self):
-        """Test league query message creation (Section 8.11.1)."""
+        """Test league query message creation."""
         msg = self.factory.league_query(
             league_id="league_2025_even_odd",
             query_type="GET_STANDINGS",
@@ -371,7 +371,7 @@ class TestMessageFactory:
         assert msg["retryable"] is False
     
     def test_game_error(self):
-        """Test game error message creation (Section 8.10.2)."""
+        """Test game error message creation."""
         msg = self.factory.game_error(
             error_code="E001",
             error_description="TIMEOUT_ERROR",
@@ -393,7 +393,7 @@ class TestMessageFactory:
         assert msg["max_retries"] == 3
     
     def test_round_start(self):
-        """Test round start message creation (Section 4.3)."""
+        """Test round start message creation."""
         matches = [
             {"match_id": "R1M1", "player_A_id": "P01", "player_B_id": "P02"},
         ]
@@ -409,7 +409,7 @@ class TestMessageFactory:
         assert len(msg["matches"]) == 1
     
     def test_round_end(self):
-        """Test round end message creation (Section 4.3)."""
+        """Test round end message creation."""
         results = [
             {"match_id": "R1M1", "winner_id": "P01", "player_A_score": 3, "player_B_score": 2},
         ]

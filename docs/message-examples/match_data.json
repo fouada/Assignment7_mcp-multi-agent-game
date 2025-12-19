@@ -1,5 +1,5 @@
 {
-  "description": "Section 9.4.3 - data/matches/<league_id>/<match_id>.json example",
+  "description": "Match data file example - data/matches/<league_id>/<match_id>.json",
   "example": {
     "schema_version": "1.0.0",
     "match_id": "R1M1",

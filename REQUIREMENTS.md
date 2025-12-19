@@ -1,4 +1,4 @@
-# Assignment 4: Agentic Game - Requirements Document
+# MCP Multi-Agent Game League - Requirements Document
 
 ## 📋 Overview
 
@@ -8,7 +8,7 @@ Build an **MCP-based (Model Context Protocol) multi-agent game system** featurin
 
 ## 🎓 Learning Objectives
 
-By the end of this exercise, you will know how to:
+By implementing this system, you will learn how to:
 
 | # | Objective | Description |
 |---|-----------|-------------|
@@ -25,7 +25,7 @@ By the end of this exercise, you will know how to:
 ### League Definition
 > **"A league is a competitive framework where multiple participants compete against each other according to defined rules."**
 > 
-> In this context, the league organizes competition between **different AI agents, where each agent is built by a different student**.
+> In this context, the league organizes competition between **different AI agents**.
 
 ### League Format: Round-Robin
 **"Everyone plays against everyone"** - Each agent must play against all other agents in the league.
@@ -33,7 +33,7 @@ By the end of this exercise, you will know how to:
 ### League Configuration
 | Component | Count | Description |
 |-----------|-------|-------------|
-| **Players** | 4+ | AI agents (each built by different student) |
+| **Players** | 4+ | AI agents (with different strategies) |
 | **Referee** | 1 | Agent that manages game rules and scoring |
 | **Games per Round** | 2 | Each round consists of 2 parallel games |
 | **League** | 1 | Single league managing all matches |
@@ -55,7 +55,7 @@ By the end of this exercise, you will know how to:
 
 ### 🎮 The Game: Odd/Even
 
-The assignment uses the **"Odd/Even"** game as the specific game implementation. This is a simple game that allows focus on the architecture rather than complex game logic.
+The system uses the **"Odd/Even"** game as the specific game implementation. This is a simple game that allows focus on the architecture rather than complex game logic.
 
 **Game Rules** (typical Odd/Even):
 - Two players each choose a number (usually 1-5 fingers)
@@ -97,13 +97,13 @@ The system must implement the **three MCP primitives**:
 | **Prompts** | Templates | Predefined templates to help agents understand request formats |
 
 ### Transport Layers
-For this assignment, use:
+The system uses:
 - **HTTP over localhost** - Each agent runs an MCP server on localhost with different ports
 - **Endpoint**: `/mcp` on each server
 - **Method**: HTTP POST
 - **Protocol**: JSON-RPC 2.0
 
-### Port Configuration (From Course Materials)
+### Port Configuration 
 
 | Component | URL |
 |-----------|-----|
@@ -226,7 +226,7 @@ For this assignment, use:
 | `player_id` | Your assigned player ID (e.g., "P07") |
 | `reason` | Only provided if status is REJECTED |
 
-> ⚠️ **IMPORTANT**: `game_types` MUST be exactly `["even_odd"]` for this exercise!
+> ⚠️ **IMPORTANT**: `game_types` MUST be exactly `["even_odd"]` for the current implementation!
 
 ---
 
@@ -521,7 +521,7 @@ For resources that update over time:
 ## 📁 Recommended Project Structure
 
 ```
-Assignment_4_Agentic_Game/
+MCP_Multi_Agent_Game/
 ├── src/
 │   ├── client/
 │   │   ├── __init__.py
@@ -600,7 +600,7 @@ pytest-asyncio         # Async testing
 
 ## 🎮 Game Implementation Notes
 
-### Referee Agent Responsibilities (Section 2.2.2)
+### Referee Agent Responsibilities
 
 The referee manages a **single game between two players**:
 
@@ -611,7 +611,7 @@ The referee manages a **single game between two players**:
 | 3 | **Collect & Validate Moves** | Collect moves from players and validate them |
 | 4 | **Declare Results** | Announce winner and report results to league |
 
-### Player Agent Responsibilities (Section 2.2.3)
+### Player Agent Responsibilities
 
 **This is what YOU will build:**
 
@@ -643,7 +643,7 @@ The referee manages a **single game between two players**:
 | **Game League** | Organizes competition between agents according to defined rules |
 | **Architecture** | Separates between League, Referee, and Game layers |
 | **MCP Protocol** | Enables standard communication between agents |
-| **Exercise** | Two stages: local development → class competition |
+| **Implementation** | Two stages: local development → class competition |
 
 ### Core Principles from Lecture:
 
@@ -656,7 +656,7 @@ The referee manages a **single game between two players**:
 
 ---
 
-## 📅 Two Stages of the Exercise
+## 📅 Development Phases
 
 ### Stage 1: Private League (Local Development)
 
@@ -681,7 +681,7 @@ After your agent is ready:
 | Task | Description |
 |------|-------------|
 | **Submit Agent** | Submit your agent to the central class league |
-| **Compete (One vs. All)** | Your agent plays against ALL other students' agents |
+| **Compete (One vs. All)** | Your agent plays against ALL other agents |
 | **Grading** | **Your grade is determined by your position in the league table** |
 
 **Deliverables for Stage 2:**

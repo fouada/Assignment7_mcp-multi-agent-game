@@ -1,5 +1,5 @@
 {
-  "description": "League Query - Player queries standings from League Manager (Section 8.11.1)",
+  "description": "League Query - Player queries standings from League Manager",
   "request": {
     "jsonrpc": "2.0",
     "method": "league_query",

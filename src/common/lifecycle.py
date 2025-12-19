@@ -1,10 +1,10 @@
 """
-Agent Lifecycle Management (Section 2.8)
+Agent Lifecycle Management
 ========================================
 
 Manages agent state transitions and lifecycle events.
 
-State Diagram (Section 2.8.2):
+State Diagram:
 
     ┌──────────────────────────────────────────┐
     │                                          │

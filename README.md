@@ -7,7 +7,7 @@
 <div align="center">
 
 ![Architecture](https://img.shields.io/badge/Architecture-3_Layer-blue)
-![Protocol](https://img.shields.io/badge/Protocol-MCP_v1-green)
+![Protocol](https://img.shields.io/badge/Protocol-MCP_league.v2-green)
 ![Python](https://img.shields.io/badge/Python-3.11+-yellow)
 ![Package Manager](https://img.shields.io/badge/Package_Manager-UV-orange)
 ![License](https://img.shields.io/badge/License-MIT-red)
@@ -19,685 +19,376 @@
 ## 📋 Table of Contents
 
 - [System Overview](#-system-overview)
-- [Architecture Diagrams](#-architecture-diagrams)
-- [MCP Client Architecture](#-mcp-client-architecture)
-- [MCP Server Architecture](#-mcp-server-architecture)
-- [Communication Flow](#-communication-flow)
-- [Sequence Diagrams](#-sequence-diagrams)
-- [Entity State Machine](#-entity-state-machine)
+- [Architecture](#-architecture)
 - [How to Operate](#-how-to-operate)
+- [Complete Game Flow](#-complete-game-flow)
+- [Agent Communication](#-agent-communication)
+- [State Machines](#-state-machines)
 - [The Game: Odd/Even](#-the-game-oddeven)
 - [Protocol Specification](#-protocol-specification)
 - [Configuration](#-configuration)
+- [Project Structure](#-project-structure)
 - [Testing](#-testing)
 - [Deployment](#-deployment)
-- [References](#-references)
 
 ---
 
 ## 🏆 System Overview
 
-### High-Level Architecture
+### High-Level System Architecture
 
 ```mermaid
 graph TB
-    subgraph "League Layer"
-        LM[🏛️ League Manager<br/>Port 8000]
+    subgraph "🏛️ League Layer"
+        LM[League Manager<br/>Port 8000]
     end
     
-    subgraph "Referee Layer"
-        REF[⚖️ Referee Agent<br/>Port 8001]
+    subgraph "⚖️ Referee Layer"
+        REF1[Referee REF01<br/>Port 8001]
+        REF2[Referee REF02<br/>Port 8002]
     end
     
-    subgraph "Game Layer"
-        GAME[🎲 Odd/Even Game Logic]
+    subgraph "🎲 Game Layer"
+        GAME[Odd/Even Game Logic<br/>src/game/odd_even.py]
     end
     
-    subgraph "Player Layer"
-        P1[🤖 Player 1<br/>Port 8101]
-        P2[🤖 Player 2<br/>Port 8102]
-        P3[🤖 Player 3<br/>Port 8103]
-        P4[🤖 Player N<br/>Port 81XX]
+    subgraph "🤖 Player Layer"
+        P1[Player P01<br/>Port 8101<br/>random]
+        P2[Player P02<br/>Port 8102<br/>pattern]
+        P3[Player P03<br/>Port 8103<br/>llm]
+        P4[Player P04<br/>Port 8104<br/>random]
     end
     
-    LM <-->|"Registration<br/>Scheduling<br/>Results"| REF
-    REF <-->|"Game Logic<br/>Validation"| GAME
-    REF <-->|"MCP Protocol<br/>JSON-RPC 2.0"| P1
-    REF <-->|"MCP Protocol<br/>JSON-RPC 2.0"| P2
-    REF <-->|"MCP Protocol<br/>JSON-RPC 2.0"| P3
-    REF <-->|"MCP Protocol<br/>JSON-RPC 2.0"| P4
+    LM <-->|"REFEREE_REGISTER<br/>MATCH_RESULT_REPORT"| REF1
+    LM <-->|"REFEREE_REGISTER<br/>MATCH_RESULT_REPORT"| REF2
     
-    P1 -.->|"Register"| LM
-    P2 -.->|"Register"| LM
-    P3 -.->|"Register"| LM
-    P4 -.->|"Register"| LM
+    REF1 <-->|"Game Logic<br/>Validation"| GAME
+    REF2 <-->|"Game Logic<br/>Validation"| GAME
+    
+    REF1 <-->|"GAME_INVITE<br/>CHOOSE_PARITY_CALL<br/>GAME_OVER"| P1
+    REF1 <-->|"GAME_INVITE<br/>CHOOSE_PARITY_CALL<br/>GAME_OVER"| P2
+    REF2 <-->|"GAME_INVITE<br/>CHOOSE_PARITY_CALL<br/>GAME_OVER"| P3
+    REF2 <-->|"GAME_INVITE<br/>CHOOSE_PARITY_CALL<br/>GAME_OVER"| P4
+    
+    P1 -.->|"LEAGUE_REGISTER_REQUEST"| LM
+    P2 -.->|"LEAGUE_REGISTER_REQUEST"| LM
+    P3 -.->|"LEAGUE_REGISTER_REQUEST"| LM
+    P4 -.->|"LEAGUE_REGISTER_REQUEST"| LM
 ```
 
-### 🔑 Core Design Principle: Separation of Concerns
+### 🔑 Key Design Principles
 
-> **IMPORTANT**: The League Layer and Referee Layer are **NOT dependent** on the specific game.
->
-> You can replace the "Odd/Even" game with Tic-Tac-Toe, Chess, or any other game - **WITHOUT changing the general protocol**.
-
-### 🔌 Host/Server Architecture: Each Agent Has Both Server and Client
-
-> **CRITICAL ARCHITECTURE CONCEPT (from MCP Protocol)**
->
-> Each Agent in this system operates as **BOTH** an MCP Server (to receive requests) **AND** uses an MCP Client (to send requests). This enables bidirectional peer-to-peer communication between autonomous agents.
-
-```mermaid
-graph TB
-    subgraph "Each Agent Has Both"
-        direction TB
-        
-        subgraph "Agent (Single Entity)"
-            AGENT[🤖 Agent<br/>Autonomous Entity]
-            
-            subgraph "Inbound - MCP Server"
-                SERVER[📥 MCP Server<br/>Listens on port<br/>Exposes tools<br/>Handles incoming requests]
-            end
-            
-            subgraph "Outbound - MCP Client"
-                CLIENT[📤 MCP Client<br/>Connects to other servers<br/>Calls their tools<br/>Sends outgoing requests]
-            end
-        end
-    end
-    
-    AGENT --> SERVER
-    AGENT --> CLIENT
-    
-    OTHERS1[Other Agents] -->|"Call MY tools"| SERVER
-    CLIENT -->|"Call THEIR tools"| OTHERS2[Other Agents]
-```
-
-```mermaid
-graph LR
-    subgraph "League Manager Agent"
-        LM_SERVER[📥 MCP Server<br/>Port 8000]
-        LM_CLIENT[📤 MCP Client]
-    end
-    
-    subgraph "Referee Agent"
-        REF_SERVER[📥 MCP Server<br/>Port 8001]
-        REF_CLIENT[📤 MCP Client]
-    end
-    
-    subgraph "Player Agent"
-        P_SERVER[📥 MCP Server<br/>Port 8101]
-        P_CLIENT[📤 MCP Client]
-    end
-    
-    P_CLIENT -->|"register_player()"| LM_SERVER
-    REF_CLIENT -->|"GAME_INVITE"| P_SERVER
-    P_CLIENT -->|"submit_move()"| REF_SERVER
-    REF_CLIENT -->|"report_match_result()"| LM_SERVER
-```
-
-### 🤖 Agentic AI Characteristics
-
-Each agent in this system demonstrates key agentic AI properties:
-
-| Property | Description | Implementation |
-|----------|-------------|----------------|
-| **Autonomy** | Agents operate independently | Self-registration, independent decision-making |
-| **Reactivity** | Respond to environment changes | Handle game invites, move requests, results |
-| **Proactivity** | Goal-directed behavior | Strategic planning, pattern recognition |
-| **Social Ability** | Communicate with other agents | MCP protocol, JSON-RPC 2.0 |
-
-### 🧠 LLM Integration
-
-Players can use AI-powered strategies:
-
-```mermaid
-graph TB
-    subgraph "Player Agent"
-        direction TB
-        PLAYER[🤖 Player Agent<br/>MCP Server + Client]
-        
-        subgraph "Strategy Selection"
-            RANDOM[🎲 Random<br/>Strategy]
-            PATTERN[📊 Pattern<br/>Strategy]
-            LLM_STRAT[🧠 LLM<br/>Strategy]
-        end
-        
-        PLAYER --> RANDOM
-        PLAYER --> PATTERN
-        PLAYER --> LLM_STRAT
-    end
-    
-    subgraph "LLM Providers"
-        ANTHROPIC[🟣 Anthropic<br/>Claude]
-        OPENAI[🟢 OpenAI<br/>GPT-4]
-        FALLBACK[🔄 Fallback<br/>Random]
-    end
-    
-    LLM_STRAT -->|"Primary"| ANTHROPIC
-    LLM_STRAT -->|"Alternative"| OPENAI
-    LLM_STRAT -->|"On Error"| FALLBACK
-```
+| Principle | Description | Implementation |
+|-----------|-------------|----------------|
+| **Separation of Concerns** | League/Referee layers are game-agnostic | Replace Odd/Even with any game without changing protocol |
+| **Bidirectional MCP** | Each agent is BOTH server AND client | Enables peer-to-peer autonomous communication |
+| **Round-Robin Assignment** | Referees assigned to matches in rotation | `MatchScheduler.create_round_robin_schedule()` |
+| **Authentication Tokens** | Secure agent registration | `generate_auth_token()` in `protocol.py` |
 
 ---
 
-## 🏗️ Architecture Diagrams
+## 🏗️ Architecture
 
-### Three-Layer Architecture (Detailed)
+### Three-Layer Architecture
 
 ```mermaid
 graph TB
-    subgraph "LEAGUE LAYER"
+    subgraph "CONFIG LAYER"
         direction TB
-        LM_REG[📝 Player Registration]
-        LM_SCHED[📅 Match Scheduling]
-        LM_STAND[🏆 Standings Management]
-        LM_TOKEN[🔐 Token Generation]
-        
-        LM_REG --> LM_TOKEN
-        LM_TOKEN --> LM_SCHED
-        LM_SCHED --> LM_STAND
+        SYSTEM[config/system.json<br/>Protocol, Timeouts, Retry]
+        AGENTS[config/agents/agents_config.json<br/>League Manager, Referees, Players]
+        LEAGUE[config/leagues/league_2025_even_odd.json<br/>Scoring, Participants]
+        GAMES[config/games/games_registry.json<br/>Game Types, Rules Modules]
+        DEFAULTS[config/defaults/<br/>referee.json, player.json]
     end
     
-    subgraph "REFEREE LAYER"
+    subgraph "DATA LAYER"
         direction TB
-        REF_MGR[🎮 Match Management]
-        REF_VAL[✅ Move Validation]
-        REF_RES[📊 Result Resolution]
-        REF_RPT[📤 Result Reporting]
-        
-        REF_MGR --> REF_VAL
-        REF_VAL --> REF_RES
-        REF_RES --> REF_RPT
+        STANDINGS[data/leagues/league_id/<br/>standings.json, rounds.json]
+        MATCHES[data/matches/league_id/<br/>match_id.json]
+        PLAYERS[data/players/player_id/<br/>history.json]
     end
     
-    subgraph "GAME LAYER"
+    subgraph "LOG LAYER"
         direction TB
-        GAME_RULES[📜 Game Rules]
-        GAME_VALID[🔍 Move Legality]
-        GAME_WIN[🏅 Win Conditions]
-        
-        GAME_RULES --> GAME_VALID
-        GAME_VALID --> GAME_WIN
+        LEAGUE_LOG[logs/league/league_id/<br/>*.log.jsonl]
+        AGENT_LOG[logs/agents/<br/>*.log.jsonl]
+        SYSTEM_LOG[logs/system/<br/>*.log.jsonl]
     end
     
-    subgraph "TRANSPORT LAYER"
-        direction LR
-        HTTP[🌐 HTTP Transport]
-        JSONRPC[📦 JSON-RPC 2.0]
-        RETRY[🔄 Retry Logic]
+    SYSTEM --> AGENTS
+    AGENTS --> LEAGUE
+    LEAGUE --> GAMES
+    GAMES --> DEFAULTS
+    
+    STANDINGS --> MATCHES
+    MATCHES --> PLAYERS
+    
+    LEAGUE_LOG --> AGENT_LOG
+    AGENT_LOG --> SYSTEM_LOG
+```
+
+### MCP Server + Client Architecture (Each Agent)
+
+```mermaid
+graph TB
+    subgraph "Each Agent = Server + Client"
+        direction TB
         
-        HTTP --> JSONRPC
-        JSONRPC --> RETRY
+        subgraph "Inbound - MCP Server"
+            SERVER[📥 MCP Server<br/>Listens on port<br/>Exposes tools<br/>aiohttp + JSON-RPC 2.0]
+        end
+        
+        subgraph "Outbound - MCP Client"  
+            CLIENT[📤 MCP Client<br/>httpx AsyncClient<br/>Calls other agents' tools]
+        end
+        
+        subgraph "Business Logic"
+            LOGIC[Agent Logic<br/>State Management<br/>Strategy Execution]
+        end
     end
     
-    LM_SCHED --> REF_MGR
-    REF_VAL --> GAME_VALID
-    REF_RPT --> LM_STAND
+    LOGIC --> SERVER
+    LOGIC --> CLIENT
     
-    REF_MGR -.-> HTTP
+    OTHERS1[Other Agents] -->|"HTTP POST /mcp<br/>tools/call"| SERVER
+    CLIENT -->|"HTTP POST /mcp<br/>tools/call"| OTHERS2[Other Agents]
 ```
 
 ### Component Interaction Map
 
 ```mermaid
 flowchart LR
-    subgraph External["External Interface"]
-        CLI[🖥️ CLI Entry Point<br/>main.py]
-        CFG[⚙️ Configuration<br/>config.py]
+    subgraph External["Entry Points"]
+        CLI[🖥️ src/main.py<br/>CLI + Orchestrator]
+        CFG[⚙️ src/common/config.py<br/>Configuration]
     end
     
     subgraph Agents["Agent Layer"]
-        LM[League Manager]
-        REF[Referee]
-        PLAYER[Player Agent]
+        LM[league_manager.py<br/>Registration, Scheduling]
+        REF[referee.py<br/>Match Management]
+        PLAYER[player.py<br/>Strategies]
     end
     
     subgraph Core["Core Components"]
-        PROTO[Protocol<br/>Messages]
-        GAME[Game Logic<br/>Odd/Even]
-        MATCH[Match<br/>Scheduler]
+        PROTO[protocol.py<br/>20+ Message Types]
+        MATCH[match.py<br/>MatchScheduler]
+        GAME[odd_even.py<br/>Game Rules]
     end
     
     subgraph Infra["Infrastructure"]
-        SERVER[MCP Server]
-        CLIENT[MCP Client]
-        TRANSPORT[HTTP Transport]
-        LOGGER[Logger]
+        BASE[base_server.py<br/>MCP Server Base]
+        MCP[mcp_client.py<br/>HTTP Client]
+        TRANSPORT[http_transport.py<br/>JSON-RPC Handler]
     end
     
-    CLI --> CFG
     CLI --> LM
     CLI --> REF
     CLI --> PLAYER
+    CFG --> CLI
     
-    LM --> SERVER
     LM --> MATCH
     LM --> PROTO
+    LM --> BASE
     
-    REF --> SERVER
-    REF --> CLIENT
     REF --> GAME
     REF --> PROTO
+    REF --> BASE
+    REF --> MCP
     
-    PLAYER --> SERVER
-    PLAYER --> CLIENT
     PLAYER --> PROTO
+    PLAYER --> BASE
+    PLAYER --> MCP
     
-    SERVER --> TRANSPORT
-    CLIENT --> TRANSPORT
-    
-    TRANSPORT --> LOGGER
+    BASE --> TRANSPORT
+    MCP --> TRANSPORT
 ```
 
 ---
 
-## 🔌 MCP Client Architecture
+## 🚀 How to Operate
 
-### Client Component Diagram
-
-```mermaid
-graph TB
-    subgraph "MCP Client"
-        direction TB
-        
-        subgraph "Session Layer"
-            SM[📋 Session Manager<br/>Track active sessions]
-            CM[🔗 Connection Manager<br/>Health & retry]
-        end
-        
-        subgraph "Tool Layer"
-            TR[🔧 Tool Registry<br/>Discover & namespace tools]
-            TE[⚡ Tool Executor<br/>Execute tool calls]
-        end
-        
-        subgraph "Resource Layer"
-            RM[📦 Resource Manager<br/>Track & cache resources]
-            SUB[📡 Subscription Manager<br/>Resource updates]
-        end
-        
-        subgraph "Message Layer"
-            MQ[📬 Message Queue<br/>Priority FIFO]
-            RL[🚦 Rate Limiter<br/>Request throttling]
-        end
-        
-        subgraph "Transport Layer"
-            HTTP[🌐 HTTP Transport]
-            JSONRPC[📄 JSON-RPC Handler]
-        end
-    end
-    
-    SM --> CM
-    CM --> TR
-    TR --> TE
-    TE --> MQ
-    
-    RM --> SUB
-    SUB --> MQ
-    
-    MQ --> RL
-    RL --> HTTP
-    HTTP --> JSONRPC
-    
-    JSONRPC -->|"Request"| SERVER[🖥️ MCP Server]
-    SERVER -->|"Response"| JSONRPC
-```
-
-### Client Data Flow
-
-```mermaid
-sequenceDiagram
-    participant App as Application
-    participant Client as MCP Client
-    participant SM as Session Manager
-    participant TR as Tool Registry
-    participant MQ as Message Queue
-    participant Transport as HTTP Transport
-    participant Server as MCP Server
-    
-    App->>Client: connect(server_url)
-    Client->>SM: create_session()
-    SM->>Transport: POST /mcp (initialize)
-    Transport->>Server: JSON-RPC: initialize
-    Server-->>Transport: capabilities
-    Transport-->>SM: session_id
-    SM->>TR: discover_tools()
-    TR->>Transport: POST /mcp (tools/list)
-    Transport->>Server: JSON-RPC: tools/list
-    Server-->>Transport: tool_list
-    Transport-->>TR: register_tools()
-    TR-->>Client: Ready
-    
-    Note over App,Server: Client is now connected and ready
-    
-    App->>Client: call_tool("make_move", {move: 3})
-    Client->>MQ: enqueue(request)
-    MQ->>Transport: send_request()
-    Transport->>Server: JSON-RPC: tools/call
-    Server-->>Transport: result
-    Transport-->>MQ: response
-    MQ-->>Client: result
-    Client-->>App: {success: true}
-```
-
----
-
-## 🖥️ MCP Server Architecture
-
-### Server Component Diagram
-
-```mermaid
-graph TB
-    subgraph "MCP Server"
-        direction TB
-        
-        subgraph "Request Handler"
-            RH[🎯 Request Router]
-            AUTH[🔐 Auth Handler]
-            VAL[✅ Validator]
-        end
-        
-        subgraph "MCP Primitives"
-            TOOLS[🔧 Tools<br/>Actions & Operations]
-            RESOURCES[📦 Resources<br/>Read-only Data]
-            PROMPTS[📝 Prompts<br/>Templates]
-        end
-        
-        subgraph "Business Logic"
-            GAME_LOGIC[🎲 Game Logic]
-            STATE[📊 State Manager]
-            EVENTS[📡 Event Emitter]
-        end
-        
-        subgraph "Transport"
-            HTTP_SERVER[🌐 HTTP Server<br/>aiohttp]
-            JSONRPC_HANDLER[📄 JSON-RPC 2.0]
-        end
-    end
-    
-    HTTP_SERVER --> JSONRPC_HANDLER
-    JSONRPC_HANDLER --> RH
-    RH --> AUTH
-    AUTH --> VAL
-    
-    VAL --> TOOLS
-    VAL --> RESOURCES
-    VAL --> PROMPTS
-    
-    TOOLS --> GAME_LOGIC
-    RESOURCES --> STATE
-    PROMPTS --> STATE
-    
-    GAME_LOGIC --> STATE
-    STATE --> EVENTS
-    
-    CLIENT[🔌 MCP Client] -->|"HTTP POST /mcp"| HTTP_SERVER
-```
-
-### Server Request Processing
+### Quick Start Flowchart
 
 ```mermaid
 flowchart TD
-    REQ[📥 Incoming Request] --> PARSE[Parse JSON-RPC]
-    PARSE --> VALIDATE{Valid<br/>Message?}
+    START([🚀 Start]) --> CHECK{Dependencies<br/>Installed?}
     
-    VALIDATE -->|No| ERROR[❌ Return Error<br/>-32600 Invalid Request]
-    VALIDATE -->|Yes| ROUTE{Route by<br/>Method}
+    CHECK -->|No| SETUP[Run Setup]
+    SETUP --> UV_INSTALL["uv sync --all-extras"]
+    UV_INSTALL --> CHECK
     
-    ROUTE -->|"tools/list"| TOOLS_LIST[Return Tool List]
-    ROUTE -->|"tools/call"| TOOLS_CALL[Execute Tool]
-    ROUTE -->|"resources/list"| RES_LIST[Return Resources]
-    ROUTE -->|"resources/read"| RES_READ[Read Resource]
-    ROUTE -->|"prompts/list"| PROMPT_LIST[Return Prompts]
-    ROUTE -->|"Unknown"| NOT_FOUND[❌ Method Not Found<br/>-32601]
+    CHECK -->|Yes| MODE{Run Mode?}
     
-    TOOLS_CALL --> FIND_TOOL{Tool<br/>Exists?}
-    FIND_TOOL -->|No| TOOL_ERROR[❌ Tool Not Found]
-    FIND_TOOL -->|Yes| EXEC_TOOL[Execute Handler]
-    EXEC_TOOL --> TOOL_RESULT[Return Result]
+    MODE -->|"🎯 Automatic<br/>(Recommended)"| AUTO["uv run python -m src.main --run"]
+    MODE -->|"🔧 Manual<br/>(Multi-terminal)"| MANUAL[Start Components<br/>Separately]
+    MODE -->|"🐳 Docker"| DOCKER["docker-compose up --build"]
     
-    TOOLS_LIST --> RESPONSE[📤 JSON-RPC Response]
-    TOOL_RESULT --> RESPONSE
-    RES_LIST --> RESPONSE
-    RES_READ --> RESPONSE
-    PROMPT_LIST --> RESPONSE
-    ERROR --> RESPONSE
-    NOT_FOUND --> RESPONSE
-    TOOL_ERROR --> RESPONSE
+    AUTO --> AUTO_FLOW[System automatically:<br/>1. Starts League Manager :8000<br/>2. Starts 2 Referees :8001-8002<br/>3. Starts 4 Players :8101-8104<br/>4. Registers all agents<br/>5. Runs round-robin tournament<br/>6. Displays final standings]
+    
+    MANUAL --> T1["Terminal 1:<br/>uv run python -m src.main<br/>--component league"]
+    T1 --> T2["Terminal 2:<br/>uv run python -m src.main<br/>--component referee --register"]
+    T2 --> T3["Terminal 3-6:<br/>uv run python -m src.main<br/>--component player --name P01<br/>--port 8101 --register"]
+    T3 --> T7["Terminal 7:<br/>uv run python -m src.main<br/>--start-league<br/>--run-all-rounds"]
+    
+    AUTO_FLOW --> COMPLETE([🏆 League Complete])
+    T7 --> COMPLETE
+    DOCKER --> COMPLETE
+```
+
+### Step-by-Step Instructions
+
+#### Prerequisites
+
+```bash
+# Required
+- Python 3.11+
+- UV package manager (recommended) OR pip
+
+# Optional (for LLM strategies)
+export ANTHROPIC_API_KEY=your_key_here
+export OPENAI_API_KEY=your_key_here
+```
+
+#### Option 1: Full Automatic League (Recommended)
+
+```bash
+# Step 1: Install dependencies
+uv sync --all-extras
+# OR with pip:
+pip install -e '.[dev,llm]'
+
+# Step 2: Run the full league (defaults: 1 League Manager, 2 Referees, 4 Players)
+uv run python -m src.main --run
+
+# Step 3: Watch the output - system automatically:
+#   - Starts League Manager (port 8000)
+#   - Starts 2 Referees (ports 8001, 8002)
+#   - Starts 4 Players (ports 8101-8104)
+#   - Registers all agents
+#   - Runs round-robin tournament (6 matches for 4 players)
+#   - Displays standings after each round
+#   - Declares champion
+```
+
+#### Option 2: Custom Configuration
+
+```bash
+# Run with 6 players and 3 referees
+uv run python -m src.main --run --players 6 --referees 3
+
+# Run with LLM strategies (Claude)
+uv run python -m src.main --run --strategy llm
+
+# Run with mixed strategies
+uv run python -m src.main --run --strategy mixed
+
+# Run with debug logging
+uv run python -m src.main --run --debug
+```
+
+#### Option 3: Manual Multi-Terminal Setup
+
+```bash
+# Terminal 1: Start League Manager
+uv run python -m src.main --component league --debug
+
+# Terminal 2: Start Referee 1
+uv run python -m src.main --component referee --port 8001 --register
+
+# Terminal 3: Start Referee 2 (optional)
+uv run python -m src.main --component referee --port 8002 --register
+
+# Terminal 4-7: Start Players
+uv run python -m src.main --component player --name "AlphaBot" --port 8101 --register
+uv run python -m src.main --component player --name "BetaBot" --port 8102 --register --strategy pattern
+uv run python -m src.main --component player --name "ClaudeBot" --port 8103 --register --strategy llm
+uv run python -m src.main --component player --name "DeltaBot" --port 8104 --register
+
+# Terminal 8: Control Commands
+uv run python -m src.main --start-league       # Create schedule
+uv run python -m src.main --run-round          # Run one round
+uv run python -m src.main --run-all-rounds     # Run all remaining rounds
+uv run python -m src.main --get-standings      # Get current standings
+```
+
+#### Option 4: Docker
+
+```bash
+# Build and run
+docker-compose up --build
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
+```
+
+### Command Reference Table
+
+| Command | Description |
+|---------|-------------|
+| `--run` | Run full automatic league |
+| `--players N` | Number of players (default: 4) |
+| `--referees N` | Number of referees (default: 2) |
+| `--strategy [random\|pattern\|llm\|mixed]` | Player strategy type |
+| `--component [league\|referee\|player]` | Start single component |
+| `--name NAME` | Player display name |
+| `--port PORT` | Component port |
+| `--register` | Auto-register with league |
+| `--start-league` | Send start_league command |
+| `--run-round` | Run next round |
+| `--run-all-rounds` | Run all remaining rounds |
+| `--get-standings` | Get current standings |
+| `--debug` | Enable debug logging |
+| `--llm-provider [anthropic\|openai]` | LLM provider |
+| `--llm-model MODEL` | LLM model name |
+
+### Makefile Commands
+
+```bash
+make setup        # Install UV and dependencies
+make run-league   # Run full league
+make run-debug    # Run with debug logging
+make test         # Run all tests
+make lint         # Check code quality
+make docker-up    # Start with Docker
+make docker-down  # Stop Docker services
 ```
 
 ---
 
-## 🔄 Communication Flow
+## 🔄 Complete Game Flow
 
-### Entity Communication Overview
-
-```mermaid
-graph LR
-    subgraph "Players"
-        P1[🤖 Player 1]
-        P2[🤖 Player 2]
-    end
-    
-    subgraph "League Manager"
-        LM[🏛️ League Manager]
-    end
-    
-    subgraph "Referee"
-        REF[⚖️ Referee]
-    end
-    
-    P1 -->|"1. REGISTER_REQUEST"| LM
-    LM -->|"2. REGISTER_RESPONSE<br/>(token)"| P1
-    
-    P2 -->|"1. REGISTER_REQUEST"| LM
-    LM -->|"2. REGISTER_RESPONSE<br/>(token)"| P2
-    
-    LM -->|"3. MATCH_ASSIGN"| REF
-    
-    REF -->|"4. GAME_INVITE"| P1
-    REF -->|"4. GAME_INVITE"| P2
-    
-    P1 -->|"5. GAME_ACCEPT"| REF
-    P2 -->|"5. GAME_ACCEPT"| REF
-    
-    REF -->|"6. GAME_START"| P1
-    REF -->|"6. GAME_START"| P2
-    
-    REF -->|"7. MOVE_REQUEST"| P1
-    REF -->|"7. MOVE_REQUEST"| P2
-    
-    P1 -->|"8. MOVE_RESPONSE"| REF
-    P2 -->|"8. MOVE_RESPONSE"| REF
-    
-    REF -->|"9. ROUND_RESULT"| P1
-    REF -->|"9. ROUND_RESULT"| P2
-    
-    REF -->|"10. GAME_END"| P1
-    REF -->|"10. GAME_END"| P2
-    
-    REF -->|"11. MATCH_RESULT"| LM
-```
-
-### Message Protocol Flow
-
-```mermaid
-flowchart TB
-    subgraph "Registration Phase"
-        direction LR
-        REG_REQ[LEAGUE_REGISTER_REQUEST] --> REG_RES[LEAGUE_REGISTER_RESPONSE]
-        REF_REG[REFEREE_REGISTER_REQUEST] --> REF_RES[REFEREE_REGISTER_RESPONSE]
-    end
-    
-    subgraph "Match Setup Phase"
-        direction LR
-        MATCH_ASSIGN[MATCH_ASSIGN] --> GAME_INVITE[GAME_INVITE]
-        GAME_INVITE --> GAME_ACCEPT[GAME_ACCEPT]
-        GAME_ACCEPT --> GAME_START[GAME_START]
-    end
-    
-    subgraph "Game Play Phase"
-        direction LR
-        MOVE_REQ[MOVE_REQUEST] --> MOVE_RES[MOVE_RESPONSE]
-        MOVE_RES --> ROUND_RES[ROUND_RESULT]
-        ROUND_RES -->|"More rounds"| MOVE_REQ
-    end
-    
-    subgraph "Completion Phase"
-        direction LR
-        GAME_END[GAME_END] --> MATCH_RES[MATCH_RESULT]
-        MATCH_RES --> STANDINGS[STANDINGS_UPDATE]
-    end
-    
-    REG_RES --> MATCH_ASSIGN
-    GAME_START --> MOVE_REQ
-    ROUND_RES -->|"Match complete"| GAME_END
-```
-
----
-
-## 📊 Sequence Diagrams
-
-### 1. Player Registration Sequence
+### Full League Operation Sequence
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Player as 🤖 Player Agent
-    participant LM as 🏛️ League Manager
-    participant DB as 📊 State Store
-    
-    Note over Player,DB: Player Registration Flow
-    
-    Player->>Player: Generate player_id (UUID)
-    Player->>+LM: LEAGUE_REGISTER_REQUEST
-    Note right of Player: {player_id, display_name,<br/>endpoint, capabilities}
-    
-    LM->>LM: Validate request
-    LM->>DB: Check capacity
-    
-    alt League Full
-        LM-->>Player: LEAGUE_REGISTER_RESPONSE
-        Note left of LM: {success: false,<br/>error: "League full"}
-    else Registration OK
-        LM->>LM: Generate auth_token
-        LM->>DB: Store player info
-        LM-->>-Player: LEAGUE_REGISTER_RESPONSE
-        Note left of LM: {success: true,<br/>auth_token, league_info}
-    end
-    
-    Player->>Player: Store auth_token
-    Player->>Player: Update state → REGISTERED
-```
-
-### 2. Complete Game Flow Sequence
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant LM as 🏛️ League Manager
-    participant REF as ⚖️ Referee
-    participant P1 as 🤖 Player 1
-    participant P2 as 🤖 Player 2
-    participant GAME as 🎲 Game Logic
-    
-    Note over LM,GAME: Match Assignment
-    
-    LM->>+REF: MATCH_ASSIGN
-    Note right of LM: {match_id, player1_info, player2_info}
-    REF-->>-LM: ACK
-    
-    Note over LM,GAME: Game Invitation
-    
-    par Send invitations
-        REF->>+P1: GAME_INVITE
-        Note right of REF: {match_id, opponent_id, role: ODD}
-        and
-        REF->>+P2: GAME_INVITE
-        Note right of REF: {match_id, opponent_id, role: EVEN}
-    end
-    
-    P1-->>REF: GAME_ACCEPT
-    P2-->>-REF: GAME_ACCEPT
-    
-    Note over LM,GAME: Game Start
-    
-    par Notify game start
-        REF->>P1: GAME_START
-        Note right of REF: {game_id, your_role, opponent_role}
-        and
-        REF->>P2: GAME_START
-    end
-    
-    Note over LM,GAME: Round Loop (Best of N)
-    
-    loop Each Round
-        par Request moves
-            REF->>P1: MOVE_REQUEST
-            Note right of REF: {round_number, time_limit}
-            and
-            REF->>P2: MOVE_REQUEST
-        end
-        
-        P1->>P1: Strategy.choose_move()
-        P2->>P2: Strategy.choose_move()
-        
-        par Submit moves
-            P1-->>REF: MOVE_RESPONSE {move: 3}
-            and
-            P2-->>REF: MOVE_RESPONSE {move: 2}
-        end
-        
-        REF->>GAME: validate_moves(3, 2)
-        GAME-->>REF: {valid: true}
-        
-        REF->>GAME: calculate_result(3, 2)
-        Note over GAME: sum=5 (ODD) → Player1 wins
-        GAME-->>REF: {winner: player1, sum: 5}
-        
-        par Send round results
-            REF->>P1: ROUND_RESULT
-            Note right of REF: {winner: "you", sum: 5}
-            and
-            REF->>P2: ROUND_RESULT
-            Note right of REF: {winner: "opponent", sum: 5}
-        end
-    end
-    
-    Note over LM,GAME: Game End
-    
-    par Notify game end
-        REF->>P1: GAME_END
-        Note right of REF: {match_winner, final_score}
-        and
-        REF->>P2: GAME_END
-    end
-    
-    REF->>LM: MATCH_RESULT
-    Note right of REF: {match_id, winner_id, score}
-    
-    LM->>LM: Update standings
-```
-
-### 3. Full League Operation Sequence
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant ORCH as 🎯 Orchestrator
-    participant LM as 🏛️ League Manager
-    participant REF as ⚖️ Referee
-    participant P1 as 🤖 P1
-    participant P2 as 🤖 P2
-    participant P3 as 🤖 P3
-    participant P4 as 🤖 P4
+    participant ORCH as 🎯 Orchestrator<br/>main.py
+    participant LM as 🏛️ League Manager<br/>:8000
+    participant REF1 as ⚖️ Referee 1<br/>:8001
+    participant REF2 as ⚖️ Referee 2<br/>:8002
+    participant P1 as 🤖 P01<br/>:8101
+    participant P2 as 🤖 P02<br/>:8102
+    participant P3 as 🤖 P03<br/>:8103
+    participant P4 as 🤖 P04<br/>:8104
     
     Note over ORCH,P4: Phase 1: System Startup
     
     ORCH->>LM: start()
     LM-->>ORCH: Running on :8000
     
-    ORCH->>REF: start()
-    REF-->>ORCH: Running on :8001
+    par Start Referees
+        ORCH->>REF1: start()
+        REF1-->>ORCH: Running on :8001
+        and
+        ORCH->>REF2: start()
+        REF2-->>ORCH: Running on :8002
+    end
     
-    par Start all players
+    par Start Players
         ORCH->>P1: start()
         and
         ORCH->>P2: start()
@@ -709,104 +400,255 @@ sequenceDiagram
     
     Note over ORCH,P4: Phase 2: Registration
     
-    par All players register
-        P1->>LM: REGISTER_REQUEST
-        LM-->>P1: REGISTER_RESPONSE ✓
+    par Referee Registration
+        REF1->>LM: REFEREE_REGISTER_REQUEST
+        LM-->>REF1: REFEREE_REGISTER_RESPONSE ✓ auth_token
         and
-        P2->>LM: REGISTER_REQUEST
-        LM-->>P2: REGISTER_RESPONSE ✓
-        and
-        P3->>LM: REGISTER_REQUEST
-        LM-->>P3: REGISTER_RESPONSE ✓
-        and
-        P4->>LM: REGISTER_REQUEST
-        LM-->>P4: REGISTER_RESPONSE ✓
+        REF2->>LM: REFEREE_REGISTER_REQUEST
+        LM-->>REF2: REFEREE_REGISTER_RESPONSE ✓ auth_token
     end
     
-    Note over ORCH,P4: Phase 3: League Starts
+    par Player Registration
+        P1->>LM: LEAGUE_REGISTER_REQUEST
+        LM-->>P1: LEAGUE_REGISTER_RESPONSE ✓ auth_token
+        and
+        P2->>LM: LEAGUE_REGISTER_REQUEST
+        LM-->>P2: LEAGUE_REGISTER_RESPONSE ✓ auth_token
+        and
+        P3->>LM: LEAGUE_REGISTER_REQUEST
+        LM-->>P3: LEAGUE_REGISTER_RESPONSE ✓ auth_token
+        and
+        P4->>LM: LEAGUE_REGISTER_REQUEST
+        LM-->>P4: LEAGUE_REGISTER_RESPONSE ✓ auth_token
+    end
     
-    LM->>LM: Generate round-robin schedule
-    Note over LM: 4 players = 6 matches<br/>Round 1: (P1vP2, P3vP4)<br/>Round 2: (P1vP3, P2vP4)<br/>Round 3: (P1vP4, P2vP3)
+    Note over ORCH,P4: Phase 3: Schedule Creation
+    
+    LM->>LM: create_round_robin_schedule()
+    Note over LM: 4 players = 6 matches<br/>Round 1: P1vP2, P3vP4<br/>Round 2: P1vP3, P2vP4<br/>Round 3: P1vP4, P2vP3
+    
+    Note over ORCH,P4: Phase 4: Round Execution
     
     loop Each Round
-        LM->>REF: MATCH_ASSIGN (match1)
-        LM->>REF: MATCH_ASSIGN (match2)
+        LM->>LM: ROUND_ANNOUNCEMENT
+        LM->>REF1: assign_match(P1 vs P2)
+        LM->>REF2: assign_match(P3 vs P4)
         
-        Note over REF,P4: Referee runs matches...
+        Note over REF1,P2: Match 1: P1 vs P2
+        REF1->>P1: GAME_INVITE {role: ODD}
+        REF1->>P2: GAME_INVITE {role: EVEN}
+        P1-->>REF1: GAME_JOIN_ACK
+        P2-->>REF1: GAME_JOIN_ACK
         
-        REF->>LM: MATCH_RESULT (match1)
-        REF->>LM: MATCH_RESULT (match2)
+        loop Best of N rounds
+            REF1->>P1: CHOOSE_PARITY_CALL {deadline}
+            REF1->>P2: CHOOSE_PARITY_CALL {deadline}
+            P1-->>REF1: CHOOSE_PARITY_RESPONSE {number: 3}
+            P2-->>REF1: CHOOSE_PARITY_RESPONSE {number: 2}
+            REF1->>REF1: sum=5 (ODD) → P1 wins round
+            REF1->>P1: ROUND_RESULT
+            REF1->>P2: ROUND_RESULT
+        end
+        
+        REF1->>P1: GAME_OVER {winner, score}
+        REF1->>P2: GAME_OVER {winner, score}
+        REF1->>LM: MATCH_RESULT_REPORT
+        
+        Note over REF2,P4: Match 2: P3 vs P4 (parallel)
         
         LM->>LM: Update standings
+        LM->>LM: LEAGUE_STANDINGS_UPDATE
     end
     
-    Note over ORCH,P4: Phase 4: League Complete
+    Note over ORCH,P4: Phase 5: League Complete
     
     LM->>LM: Determine champion
-    LM-->>ORCH: Final standings
+    LM-->>ORCH: LEAGUE_COMPLETED {champion, final_standings}
 ```
 
-### 4. Error Handling & Retry Sequence
+### Single Match Flow (Detailed)
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Client as 🔌 MCP Client
-    participant Retry as 🔄 Retry Handler
-    participant CB as 🔘 Circuit Breaker
-    participant Transport as 🌐 HTTP Transport
-    participant Server as 🖥️ Server
+    participant REF as ⚖️ Referee
+    participant P1 as 🤖 Player 1<br/>(ODD)
+    participant P2 as 🤖 Player 2<br/>(EVEN)
+    participant GAME as 🎲 Game Logic
     
-    Note over Client,Server: Request with Retry Logic
+    Note over REF,GAME: Match Setup
     
-    Client->>Retry: send_request()
-    Retry->>CB: check_state()
+    REF->>P1: GAME_INVITE
+    Note right of REF: {match_id, opponent_id,<br/>assigned_role: "ODD",<br/>game_type: "even_odd",<br/>best_of: 5}
     
-    alt Circuit OPEN
-        CB-->>Client: ❌ Circuit Open Error
-    else Circuit CLOSED/HALF-OPEN
-        loop Max 3 retries
-            Retry->>Transport: POST /mcp
-            Transport->>Server: HTTP Request
-            
-            alt Success
-                Server-->>Transport: 200 OK
-                Transport-->>Retry: Response
-                Retry->>CB: record_success()
-                Retry-->>Client: ✓ Result
-            else Timeout
-                Note over Transport,Server: ⏱️ Timeout after 5s
-                Transport-->>Retry: TimeoutError
-                Retry->>Retry: wait(backoff * 2^attempt)
-                Note over Retry: Exponential backoff<br/>+ jitter
-            else Server Error (5xx)
-                Server-->>Transport: 500 Error
-                Transport-->>Retry: ServerError
-                Retry->>CB: record_failure()
-                Retry->>Retry: wait(backoff * 2^attempt)
-            else Client Error (4xx)
-                Server-->>Transport: 400 Error
-                Transport-->>Retry: ClientError
-                Note over Retry: No retry for<br/>client errors
-                Retry-->>Client: ❌ Error
-            end
-        end
+    REF->>P2: GAME_INVITE
+    Note right of REF: {match_id, opponent_id,<br/>assigned_role: "EVEN",<br/>game_type: "even_odd",<br/>best_of: 5}
+    
+    P1-->>REF: GAME_JOIN_ACK {accepted: true}
+    P2-->>REF: GAME_JOIN_ACK {accepted: true}
+    
+    Note over REF,GAME: Game Rounds (Best of 5)
+    
+    loop Round 1 to N (until winner)
+        REF->>P1: CHOOSE_PARITY_CALL
+        Note right of REF: {game_round: 1,<br/>current_score: {ODD: 0, EVEN: 0},<br/>deadline: "2024-12-19T12:00:30Z"}
         
-        Note over Retry: Max retries exceeded
-        Retry->>CB: record_failure()
-        CB->>CB: failures++ 
+        REF->>P2: CHOOSE_PARITY_CALL
         
-        alt failures >= threshold
-            CB->>CB: state = OPEN
-        end
+        P1->>P1: Strategy.choose_move()
+        P2->>P2: Strategy.choose_move()
         
-        Retry-->>Client: ❌ Max Retries Error
+        P1-->>REF: CHOOSE_PARITY_RESPONSE {number: 3}
+        P2-->>REF: CHOOSE_PARITY_RESPONSE {number: 2}
+        
+        REF->>GAME: validate(3, 2)
+        GAME-->>REF: valid
+        
+        REF->>GAME: calculate_result(3, 2)
+        Note over GAME: sum = 5 (ODD)<br/>ODD player wins
+        GAME-->>REF: {winner: "ODD", sum: 5}
+        
+        REF->>P1: ROUND_RESULT
+        Note right of REF: {round_winner: "ODD",<br/>you_won: true,<br/>your_number: 3,<br/>opponent_number: 2,<br/>sum: 5,<br/>updated_score: {ODD: 1, EVEN: 0}}
+        
+        REF->>P2: ROUND_RESULT
+        Note right of REF: {round_winner: "ODD",<br/>you_won: false, ...}
     end
+    
+    Note over REF,GAME: Match Complete
+    
+    REF->>P1: GAME_OVER
+    Note right of REF: {match_winner: "P1",<br/>final_score: {ODD: 3, EVEN: 1},<br/>rounds_played: 4}
+    
+    REF->>P2: GAME_OVER
 ```
 
 ---
 
-## 🔀 Entity State Machine
+## 💬 Agent Communication
+
+### Message Flow Overview
+
+```mermaid
+flowchart TB
+    subgraph "Registration Phase"
+        REF_REG[REFEREE_REGISTER_REQUEST] --> REF_RES[REFEREE_REGISTER_RESPONSE]
+        PLAYER_REG[LEAGUE_REGISTER_REQUEST] --> PLAYER_RES[LEAGUE_REGISTER_RESPONSE]
+    end
+    
+    subgraph "Match Setup Phase"
+        ROUND_ANN[ROUND_ANNOUNCEMENT] --> GAME_INV[GAME_INVITE]
+        GAME_INV --> GAME_ACK[GAME_JOIN_ACK]
+    end
+    
+    subgraph "Game Play Phase"
+        PARITY_CALL[CHOOSE_PARITY_CALL] --> PARITY_RES[CHOOSE_PARITY_RESPONSE]
+        PARITY_RES --> ROUND_RES[ROUND_RESULT]
+        ROUND_RES -->|"More rounds"| PARITY_CALL
+    end
+    
+    subgraph "Completion Phase"
+        GAME_END[GAME_OVER] --> MATCH_REPORT[MATCH_RESULT_REPORT]
+        MATCH_REPORT --> STANDINGS[LEAGUE_STANDINGS_UPDATE]
+        STANDINGS -->|"More matches"| ROUND_ANN
+        STANDINGS -->|"League done"| COMPLETE[LEAGUE_COMPLETED]
+    end
+    
+    REF_RES --> ROUND_ANN
+    PLAYER_RES --> ROUND_ANN
+    GAME_ACK --> PARITY_CALL
+    ROUND_RES -->|"Match complete"| GAME_END
+```
+
+### Protocol Message Types (20+)
+
+```mermaid
+classDiagram
+    class BaseMessage {
+        +string protocol = "league.v2"
+        +string message_type
+        +string league_id
+        +string conversation_id
+        +string sender
+        +datetime timestamp
+    }
+    
+    class LEAGUE_REGISTER_REQUEST {
+        +string player_id
+        +string display_name
+        +string endpoint
+        +string[] game_types
+    }
+    
+    class LEAGUE_REGISTER_RESPONSE {
+        +bool success
+        +string auth_token
+        +dict league_info
+        +string error
+    }
+    
+    class REFEREE_REGISTER_REQUEST {
+        +string referee_id
+        +string endpoint
+        +string[] supported_games
+    }
+    
+    class GAME_INVITE {
+        +string match_id
+        +string opponent_id
+        +string assigned_role
+        +string game_type
+        +int best_of
+    }
+    
+    class CHOOSE_PARITY_CALL {
+        +int game_round
+        +dict current_score
+        +datetime deadline
+    }
+    
+    class CHOOSE_PARITY_RESPONSE {
+        +int number
+        +dict metadata
+    }
+    
+    class GAME_OVER {
+        +string match_winner
+        +dict final_score
+        +int rounds_played
+    }
+    
+    class MATCH_RESULT_REPORT {
+        +string match_id
+        +string winner_id
+        +dict score
+        +list round_details
+    }
+    
+    BaseMessage <|-- LEAGUE_REGISTER_REQUEST
+    BaseMessage <|-- LEAGUE_REGISTER_RESPONSE
+    BaseMessage <|-- REFEREE_REGISTER_REQUEST
+    BaseMessage <|-- GAME_INVITE
+    BaseMessage <|-- CHOOSE_PARITY_CALL
+    BaseMessage <|-- CHOOSE_PARITY_RESPONSE
+    BaseMessage <|-- GAME_OVER
+    BaseMessage <|-- MATCH_RESULT_REPORT
+```
+
+### Message Timeouts
+
+| Message Type | Timeout |
+|--------------|---------|
+| `REFEREE_REGISTER` | 10 seconds |
+| `GAME_JOIN_ACK` | 10 seconds |
+| `CHOOSE_PARITY` (Move) | 30 seconds |
+| `MATCH_RESULT_REPORT` | 10 seconds |
+| `LEAGUE_QUERY` | 10 seconds |
+| Generic Response | 10 seconds |
+
+---
+
+## 🔀 State Machines
 
 ### Player Agent States
 
@@ -814,33 +656,32 @@ sequenceDiagram
 stateDiagram-v2
     [*] --> INIT: Create Player
     
-    INIT --> REGISTERED: register_success
-    INIT --> INIT: register_failed (retry)
+    INIT --> REGISTERED: LEAGUE_REGISTER_RESPONSE ✓
+    INIT --> INIT: Registration failed (retry)
     
-    REGISTERED --> ACTIVE: game_invite_accepted
-    REGISTERED --> SUSPENDED: timeout / error
+    REGISTERED --> ACTIVE: GAME_INVITE received
+    REGISTERED --> SUSPENDED: Timeout / Error
     
-    ACTIVE --> IN_GAME: game_started
+    ACTIVE --> IN_GAME: GAME_JOIN_ACK sent
     
-    IN_GAME --> ACTIVE: game_ended
-    IN_GAME --> SUSPENDED: disconnected
+    IN_GAME --> ACTIVE: GAME_OVER received
+    IN_GAME --> SUSPENDED: Disconnected
     
-    ACTIVE --> REGISTERED: match_complete
+    ACTIVE --> REGISTERED: Match complete
     
-    SUSPENDED --> REGISTERED: reconnected
-    SUSPENDED --> SHUTDOWN: max_retries_exceeded
+    SUSPENDED --> REGISTERED: Reconnected
+    SUSPENDED --> SHUTDOWN: Max retries exceeded
     
-    REGISTERED --> SHUTDOWN: league_ended
-    ACTIVE --> SHUTDOWN: league_ended
+    REGISTERED --> SHUTDOWN: LEAGUE_COMPLETED
+    ACTIVE --> SHUTDOWN: LEAGUE_COMPLETED
     
     SHUTDOWN --> [*]
     
-    note right of INIT: Initial state after creation
-    note right of REGISTERED: Ready to play
-    note right of ACTIVE: Participating in league
-    note right of IN_GAME: Currently playing a match
+    note right of INIT: Initial state
+    note right of REGISTERED: Ready to receive invites
+    note right of ACTIVE: Processing game invitation
+    note right of IN_GAME: Playing match
     note right of SUSPENDED: Temporarily unavailable
-    note right of SHUTDOWN: Final cleanup
 ```
 
 ### Referee Agent States
@@ -849,26 +690,26 @@ stateDiagram-v2
 stateDiagram-v2
     [*] --> INIT: Create Referee
     
-    INIT --> READY: registered_with_league
+    INIT --> READY: REFEREE_REGISTER_RESPONSE ✓
     
-    READY --> MANAGING_MATCH: match_assigned
+    READY --> MANAGING_MATCH: Match assigned
     
-    MANAGING_MATCH --> WAITING_ACCEPTS: invites_sent
+    MANAGING_MATCH --> WAITING_ACCEPTS: GAME_INVITE sent
     
-    WAITING_ACCEPTS --> GAME_RUNNING: all_accepted
-    WAITING_ACCEPTS --> READY: timeout (forfeit)
+    WAITING_ACCEPTS --> GAME_RUNNING: All GAME_JOIN_ACK received
+    WAITING_ACCEPTS --> READY: Timeout (forfeit)
     
-    GAME_RUNNING --> WAITING_MOVES: move_requests_sent
+    GAME_RUNNING --> WAITING_MOVES: CHOOSE_PARITY_CALL sent
     
-    WAITING_MOVES --> RESOLVING_ROUND: moves_received
-    WAITING_MOVES --> GAME_RUNNING: timeout (default_move)
+    WAITING_MOVES --> RESOLVING_ROUND: Both moves received
+    WAITING_MOVES --> GAME_RUNNING: Timeout (default move)
     
-    RESOLVING_ROUND --> GAME_RUNNING: more_rounds
-    RESOLVING_ROUND --> REPORTING_RESULT: match_complete
+    RESOLVING_ROUND --> GAME_RUNNING: More rounds needed
+    RESOLVING_ROUND --> REPORTING_RESULT: Match complete
     
-    REPORTING_RESULT --> READY: result_acknowledged
+    REPORTING_RESULT --> READY: MATCH_RESULT_REPORT acknowledged
     
-    READY --> SHUTDOWN: league_ended
+    READY --> SHUTDOWN: League ended
     
     SHUTDOWN --> [*]
 ```
@@ -879,282 +720,98 @@ stateDiagram-v2
 stateDiagram-v2
     [*] --> INIT: Create League
     
-    INIT --> REGISTRATION_OPEN: start_registration
+    INIT --> REGISTRATION_OPEN: Start registration
     
-    REGISTRATION_OPEN --> READY: min_players_reached
-    REGISTRATION_OPEN --> REGISTRATION_OPEN: player_registered
+    REGISTRATION_OPEN --> READY: Min players reached
+    REGISTRATION_OPEN --> REGISTRATION_OPEN: Agent registered
     
-    READY --> RUNNING: start_league
+    READY --> RUNNING: start_league() called
     
-    RUNNING --> ROUND_IN_PROGRESS: start_round
+    RUNNING --> ROUND_IN_PROGRESS: start_next_round()
     
-    ROUND_IN_PROGRESS --> BETWEEN_ROUNDS: all_matches_complete
+    ROUND_IN_PROGRESS --> BETWEEN_ROUNDS: All matches complete
     
-    BETWEEN_ROUNDS --> ROUND_IN_PROGRESS: start_next_round
-    BETWEEN_ROUNDS --> COMPLETE: all_rounds_done
+    BETWEEN_ROUNDS --> ROUND_IN_PROGRESS: More rounds
+    BETWEEN_ROUNDS --> COMPLETE: All rounds done
     
-    COMPLETE --> SHUTDOWN: cleanup
+    COMPLETE --> SHUTDOWN: Cleanup
     
     SHUTDOWN --> [*]
     
-    note right of REGISTRATION_OPEN: Accepting player registrations
-    note right of READY: Enough players, ready to start
-    note right of RUNNING: League competition active
-    note right of COMPLETE: Winner determined
+    note right of REGISTRATION_OPEN: Accepting registrations
+    note right of READY: Enough players, schedule ready
+    note right of RUNNING: Tournament active
+    note right of COMPLETE: Champion determined
 ```
-
----
-
-## 🚀 How to Operate
-
-### Quick Start Flow
-
-```mermaid
-flowchart TD
-    START([🚀 Start]) --> SETUP{Setup<br/>Complete?}
-    
-    SETUP -->|No| INSTALL[Install Dependencies]
-    INSTALL --> UV{Use UV?}
-    
-    UV -->|Yes| UV_INSTALL["uv sync --all-extras"]
-    UV -->|No| PIP_INSTALL["pip install -e '.[dev,llm]'"]
-    
-    UV_INSTALL --> SETUP
-    PIP_INSTALL --> SETUP
-    
-    SETUP -->|Yes| RUN_MODE{Run Mode?}
-    
-    RUN_MODE -->|"Full League<br/>(Automatic)"| FULL["uv run python -m src.main --run --players 4"]
-    RUN_MODE -->|"Manual<br/>(Multi-terminal)"| MANUAL[Start Components<br/>Separately]
-    RUN_MODE -->|Docker| DOCKER["docker-compose up --build"]
-    
-    MANUAL --> T1["Terminal 1:<br/>--component league"]
-    MANUAL --> T2["Terminal 2:<br/>--component referee --register"]
-    MANUAL --> T3["Terminal 3-N:<br/>--component player --register"]
-    T3 --> CTRL["Terminal 7:<br/>--start-league<br/>--run-all-rounds"]
-    
-    FULL --> WATCH[📊 Watch League Progress]
-    T1 --> WATCH
-    T2 --> WATCH
-    T3 --> WATCH
-    DOCKER --> WATCH
-    
-    WATCH --> END([🏆 League Complete])
-```
-
-### Command Reference
-
-#### Setup Commands
-
-| Command | Description |
-|---------|-------------|
-| `./scripts/setup.sh` | Run automated setup script |
-| `uv sync --all-extras` | Install all dependencies with UV |
-| `pip install -e '.[dev,llm]'` | Install with pip (alternative) |
-
-#### Run Commands
-
-| Command | Description |
-|---------|-------------|
-| `uv run python -m src.main --run --players 4` | Run full league with 4 players |
-| `make run-league` | Run league via Makefile |
-| `docker-compose up` | Run with Docker |
-
-#### Component Commands
-
-| Option | Description |
-|--------|-------------|
-| `--component league` | Start League Manager only |
-| `--component referee` | Start Referee only |
-| `--component player --name X --port Y` | Start a Player with name and port |
-
-#### CLI Options
-
-| Option | Description |
-|--------|-------------|
-| `--debug` | Enable debug logging |
-| `--register` | Auto-register player with league |
-| `--players N` | Number of players to start |
-| `--strategy [mixed\|random\|pattern\|llm]` | Player strategy type |
-
-> **Full Command Reference:** See [docs/COMMAND_REFERENCE.md](./docs/COMMAND_REFERENCE.md) for complete details.
-
-### Detailed Operation Steps
-
-#### Option 1: Full League (Automatic - Recommended)
-
-```bash
-# Step 1: Setup (one time)
-./scripts/setup.sh
-# OR
-uv sync --all-extras
-
-# Step 2: Run the league
-uv run python -m src.main --run --players 4
-
-# Step 3: Watch the output
-# System automatically:
-# - Starts League Manager (port 8000)
-# - Starts Referee (port 8001)
-# - Starts 4 Players (ports 8101-8104)
-# - Registers all players
-# - Runs round-robin tournament
-# - Displays standings after each round
-# - Declares winner
-```
-
-#### Option 2: Manual (Multi-Terminal)
-
-**Follow this order per PDF Section 2.5 (League Flow):**
-
-```bash
-# Terminal 1: Start League Manager
-uv run python -m src.main --component league --debug
-
-# Terminal 2: Start Referee (Step 1: Referee Registration)
-uv run python -m src.main --component referee --debug --register
-
-# Terminal 3: Start Player 1 (Step 2: Player Registration)
-uv run python -m src.main --component player --name "AlphaBot" --port 8101 --register
-
-# Terminal 4: Start Player 2 (Step 2: Player Registration)
-uv run python -m src.main --component player --name "BetaBot" --port 8102 --register
-
-# Terminal 5: Start Player 3 (Step 2: Player Registration)
-uv run python -m src.main --component player --name "GammaBot" --port 8103 --register
-
-# Terminal 6: Start Player 4 (Step 2: Player Registration)
-uv run python -m src.main --component player --name "DeltaBot" --port 8104 --register
-
-# Terminal 7: Control Commands (Steps 3-6)
-uv run python -m src.main --start-league      # Step 3: Create Schedule
-uv run python -m src.main --run-round         # Step 4-5: Run Next Round
-uv run python -m src.main --run-all-rounds    # Run All Remaining Rounds
-uv run python -m src.main --get-standings     # Step 6: Get Standings
-```
-
-#### Option 3: Docker
-
-```bash
-# Build and start all services
-docker-compose up --build
-
-# View logs
-docker-compose logs -f
-
-# Stop
-docker-compose down
-```
-
-### Makefile Commands
-
-| Command | Description |
-|---------|-------------|
-| `make setup` | Install UV and all dependencies |
-| `make run-league` | Run full league with 4 players |
-| `make run-debug` | Run with debug logging |
-| `make test` | Run all tests |
-| `make lint` | Check code quality |
-| `make docker-up` | Start with Docker |
-| `make docker-down` | Stop Docker services |
 
 ---
 
 ## 🎯 The Game: Odd/Even
 
-### Game Rules Diagram
+### Game Rules
 
 ```mermaid
 flowchart TD
-    START([🎮 Game Start]) --> ASSIGN[Assign Roles]
-    ASSIGN --> ROLES{Roles}
+    START([🎮 Match Start]) --> ASSIGN[Assign Roles Randomly]
     
-    ROLES --> P1_ODD[Player 1: ODD]
-    ROLES --> P2_EVEN[Player 2: EVEN]
+    ASSIGN --> P1_ODD[Player 1: ODD]
+    ASSIGN --> P2_EVEN[Player 2: EVEN]
     
     P1_ODD --> ROUND[🔄 Round N]
     P2_EVEN --> ROUND
     
-    ROUND --> CHOOSE[Both players choose<br/>number 1-5]
+    ROUND --> CHOOSE[Both players choose<br/>number 1-5 secretly]
+    
     CHOOSE --> SUM[Calculate sum]
     
-    SUM --> CHECK{Sum is<br/>Odd or Even?}
+    SUM --> CHECK{Sum % 2 == 0?}
     
-    CHECK -->|ODD| ODD_WIN[🎯 ODD player wins round]
-    CHECK -->|EVEN| EVEN_WIN[🎯 EVEN player wins round]
+    CHECK -->|"Yes (EVEN)"| EVEN_WIN[🎯 EVEN player wins round]
+    CHECK -->|"No (ODD)"| ODD_WIN[🎯 ODD player wins round]
     
-    ODD_WIN --> MORE{More<br/>rounds?}
-    EVEN_WIN --> MORE
+    EVEN_WIN --> UPDATE[Update score]
+    ODD_WIN --> UPDATE
     
-    MORE -->|Yes| ROUND
-    MORE -->|No| WINNER[Determine match winner<br/>Best of N]
+    UPDATE --> WINNER_CHECK{Best of N<br/>winner?}
     
-    WINNER --> END([🏆 Match Complete])
+    WINNER_CHECK -->|No| ROUND
+    WINNER_CHECK -->|Yes| MATCH_END[Determine match winner]
+    
+    MATCH_END --> END([🏆 Match Complete])
 ```
 
 ### Scoring System
 
-| Result | League Points |
-|--------|--------------|
+| Match Result | League Points |
+|--------------|---------------|
 | **Win** | 3 points |
 | **Draw** | 1 point |
 | **Loss** | 0 points |
 
+### Player Strategies
+
+```mermaid
+graph TB
+    subgraph "Strategy Types"
+        RANDOM[🎲 RandomStrategy<br/>Uniform random 1-5]
+        PATTERN[📊 PatternStrategy<br/>Exploits opponent patterns]
+        LLM[🧠 LLMStrategy<br/>AI-powered decisions]
+    end
+    
+    subgraph "LLM Providers"
+        ANTHROPIC[🟣 Anthropic Claude<br/>claude-3-5-sonnet]
+        OPENAI[🟢 OpenAI GPT<br/>gpt-4o-mini]
+        FALLBACK[🔄 Fallback<br/>Random on error]
+    end
+    
+    LLM -->|Primary| ANTHROPIC
+    LLM -->|Alternative| OPENAI
+    LLM -->|On Error| FALLBACK
+```
+
 ---
 
 ## 📨 Protocol Specification
-
-### Message Structure
-
-```mermaid
-classDiagram
-    class BaseMessage {
-        +string protocol
-        +string message_type
-        +string league_id
-        +string conversation_id
-        +string sender
-        +datetime timestamp
-    }
-    
-    class RegisterRequest {
-        +string player_id
-        +string display_name
-        +string endpoint
-        +dict capabilities
-    }
-    
-    class RegisterResponse {
-        +bool success
-        +string auth_token
-        +dict league_info
-        +string error
-    }
-    
-    class GameInvite {
-        +string match_id
-        +string opponent_id
-        +string role
-        +int rounds
-    }
-    
-    class MoveRequest {
-        +int round_number
-        +dict game_state
-        +int time_limit
-    }
-    
-    class MoveResponse {
-        +int move
-        +dict metadata
-    }
-    
-    BaseMessage <|-- RegisterRequest
-    BaseMessage <|-- RegisterResponse
-    BaseMessage <|-- GameInvite
-    BaseMessage <|-- MoveRequest
-    BaseMessage <|-- MoveResponse
-```
 
 ### JSON-RPC 2.0 Format
 
@@ -1164,15 +821,33 @@ classDiagram
   "id": "unique-request-id",
   "method": "tools/call",
   "params": {
-    "name": "make_move",
+    "name": "receive_game_invite",
     "arguments": {
-      "protocol": "league.v1",
-      "message_type": "MOVE_RESPONSE",
-      "move": 3
+      "protocol": "league.v2",
+      "message_type": "GAME_INVITE",
+      "league_id": "league_2025_even_odd",
+      "match_id": "match_001",
+      "opponent_id": "P02",
+      "assigned_role": "ODD",
+      "game_type": "even_odd",
+      "best_of": 5
     }
   }
 }
 ```
+
+### Message Examples
+
+See `docs/message-examples/` for all 18+ example messages:
+
+- `registration/referee_register_request.json`
+- `registration/player_register_request.json`
+- `game_invite.json`
+- `choose_parity.json`
+- `game_over.json`
+- `match_result_report.json`
+- `standings_update.json`
+- And more...
 
 ---
 
@@ -1180,28 +855,41 @@ classDiagram
 
 ### Port Configuration
 
-| Component | Port | URL |
-|-----------|------|-----|
+| Component | Default Port | URL |
+|-----------|--------------|-----|
 | League Manager | 8000 | `http://localhost:8000/mcp` |
-| Referee | 8001 | `http://localhost:8001/mcp` |
-| Player 1 | 8101 | `http://localhost:8101/mcp` |
-| Player 2 | 8102 | `http://localhost:8102/mcp` |
+| Referee 1 | 8001 | `http://localhost:8001/mcp` |
+| Referee 2 | 8002 | `http://localhost:8002/mcp` |
+| Player 1 (P01) | 8101 | `http://localhost:8101/mcp` |
+| Player 2 (P02) | 8102 | `http://localhost:8102/mcp` |
+| Player 3 (P03) | 8103 | `http://localhost:8103/mcp` |
+| Player 4 (P04) | 8104 | `http://localhost:8104/mcp` |
 | Player N | 81XX | `http://localhost:81XX/mcp` |
+
+### Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `config/system.json` | Global system settings, timeouts, retry policy |
+| `config/agents/agents_config.json` | Agent definitions (LM, Referees, Players) |
+| `config/leagues/league_2025_even_odd.json` | League scoring and participant limits |
+| `config/games/games_registry.json` | Game type definitions and rules modules |
+| `config/defaults/referee.json` | Default referee settings |
+| `config/defaults/player.json` | Default player settings |
 
 ### Environment Variables
 
 ```bash
-# LLM Configuration (for AI strategies)
-export OPENAI_API_KEY=your_key_here
-export ANTHROPIC_API_KEY=your_key_here
+# LLM Configuration
+export ANTHROPIC_API_KEY=your_anthropic_key
+export OPENAI_API_KEY=your_openai_key
 
 # Logging
 export LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR
 
-# Server Configuration
+# Server Configuration (optional overrides)
 export LEAGUE_HOST=localhost
 export LEAGUE_PORT=8000
-export REFEREE_PORT=8001
 ```
 
 ---
@@ -1209,54 +897,89 @@ export REFEREE_PORT=8001
 ## 📁 Project Structure
 
 ```
-Assignment_7_MCP_Multi_Agent_Game/
-├── src/
-│   ├── client/                 # MCP Client Implementation
-│   │   ├── mcp_client.py       # Main client
-│   │   ├── session_manager.py  # Session management
-│   │   ├── tool_registry.py    # Tool discovery & namespacing
-│   │   ├── connection_manager.py # Health & retry logic
-│   │   ├── message_queue.py    # Priority message handling
-│   │   └── resource_manager.py # Resource & subscription management
-│   │
-│   ├── server/                 # MCP Server Implementation
-│   │   ├── mcp_server.py       # Full MCP server
-│   │   ├── base_server.py      # Game server base class
-│   │   ├── tools/              # Tool implementations
-│   │   └── resources/          # Resource definitions
-│   │
-│   ├── transport/              # Transport Layer
-│   │   ├── json_rpc.py         # JSON-RPC 2.0 implementation
-│   │   ├── http_transport.py   # HTTP communication
-│   │   └── base.py             # Transport interface
-│   │
-│   ├── game/                   # Game Logic
-│   │   ├── odd_even.py         # Odd/Even game implementation
-│   │   └── match.py            # Match & scheduling
-│   │
-│   ├── agents/                 # AI Agents
-│   │   ├── league_manager.py   # League management
-│   │   ├── referee.py          # Game referee
-│   │   └── player.py           # Player with strategies
-│   │
-│   ├── common/                 # Shared Utilities
-│   │   ├── config.py           # Configuration management
-│   │   ├── logger.py           # Structured logging
-│   │   ├── exceptions.py       # Custom exceptions
-│   │   └── protocol.py         # Protocol definitions
-│   │
-│   └── main.py                 # Main entry point
+MCP_Multi_Agent_Game/
+├── src/                           # Source code
+│   ├── main.py                    # 🎯 Main entry point & orchestrator
+│   ├── agents/                    # Agent implementations
+│   │   ├── league_manager.py      # 🏛️ League Manager agent
+│   │   ├── referee.py             # ⚖️ Referee agent  
+│   │   └── player.py              # 🤖 Player agent + strategies
+│   ├── game/                      # Game logic
+│   │   ├── odd_even.py            # 🎲 Odd/Even game rules
+│   │   ├── match.py               # 📅 Match scheduling
+│   │   └── registry.py            # Game type registry
+│   ├── common/                    # Shared utilities (≈ league_sdk)
+│   │   ├── config.py              # Configuration management
+│   │   ├── config_loader.py       # Config file loader
+│   │   ├── protocol.py            # 📨 Message types & factories
+│   │   ├── repositories.py        # Data persistence
+│   │   ├── logger.py              # Structured logging
+│   │   ├── lifecycle.py           # Agent lifecycle management
+│   │   └── exceptions.py          # Custom exceptions
+│   ├── server/                    # MCP Server implementation
+│   │   ├── base_server.py         # Base MCP server class
+│   │   ├── mcp_server.py          # Full MCP server
+│   │   ├── tools/                 # Tool implementations
+│   │   └── resources/             # Resource definitions
+│   ├── client/                    # MCP Client implementation
+│   │   ├── mcp_client.py          # HTTP client
+│   │   ├── session_manager.py     # Session management
+│   │   ├── connection_manager.py  # Connection & retry
+│   │   ├── message_queue.py       # Message queuing
+│   │   ├── tool_registry.py       # Tool discovery
+│   │   └── resource_manager.py    # Resource management
+│   └── transport/                 # Transport layer
+│       ├── json_rpc.py            # JSON-RPC 2.0
+│       ├── http_transport.py      # HTTP communication
+│       └── base.py                # Transport interface
 │
-├── config/
-│   └── servers.json            # Server configurations
+├── config/                        # Configuration layer
+│   ├── system.json                # System-wide config
+│   ├── agents/agents_config.json  # Agent definitions
+│   ├── leagues/league_2025_even_odd.json
+│   ├── games/games_registry.json
+│   ├── defaults/                  # Default settings
+│   └── servers.json               # Server registry
 │
-├── tests/                      # Test Suite
-├── scripts/                    # Setup & run scripts
-├── docs/                       # Documentation
-├── pyproject.toml              # Project configuration
-├── Makefile                    # Common commands
-├── Dockerfile                  # Docker build
-└── docker-compose.yml          # Multi-container setup
+├── data/                          # Runtime data layer
+│   ├── leagues/league_2025_even_odd/
+│   │   ├── standings.json         # Current standings
+│   │   └── rounds.json            # Round history
+│   ├── matches/league_2025_even_odd/
+│   └── players/                   # Player history
+│       ├── P01/history.json
+│       └── P02/history.json
+│
+├── logs/                          # Logging layer
+│   ├── league/league_2025_even_odd/
+│   ├── agents/
+│   └── system/
+│
+├── docs/                          # Documentation
+│   ├── protocol-spec.md           # Protocol specification
+│   ├── message-examples/          # 18+ JSON examples
+│   ├── ARCHITECTURE.md
+│   ├── COMMAND_REFERENCE.md
+│   ├── DEPLOYMENT.md
+│   └── DEVELOPMENT.md
+│
+├── tests/                         # Test suite
+│   ├── test_game.py
+│   ├── test_protocol.py
+│   ├── test_transport.py
+│   └── ...
+│
+├── scripts/                       # Utility scripts
+│   ├── setup.sh
+│   ├── run_league.sh
+│   └── run_tests.sh
+│
+├── pyproject.toml                 # Project configuration
+├── Makefile                       # Common commands
+├── Dockerfile                     # Docker build
+├── docker-compose.yml             # Multi-container setup
+├── README.md                      # This file
+└── REQUIREMENTS.md                # Requirements specification
 ```
 
 ---
@@ -1272,6 +995,8 @@ uv run pytest tests/ --cov=src --cov-report=html
 
 # Run specific test
 uv run pytest tests/test_game.py -v
+uv run pytest tests/test_protocol.py -v
+uv run pytest tests/test_transport.py -v
 
 # Or use Makefile
 make test
@@ -1284,15 +1009,27 @@ make test
 ### Docker Deployment
 
 ```bash
-# Build the image
-docker build -t mcp-game-league .
+# Build and run all services
+docker-compose up --build
 
-# Run single container
-docker run -p 8000:8000 -p 8001:8001 mcp-game-league
+# Run in background
+docker-compose up -d
 
-# Or use Docker Compose
-docker-compose up --build -d
+# View logs
+docker-compose logs -f league_manager
+docker-compose logs -f referee
+docker-compose logs -f player1
+
+# Stop all services
+docker-compose down
 ```
+
+### Production Considerations
+
+- Set `LOG_LEVEL=INFO` in production
+- Configure proper timeouts in `config/system.json`
+- Use environment variables for secrets (API keys)
+- Enable retry policy with exponential backoff
 
 ---
 
@@ -1301,20 +1038,22 @@ docker-compose up --build -d
 - [Model Context Protocol Specification](https://spec.modelcontextprotocol.io/)
 - [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification)
 - [UV Package Manager](https://docs.astral.sh/uv/)
-- [Assignment Requirements](./REQUIREMENTS.md)
+- [Project Requirements](./REQUIREMENTS.md)
+- [Protocol Specification](./docs/protocol-spec.md)
 - [Architecture Documentation](./docs/ARCHITECTURE.md)
+- [Command Reference](./docs/COMMAND_REFERENCE.md)
 
 ---
 
 ## 📄 License
 
-MIT License - Academic project for LLMs and Multi-Agent Orchestration course.
+MIT License
 
 ---
 
 <div align="center">
 
-**Built with ❤️ for MIT-Level Excellence**
+**Built with ❤️ using Model Context Protocol**
 
 *Last Updated: December 2024*
 

@@ -1,5 +1,5 @@
 """
-Tests for configuration loader (Section 7).
+Tests for configuration loader.
 """
 
 import pytest

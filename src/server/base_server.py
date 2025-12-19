@@ -45,7 +45,7 @@ class BaseGameServer(MCPServer):
         self.server_type = server_type
         self.league_id = league_id
         
-        # Set sender format according to protocol spec (Section 2.4.4)
+        # Set sender format according to protocol spec
         # - league_manager: "league_manager" (single instance, no ID)
         # - referee: "referee:REF01" (type:id format)
         # - player: "player:P01" (type:id format)

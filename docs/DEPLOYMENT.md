@@ -28,7 +28,7 @@ This guide covers deployment options for the MCP Multi-Agent Game League system.
 ```bash
 # Clone repository
 git clone <repository-url>
-cd Assignment_7_MCP_Multi_Agent_Game
+cd MCP_Multi_Agent_Game
 
 # Run setup script (installs UV if needed)
 ./scripts/setup.sh

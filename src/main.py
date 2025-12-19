@@ -1,16 +1,16 @@
 """
-Main Entry Point - League System Runner (Section 8)
+Main Entry Point - League System Runner
 ===================================================
 
 Orchestrates the MCP Multi-Agent Game League.
 
-Section 8 Default Configuration:
+ Default Configuration:
     - 1 League Manager (port 8000)
     - 2 Referees (ports 8001, 8002)  
     - 4 Players (ports 8101-8104)
 
 Usage:
-    # Start full league with Section 8 defaults (1 LM, 2 Refs, 4 Players)
+    # Start full league with  defaults (1 LM, 2 Refs, 4 Players)
     python -m src.main --run
     
     # Custom configuration
@@ -50,14 +50,14 @@ logger = get_logger(__name__)
 
 class GameOrchestrator:
     """
-    Orchestrates the full game league (Section 8).
+    Orchestrates the full game league.
     
     Manages:
     - League Manager (1)
     - Multiple Referees (configurable, default 2)
     - Multiple Players (configurable, default 4)
     
-    Example configuration (Section 8):
+    Example configuration:
         - 1 League Manager on port 8000
         - 2 Referees on ports 8001, 8002
         - 4 Players on ports 8101-8104
@@ -119,7 +119,7 @@ class GameOrchestrator:
         return referee
     
     async def start_referees(self, num_referees: int = 2) -> List[RefereeAgent]:
-        """Start multiple referees (Section 8 requirement)."""
+        """Start multiple referees."""
         for i in range(num_referees):
             referee_id = f"REF{i + 1:02d}"
             port = self.config.referee.port + i
@@ -175,7 +175,7 @@ class GameOrchestrator:
         strategy: str = "mixed",
     ) -> None:
         """
-        Start all components (Section 8 configuration).
+        Start all components.
         
         Args:
             num_players: Number of players to start (default: 4)
@@ -187,7 +187,7 @@ class GameOrchestrator:
                 - "llm": All players use LLM (Claude) strategy
         """
         logger.info("="*60)
-        logger.info("Starting MCP Game League (Section 8 Configuration)")
+        logger.info("Starting MCP Game League")
         logger.info("="*60)
         logger.info(f"  League Manager: 1")
         logger.info(f"  Referees: {num_referees}")
@@ -203,7 +203,7 @@ class GameOrchestrator:
         # Wait a bit for league manager to be ready
         await asyncio.sleep(0.5)
         
-        # Start referees (Section 8: 2 referees)
+        # Start referees
         await self.start_referees(num_referees)
         
         # Wait a bit
@@ -572,14 +572,14 @@ Examples:
         "--players",
         type=int,
         default=4,
-        help="Number of players (default: 4, Section 8)",
+        help="Number of players (default: 4, )",
     )
     
     parser.add_argument(
         "--referees",
         type=int,
         default=2,
-        help="Number of referees (default: 2, Section 8)",
+        help="Number of referees (default: 2, )",
     )
     
     parser.add_argument(

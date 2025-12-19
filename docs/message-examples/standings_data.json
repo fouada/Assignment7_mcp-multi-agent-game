@@ -1,5 +1,5 @@
 {
-  "description": "Section 9.4.1 - data/leagues/<league_id>/standings.json example",
+  "description": "Standings data file example - data/leagues/<league_id>/standings.json",
   "example": {
     "schema_version": "1.0.0",
     "league_id": "league_2025_even_odd",

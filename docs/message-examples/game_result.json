@@ -1,5 +1,5 @@
 {
-  "description": "Game Result (Section 3.2.6)",
+  "description": "Game Result",
   "message": {
     "protocol": "league.v2",
     "message_id": "cc0e8400-e29b-41d4-a716-446655440001",

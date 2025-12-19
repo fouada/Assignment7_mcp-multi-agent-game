@@ -1,5 +1,5 @@
 {
-  "description": "CHOOSE_PARITY_CALL and CHOOSE_PARITY_RESPONSE (Section 8.7.3)",
+  "description": "CHOOSE_PARITY_CALL and CHOOSE_PARITY_RESPONSE",
   "request_to_P01": {
     "jsonrpc": "2.0",
     "method": "choose_parity",

@@ -31,7 +31,7 @@ This guide provides information for developers contributing to the MCP Multi-Age
 ```bash
 # Clone repository
 git clone <repository-url>
-cd Assignment_7_MCP_Multi_Agent_Game
+cd MCP_Multi_Agent_Game
 
 # Install UV (if not already installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh

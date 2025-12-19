@@ -4,7 +4,7 @@
     "even_odd": {
       "game_type": "even_odd",
       "display_name": "Even/Odd",
-      "description": "Two players choose numbers 1-10. Sum determines winner based on odd/even role (Section 8.7.4).",
+      "description": "Two players choose numbers 1-10. Sum determines winner based on odd/even role.",
       "rules_module": "src.game.odd_even",
       "max_round_time_sec": 30,
       "min_players": 2,
