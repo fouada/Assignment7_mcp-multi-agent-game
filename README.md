@@ -523,9 +523,197 @@ sequenceDiagram
     REF->>P2: GAME_OVER
 ```
 
+### Single Round Communication Flow
+
+```mermaid
+flowchart TD
+    START([Round Start]) --> REQ_MOVES
+    
+    subgraph "Move Collection Phase"
+        REQ_MOVES[📤 Referee sends<br/>CHOOSE_PARITY_CALL<br/>to both players]
+        
+        REQ_MOVES --> P1_DECIDE
+        REQ_MOVES --> P2_DECIDE
+        
+        P1_DECIDE[🤖 Player 1<br/>Strategy.decide_move]
+        P2_DECIDE[🤖 Player 2<br/>Strategy.decide_move]
+        
+        P1_DECIDE --> P1_SEND[📥 P1 sends<br/>CHOOSE_PARITY_RESPONSE]
+        P2_DECIDE --> P2_SEND[📥 P2 sends<br/>CHOOSE_PARITY_RESPONSE]
+    end
+    
+    P1_SEND --> COLLECT
+    P2_SEND --> COLLECT
+    
+    subgraph "Resolution Phase"
+        COLLECT[📋 Referee collects<br/>both moves]
+        
+        COLLECT --> VALIDATE{Validate<br/>moves 1-5?}
+        
+        VALIDATE -->|Invalid| TIMEOUT{Timeout?}
+        TIMEOUT -->|Yes| DEFAULT[Use default = 3]
+        TIMEOUT -->|No| ERROR[❌ Handle Error]
+        DEFAULT --> CALC
+        
+        VALIDATE -->|Valid| CALC[🧮 Calculate Sum]
+        
+        CALC --> PARITY{Sum % 2?}
+        
+        PARITY -->|"Odd (1,3,5,7,9)"| ODD_WINS[🎯 ODD Player Wins]
+        PARITY -->|"Even (2,4,6,8,10)"| EVEN_WINS[🎯 EVEN Player Wins]
+    end
+    
+    ODD_WINS --> UPDATE
+    EVEN_WINS --> UPDATE
+    
+    subgraph "Result Broadcast"
+        UPDATE[📊 Update Scores]
+        UPDATE --> SEND_RESULTS[📤 Send ROUND_RESULT<br/>to both players]
+    end
+    
+    SEND_RESULTS --> CHECK{Match<br/>Winner?}
+    
+    CHECK -->|"No (continue)"| START
+    CHECK -->|"Yes (3 wins)"| FINISH([Match Complete])
+```
+
+### Summary: Complete Communication Flow
+
+```mermaid
+flowchart TB
+    subgraph "1️⃣ STARTUP"
+        START[CLI starts all agents]
+    end
+    
+    subgraph "2️⃣ REGISTRATION"
+        REF_REG[Referee registers]
+        PLAYER_REG[Players register]
+    end
+    
+    subgraph "3️⃣ LEAGUE START"
+        GEN_SCHEDULE[Generate round-robin schedule]
+    end
+    
+    subgraph "4️⃣ FOR EACH ROUND"
+        ANNOUNCE[Round announcement]
+        
+        subgraph "Match Execution"
+            INVITE[Send GAME_INVITE]
+            ACCEPT[Receive GAME_JOIN_ACK]
+            ROUNDS[Play rounds<br/>CHOOSE_PARITY_CALL/RESPONSE]
+            RESULT[Send GAME_OVER]
+        end
+        
+        REPORT[MATCH_RESULT_REPORT]
+        UPDATE[LEAGUE_STANDINGS_UPDATE]
+    end
+    
+    subgraph "5️⃣ COMPLETION"
+        COMPLETE[LEAGUE_COMPLETED<br/>🏆 Champion declared]
+    end
+    
+    START --> REF_REG
+    REF_REG --> PLAYER_REG
+    PLAYER_REG --> GEN_SCHEDULE
+    GEN_SCHEDULE --> ANNOUNCE
+    ANNOUNCE --> INVITE
+    INVITE --> ACCEPT
+    ACCEPT --> ROUNDS
+    ROUNDS --> RESULT
+    RESULT --> REPORT
+    REPORT --> UPDATE
+    UPDATE -->|More rounds| ANNOUNCE
+    UPDATE -->|All done| COMPLETE
+```
+
 ---
 
 ## 💬 Agent Communication
+
+### Bidirectional MCP Communication
+
+> **Key Concept**: Each agent has BOTH an MCP Server (receives requests) AND an MCP Client (makes requests to other agents)
+
+```mermaid
+graph LR
+    subgraph "League Manager Agent"
+        LM_S[📥 Server<br/>:8000]
+        LM_C[📤 Client]
+        LM_LOGIC[Logic]
+        LM_S -.-> LM_LOGIC
+        LM_C -.-> LM_LOGIC
+    end
+    
+    subgraph "Referee Agent"
+        REF_S[📥 Server<br/>:8001]
+        REF_C[📤 Client]
+        REF_LOGIC[Logic]
+        REF_S -.-> REF_LOGIC
+        REF_C -.-> REF_LOGIC
+    end
+    
+    subgraph "Player 1 Agent"
+        P1_S[📥 Server<br/>:8101]
+        P1_C[📤 Client]
+        P1_LOGIC[Logic]
+        P1_S -.-> P1_LOGIC
+        P1_C -.-> P1_LOGIC
+    end
+    
+    subgraph "Player 2 Agent"
+        P2_S[📥 Server<br/>:8102]
+        P2_C[📤 Client]
+        P2_LOGIC[Logic]
+        P2_S -.-> P2_LOGIC
+        P2_C -.-> P2_LOGIC
+    end
+    
+    %% Registration flow
+    P1_C -->|"1️⃣ register_player()"| LM_S
+    P2_C -->|"1️⃣ register_player()"| LM_S
+    LM_S -->|"2️⃣ {token}"| P1_C
+    LM_S -->|"2️⃣ {token}"| P2_C
+    
+    %% Referee assignment
+    LM_C -->|"3️⃣ start_match()"| REF_S
+    
+    %% Game invitations
+    REF_C -->|"4️⃣ GAME_INVITE"| P1_S
+    REF_C -->|"4️⃣ GAME_INVITE"| P2_S
+    
+    %% Move submissions
+    P1_C -->|"5️⃣ MOVE_RESPONSE"| REF_S
+    P2_C -->|"5️⃣ MOVE_RESPONSE"| REF_S
+    
+    %% Result reporting
+    REF_C -->|"6️⃣ report_result()"| LM_S
+```
+
+### Message Routing Matrix
+
+```mermaid
+graph LR
+    subgraph "Senders"
+        S_LM[🏛️ League Manager]
+        S_REF[⚖️ Referee]
+        S_P[🤖 Player]
+    end
+    
+    subgraph "Receivers"
+        R_LM[🏛️ League Manager]
+        R_REF[⚖️ Referee]
+        R_P[🤖 Player]
+    end
+    
+    S_LM -->|"ROUND_ANNOUNCEMENT<br/>start_match()"| R_REF
+    S_LM -->|"REGISTER_RESPONSE<br/>STANDINGS_UPDATE<br/>LEAGUE_COMPLETED"| R_P
+    
+    S_REF -->|"MATCH_RESULT_REPORT"| R_LM
+    S_REF -->|"GAME_INVITE<br/>GAME_START<br/>CHOOSE_PARITY_CALL<br/>ROUND_RESULT<br/>GAME_OVER"| R_P
+    
+    S_P -->|"REGISTER_REQUEST"| R_LM
+    S_P -->|"GAME_JOIN_ACK<br/>CHOOSE_PARITY_RESPONSE"| R_REF
+```
 
 ### Message Flow Overview
 
@@ -1041,6 +1229,7 @@ docker-compose down
 - [Project Requirements](./REQUIREMENTS.md)
 - [Protocol Specification](./docs/protocol-spec.md)
 - [Architecture Documentation](./docs/ARCHITECTURE.md)
+- [Communication Flow Diagrams](./docs/COMMUNICATION_FLOW_DIAGRAM.md) - Detailed Mermaid diagrams
 - [Command Reference](./docs/COMMAND_REFERENCE.md)
 
 ---

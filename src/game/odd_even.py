@@ -357,6 +357,22 @@ class OddEvenGame:
         
         return result
     
+    def get_player_score(self, player_id: str) -> int:
+        """Get the current score for a player."""
+        if player_id == self.player1_id:
+            return self.player1_score
+        elif player_id == self.player2_id:
+            return self.player2_score
+        return 0
+    
+    def get_opponent_score(self, player_id: str) -> int:
+        """Get the current score for a player's opponent."""
+        if player_id == self.player1_id:
+            return self.player2_score
+        elif player_id == self.player2_id:
+            return self.player1_score
+        return 0
+    
     def get_result(self) -> GameResult:
         """
         Get final game result (Step 6: Report Result).
