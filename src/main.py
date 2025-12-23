@@ -372,6 +372,7 @@ async def run_component(component: str, args: argparse.Namespace) -> None:
         )
     elif component == "referee":
         server = RefereeAgent(
+            referee_id=args.name or "REF01",
             league_id=config.league.league_id,
             port=args.port or config.referee.port,
         )
@@ -558,7 +559,7 @@ Examples:
         "--name",
         type=str,
         default=None,
-        help="Name (for player component)",
+        help="Name/ID for player or referee (e.g., P01, REF02)",
     )
     
     parser.add_argument(

@@ -190,6 +190,7 @@ flowchart LR
     LM --> MATCH
     LM --> PROTO
     LM --> BASE
+    LM --> MCP
     
     REF --> GAME
     REF --> PROTO
@@ -203,6 +204,8 @@ flowchart LR
     BASE --> TRANSPORT
     MCP --> TRANSPORT
 ```
+
+**Note**: All agents (League Manager, Referee, Player) use both MCP Server (inbound) and MCP Client (outbound) for bidirectional communication.
 
 ---
 
@@ -425,40 +428,40 @@ sequenceDiagram
     Note over ORCH,P4: Phase 3: Schedule Creation
     
     LM->>LM: create_round_robin_schedule()
-    Note over LM: 4 players = 6 matches<br/>Round 1: P1vP2, P3vP4<br/>Round 2: P1vP3, P2vP4<br/>Round 3: P1vP4, P2vP3
+    Note over LM: 4 players = 6 matches<br/>Round 1: P01vP04, P02vP03<br/>Round 2: P01vP03, P04vP02<br/>Round 3: P01vP02, P03vP04
     
-    Note over ORCH,P4: Phase 4: Round Execution
+    Note over ORCH,P4: Phase 4: Round Execution (showing Round 1)
     
-    loop Each Round
-        LM->>LM: ROUND_ANNOUNCEMENT
-        LM->>REF1: assign_match(P1 vs P2)
-        LM->>REF2: assign_match(P3 vs P4)
-        
-        Note over REF1,P2: Match 1: P1 vs P2
-        REF1->>P1: GAME_INVITE {role: ODD}
-        REF1->>P2: GAME_INVITE {role: EVEN}
-        P1-->>REF1: GAME_JOIN_ACK
-        P2-->>REF1: GAME_JOIN_ACK
-        
-        loop Best of N rounds
-            REF1->>P1: CHOOSE_PARITY_CALL {deadline}
-            REF1->>P2: CHOOSE_PARITY_CALL {deadline}
-            P1-->>REF1: CHOOSE_PARITY_RESPONSE {number: 3}
-            P2-->>REF1: CHOOSE_PARITY_RESPONSE {number: 2}
-            REF1->>REF1: sum=5 (ODD) → P1 wins round
-            REF1->>P1: ROUND_RESULT
-            REF1->>P2: ROUND_RESULT
-        end
-        
-        REF1->>P1: GAME_OVER {winner, score}
-        REF1->>P2: GAME_OVER {winner, score}
-        REF1->>LM: MATCH_RESULT_REPORT
-        
-        Note over REF2,P4: Match 2: P3 vs P4 (parallel)
-        
-        LM->>LM: Update standings
-        LM->>LM: LEAGUE_STANDINGS_UPDATE
+    LM->>LM: ROUND_ANNOUNCEMENT
+    LM->>REF1: start_match(P01 vs P04)
+    LM->>REF2: start_match(P02 vs P03)
+    
+    Note over REF1,P4: Match R1M1: P01 vs P04
+    REF1->>P1: GAME_INVITE {role: ODD}
+    REF1->>P4: GAME_INVITE {role: EVEN}
+    P1-->>REF1: GAME_JOIN_ACK
+    P4-->>REF1: GAME_JOIN_ACK
+    
+    loop Best of 5 rounds
+        REF1->>P1: CHOOSE_PARITY_CALL {deadline}
+        REF1->>P4: CHOOSE_PARITY_CALL {deadline}
+        P1-->>REF1: CHOOSE_PARITY_RESPONSE {number: 3}
+        P4-->>REF1: CHOOSE_PARITY_RESPONSE {number: 2}
+        REF1->>REF1: sum=5 (ODD) → P01 wins round
+        REF1->>P1: ROUND_RESULT
+        REF1->>P4: ROUND_RESULT
     end
+    
+    REF1->>P1: GAME_OVER {winner: P01}
+    REF1->>P4: GAME_OVER {winner: P01}
+    REF1->>LM: MATCH_RESULT_REPORT
+    
+    Note over REF2,P3: Match R1M2: P02 vs P03 (parallel)
+    
+    LM->>LM: Update standings
+    LM->>LM: LEAGUE_STANDINGS_UPDATE
+    
+    Note over ORCH,P4: Rounds 2 and 3 follow same pattern
     
     Note over ORCH,P4: Phase 5: League Complete
     
@@ -479,10 +482,10 @@ sequenceDiagram
     Note over REF,GAME: Match Setup
     
     REF->>P1: GAME_INVITE
-    Note right of REF: {match_id, opponent_id,<br/>assigned_role: "ODD",<br/>game_type: "even_odd",<br/>best_of: 5}
+    Note right of REF: {game_id, match_id,<br/>opponent_id,<br/>assigned_role: "ODD",<br/>rounds_to_play: 5}
     
     REF->>P2: GAME_INVITE
-    Note right of REF: {match_id, opponent_id,<br/>assigned_role: "EVEN",<br/>game_type: "even_odd",<br/>best_of: 5}
+    Note right of REF: {game_id, match_id,<br/>opponent_id,<br/>assigned_role: "EVEN",<br/>rounds_to_play: 5}
     
     P1-->>REF: GAME_JOIN_ACK {accepted: true}
     P2-->>REF: GAME_JOIN_ACK {accepted: true}
@@ -491,15 +494,15 @@ sequenceDiagram
     
     loop Round 1 to N (until winner)
         REF->>P1: CHOOSE_PARITY_CALL
-        Note right of REF: {game_round: 1,<br/>current_score: {ODD: 0, EVEN: 0},<br/>deadline: "2024-12-19T12:00:30Z"}
+        Note right of REF: {match_id, player_id,<br/>round_id: 1,<br/>your_standings: {wins: 0, losses: 0},<br/>deadline: "2024-12-23T12:00:30Z"}
         
         REF->>P2: CHOOSE_PARITY_CALL
         
         P1->>P1: Strategy.choose_move()
         P2->>P2: Strategy.choose_move()
         
-        P1-->>REF: CHOOSE_PARITY_RESPONSE {number: 3}
-        P2-->>REF: CHOOSE_PARITY_RESPONSE {number: 2}
+        P1-->>REF: CHOOSE_PARITY_RESPONSE {parity_choice: 3}
+        P2-->>REF: CHOOSE_PARITY_RESPONSE {parity_choice: 2}
         
         REF->>GAME: validate(3, 2)
         GAME-->>REF: valid
@@ -518,10 +521,12 @@ sequenceDiagram
     Note over REF,GAME: Match Complete
     
     REF->>P1: GAME_OVER
-    Note right of REF: {match_winner: "P1",<br/>final_score: {ODD: 3, EVEN: 1},<br/>rounds_played: 4}
+    Note right of REF: {match_id, status: "WIN",<br/>winner_player_id: "P01",<br/>drawn_number, number_parity,<br/>choices}
     
     REF->>P2: GAME_OVER
 ```
+
+**Code Reference**: `src/agents/referee.py` → `RefereeAgent._run_game_round()`
 
 ### Single Round Communication Flow
 
@@ -762,77 +767,113 @@ classDiagram
     }
     
     class LEAGUE_REGISTER_REQUEST {
-        +string player_id
+        +PlayerMeta player_meta
+    }
+    
+    class PlayerMeta {
         +string display_name
-        +string endpoint
+        +string version
         +string[] game_types
+        +string contact_endpoint
     }
     
     class LEAGUE_REGISTER_RESPONSE {
-        +bool success
+        +string status
+        +string player_id
         +string auth_token
-        +dict league_info
-        +string error
+        +string reason
     }
     
     class REFEREE_REGISTER_REQUEST {
+        +RefereeMeta referee_meta
+    }
+    
+    class RefereeMeta {
+        +string display_name
+        +string version
+        +string[] game_types
+        +string contact_endpoint
+        +int max_concurrent_matches
+    }
+    
+    class REFEREE_REGISTER_RESPONSE {
+        +string status
         +string referee_id
-        +string endpoint
-        +string[] supported_games
+        +string auth_token
+        +string reason
     }
     
     class GAME_INVITE {
+        +string game_id
         +string match_id
         +string opponent_id
         +string assigned_role
-        +string game_type
-        +int best_of
+        +int rounds_to_play
     }
     
     class CHOOSE_PARITY_CALL {
-        +int game_round
-        +dict current_score
-        +datetime deadline
+        +string match_id
+        +string player_id
+        +string opponent_id
+        +int round_id
+        +dict your_standings
+        +string deadline
     }
     
     class CHOOSE_PARITY_RESPONSE {
-        +int number
-        +dict metadata
+        +string match_id
+        +string player_id
+        +string parity_choice
     }
     
     class GAME_OVER {
-        +string match_winner
-        +dict final_score
-        +int rounds_played
+        +string match_id
+        +string game_type
+        +string status
+        +string winner_player_id
+        +int drawn_number
+        +string number_parity
+        +dict choices
     }
     
     class MATCH_RESULT_REPORT {
+        +string league_id
+        +int round_id
         +string match_id
+        +string game_type
         +string winner_id
         +dict score
-        +list round_details
     }
     
     BaseMessage <|-- LEAGUE_REGISTER_REQUEST
     BaseMessage <|-- LEAGUE_REGISTER_RESPONSE
     BaseMessage <|-- REFEREE_REGISTER_REQUEST
+    BaseMessage <|-- REFEREE_REGISTER_RESPONSE
     BaseMessage <|-- GAME_INVITE
     BaseMessage <|-- CHOOSE_PARITY_CALL
     BaseMessage <|-- CHOOSE_PARITY_RESPONSE
     BaseMessage <|-- GAME_OVER
     BaseMessage <|-- MATCH_RESULT_REPORT
+    LEAGUE_REGISTER_REQUEST *-- PlayerMeta
+    REFEREE_REGISTER_REQUEST *-- RefereeMeta
 ```
+
+**Code Reference**: `src/common/protocol.py` → `MessageFactory`
 
 ### Message Timeouts
 
-| Message Type | Timeout |
-|--------------|---------|
-| `REFEREE_REGISTER` | 10 seconds |
-| `GAME_JOIN_ACK` | 10 seconds |
-| `CHOOSE_PARITY` (Move) | 30 seconds |
-| `MATCH_RESULT_REPORT` | 10 seconds |
-| `LEAGUE_QUERY` | 10 seconds |
-| Generic Response | 10 seconds |
+| Message Type | Timeout | Code Constant |
+|--------------|---------|---------------|
+| `REFEREE_REGISTER` | 10 seconds | `MessageTimeout.REFEREE_REGISTER` |
+| `LEAGUE_REGISTER` | 10 seconds | `MessageTimeout.LEAGUE_REGISTER` |
+| `GAME_JOIN_ACK` | 5 seconds | `MessageTimeout.GAME_JOIN_ACK` |
+| `CHOOSE_PARITY` (Move) | 30 seconds | `MessageTimeout.CHOOSE_PARITY` |
+| `GAME_OVER` | 5 seconds | `MessageTimeout.GAME_OVER` |
+| `MATCH_RESULT_REPORT` | 10 seconds | `MessageTimeout.MATCH_RESULT_REPORT` |
+| `LEAGUE_QUERY` | 10 seconds | `MessageTimeout.LEAGUE_QUERY` |
+| Generic Response | 10 seconds | `MessageTimeout.GENERIC` |
+
+**Code Reference**: `src/common/protocol.py` → `MessageTimeout`
 
 ---
 
@@ -840,97 +881,121 @@ classDiagram
 
 ### Player Agent States
 
+The player uses two state systems:
+1. **AgentState** (lifecycle): `INIT → REGISTERED → ACTIVE → SHUTDOWN`
+2. **GameSession.state** (per-game): `invited → accepted → making_move → awaiting_next → completed`
+
 ```mermaid
 stateDiagram-v2
     [*] --> INIT: Create Player
     
     INIT --> REGISTERED: LEAGUE_REGISTER_RESPONSE ✓
-    INIT --> INIT: Registration failed (retry)
+    INIT --> SHUTDOWN: Registration failed
     
     REGISTERED --> ACTIVE: GAME_INVITE received
-    REGISTERED --> SUSPENDED: Timeout / Error
+    REGISTERED --> SHUTDOWN: League ended
     
-    ACTIVE --> IN_GAME: GAME_JOIN_ACK sent
+    ACTIVE --> SUSPENDED: Timeout / Error
+    ACTIVE --> SHUTDOWN: League ended
     
-    IN_GAME --> ACTIVE: GAME_OVER received
-    IN_GAME --> SUSPENDED: Disconnected
-    
-    ACTIVE --> REGISTERED: Match complete
-    
-    SUSPENDED --> REGISTERED: Reconnected
+    SUSPENDED --> ACTIVE: Recovered
     SUSPENDED --> SHUTDOWN: Max retries exceeded
-    
-    REGISTERED --> SHUTDOWN: LEAGUE_COMPLETED
-    ACTIVE --> SHUTDOWN: LEAGUE_COMPLETED
     
     SHUTDOWN --> [*]
     
-    note right of INIT: Initial state
-    note right of REGISTERED: Ready to receive invites
-    note right of ACTIVE: Processing game invitation
-    note right of IN_GAME: Playing match
+    note right of INIT: Agent started, not registered
+    note right of REGISTERED: Has auth_token, waiting for games
+    note right of ACTIVE: Participating in games
     note right of SUSPENDED: Temporarily unavailable
+    note right of SHUTDOWN: Agent finished
+
+    state "Game Session States" as GameSession {
+        invited --> accepted: Accept invitation
+        invited --> declined: Decline invitation
+        accepted --> making_move: CHOOSE_PARITY_CALL
+        making_move --> awaiting_next: Move submitted
+        awaiting_next --> making_move: Next round
+        awaiting_next --> completed: GAME_OVER
+    }
 ```
+
+**Code Reference**: `src/common/protocol.py` → `AgentState`, `src/agents/player.py` → `GameSession.state`
 
 ### Referee Agent States
 
 ```mermaid
 stateDiagram-v2
-    [*] --> INIT: Create Referee
+    [*] --> IDLE: Create Referee
     
-    INIT --> READY: REFEREE_REGISTER_RESPONSE ✓
+    IDLE --> WAITING_FOR_PLAYERS: Match assigned (start_match)
     
-    READY --> MANAGING_MATCH: Match assigned
+    WAITING_FOR_PLAYERS --> COLLECTING_CHOICES: Players ready
+    WAITING_FOR_PLAYERS --> FINISHED: Timeout (forfeit)
     
-    MANAGING_MATCH --> WAITING_ACCEPTS: GAME_INVITE sent
+    COLLECTING_CHOICES --> DRAWING_NUMBER: Both moves received
+    COLLECTING_CHOICES --> COLLECTING_CHOICES: Timeout (use default)
     
-    WAITING_ACCEPTS --> GAME_RUNNING: All GAME_JOIN_ACK received
-    WAITING_ACCEPTS --> READY: Timeout (forfeit)
+    DRAWING_NUMBER --> COLLECTING_CHOICES: More rounds needed
+    DRAWING_NUMBER --> FINISHED: Match complete
     
-    GAME_RUNNING --> WAITING_MOVES: CHOOSE_PARITY_CALL sent
+    FINISHED --> IDLE: Ready for next match
     
-    WAITING_MOVES --> RESOLVING_ROUND: Both moves received
-    WAITING_MOVES --> GAME_RUNNING: Timeout (default move)
+    IDLE --> [*]: League ended
     
-    RESOLVING_ROUND --> GAME_RUNNING: More rounds needed
-    RESOLVING_ROUND --> REPORTING_RESULT: Match complete
-    
-    REPORTING_RESULT --> READY: MATCH_RESULT_REPORT acknowledged
-    
-    READY --> SHUTDOWN: League ended
-    
-    SHUTDOWN --> [*]
+    note right of IDLE: Ready to manage matches
+    note right of WAITING_FOR_PLAYERS: Sent GAME_INVITE, awaiting ACK
+    note right of COLLECTING_CHOICES: Sent CHOOSE_PARITY_CALL
+    note right of DRAWING_NUMBER: Resolving round winner
+    note right of FINISHED: Reporting result to League Manager
 ```
+
+**Code Reference**: `src/agents/referee.py` → `RefereeState`
 
 ### League Manager States
 
 ```mermaid
 stateDiagram-v2
-    [*] --> INIT: Create League
+    [*] --> REGISTRATION: Create League
     
-    INIT --> REGISTRATION_OPEN: Start registration
+    REGISTRATION --> REGISTRATION: Player/Referee registered
+    REGISTRATION --> READY: Min players reached + start_league()
     
-    REGISTRATION_OPEN --> READY: Min players reached
-    REGISTRATION_OPEN --> REGISTRATION_OPEN: Agent registered
+    READY --> IN_PROGRESS: start_next_round()
     
-    READY --> RUNNING: start_league() called
+    IN_PROGRESS --> IN_PROGRESS: Round completed, more rounds
+    IN_PROGRESS --> COMPLETED: All rounds finished
     
-    RUNNING --> ROUND_IN_PROGRESS: start_next_round()
+    COMPLETED --> [*]: League ended
     
-    ROUND_IN_PROGRESS --> BETWEEN_ROUNDS: All matches complete
-    
-    BETWEEN_ROUNDS --> ROUND_IN_PROGRESS: More rounds
-    BETWEEN_ROUNDS --> COMPLETE: All rounds done
-    
-    COMPLETE --> SHUTDOWN: Cleanup
-    
-    SHUTDOWN --> [*]
-    
-    note right of REGISTRATION_OPEN: Accepting registrations
-    note right of READY: Enough players, schedule ready
-    note right of RUNNING: Tournament active
-    note right of COMPLETE: Champion determined
+    note right of REGISTRATION: Accepting player & referee registrations
+    note right of READY: Schedule created, ready to start
+    note right of IN_PROGRESS: Tournament running
+    note right of COMPLETED: Champion determined
 ```
+
+**Code Reference**: `src/agents/league_manager.py` → `LeagueState`
+
+### Match States
+
+```mermaid
+stateDiagram-v2
+    [*] --> SCHEDULED: Match created
+    
+    SCHEDULED --> INVITATIONS_SENT: GAME_INVITE sent
+    
+    INVITATIONS_SENT --> PLAYERS_READY: Both ACKs received
+    INVITATIONS_SENT --> CANCELLED: Timeout
+    
+    PLAYERS_READY --> IN_PROGRESS: Game started
+    
+    IN_PROGRESS --> COMPLETED: Winner determined
+    IN_PROGRESS --> CANCELLED: Error
+    
+    COMPLETED --> [*]
+    CANCELLED --> [*]
+```
+
+**Code Reference**: `src/game/match.py` → `MatchState`
 
 ---
 
@@ -948,7 +1013,7 @@ flowchart TD
     P1_ODD --> ROUND[🔄 Round N]
     P2_EVEN --> ROUND
     
-    ROUND --> CHOOSE[Both players choose<br/>number 1-5 secretly]
+    ROUND --> CHOOSE[Both players choose<br/>number 1-10 secretly]
     
     CHOOSE --> SUM[Calculate sum]
     
@@ -968,6 +1033,8 @@ flowchart TD
     MATCH_END --> END([🏆 Match Complete])
 ```
 
+**Code Reference**: `src/game/odd_even.py` → `OddEvenGame`, `OddEvenRules`
+
 ### Scoring System
 
 | Match Result | League Points |
@@ -981,7 +1048,7 @@ flowchart TD
 ```mermaid
 graph TB
     subgraph "Strategy Types"
-        RANDOM[🎲 RandomStrategy<br/>Uniform random 1-5]
+        RANDOM[🎲 RandomStrategy<br/>Uniform random 1-10]
         PATTERN[📊 PatternStrategy<br/>Exploits opponent patterns]
         LLM[🧠 LLMStrategy<br/>AI-powered decisions]
     end
@@ -996,6 +1063,8 @@ graph TB
     LLM -->|Alternative| OPENAI
     LLM -->|On Error| FALLBACK
 ```
+
+**Code Reference**: `src/agents/player.py` → `PlayerAgent.decide_move()`
 
 ---
 
@@ -1053,6 +1122,8 @@ See `docs/message-examples/` for all 18+ example messages:
 | Player 3 (P03) | 8103 | `http://localhost:8103/mcp` |
 | Player 4 (P04) | 8104 | `http://localhost:8104/mcp` |
 | Player N | 81XX | `http://localhost:81XX/mcp` |
+
+**Code Reference**: `src/common/config.py` → `DEFAULT_PORTS`
 
 ### Configuration Files
 
@@ -1244,6 +1315,6 @@ MIT License
 
 **Built with ❤️ using Model Context Protocol**
 
-*Last Updated: December 2024*
+*Last Updated: December 23, 2024*
 
 </div>

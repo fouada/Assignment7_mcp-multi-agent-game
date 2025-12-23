@@ -17,6 +17,7 @@ from enum import Enum
 import uuid
 
 from ..server.base_server import BaseGameServer
+from ..client.mcp_client import MCPClient
 from ..game.match import Match, MatchScheduler, MatchState
 from ..common.logger import get_logger
 from ..common.protocol import (
@@ -164,6 +165,9 @@ class LeagueManager(BaseGameServer):
         
         # Referee
         self._referee_endpoint: Optional[str] = None
+        
+        # MCP client for communicating with referees
+        self._client: Optional[MCPClient] = None
         
         # Register tools
         self._register_tools()
@@ -350,6 +354,18 @@ class LeagueManager(BaseGameServer):
         )
         async def schedule_resource(params: Dict) -> Dict:
             return self._get_schedule()
+    
+    async def on_start(self) -> None:
+        """Initialize League Manager - create MCP client for referee communication."""
+        self._client = MCPClient(f"{self.name}_client")
+        await self._client.start()
+        logger.info("League Manager MCP client started")
+    
+    async def on_stop(self) -> None:
+        """Cleanup League Manager."""
+        if self._client:
+            await self._client.stop()
+        logger.info("League Manager stopped")
     
     async def _handle_referee_registration(self, params: Dict) -> Dict:
         """Handle referee registration."""
