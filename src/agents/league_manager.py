@@ -32,6 +32,12 @@ from ..common.exceptions import (
     AlreadyRegisteredError,
     LeagueFullError,
 )
+from ..common.events import (
+    get_event_bus,
+    AgentRegisteredEvent,
+    TournamentRoundStartedEvent,
+    StandingsUpdatedEvent,
+)
 
 logger = get_logger(__name__)
 
@@ -487,7 +493,22 @@ class LeagueManager(BaseGameServer):
             player_id=player_id,
             endpoint=endpoint,
         )
-        
+
+        # Emit agent registered event
+        try:
+            event_bus = get_event_bus()
+            await event_bus.emit(
+                "agent.registered",
+                AgentRegisteredEvent(
+                    agent_id=player_id,
+                    agent_type="player",
+                    agent_name=display_name,
+                    source="league_manager",
+                )
+            )
+        except Exception as e:
+            logger.error(f"Failed to emit AgentRegisteredEvent: {e}")
+
         return self.message_factory.register_response(
             status=RegistrationStatus.ACCEPTED.value,
             player_id=player_id,
@@ -603,7 +624,22 @@ class LeagueManager(BaseGameServer):
             matches=len(self._current_round_matches),
             referees_assigned=len([m for m in round_matches_info if m["referee_endpoint"]]),
         )
-        
+
+        # Emit tournament round started event
+        try:
+            event_bus = get_event_bus()
+            await event_bus.emit(
+                "tournament.round.started",
+                TournamentRoundStartedEvent(
+                    round_number=self.current_round,
+                    total_rounds=len(self._schedule),
+                    matches=[m["match_id"] for m in round_matches_info],
+                    source="league_manager",
+                )
+            )
+        except Exception as e:
+            logger.error(f"Failed to emit TournamentRoundStartedEvent: {e}")
+
         # Create ROUND_ANNOUNCEMENT message
         announcement = self.message_factory.round_announcement(
             round_id=self.current_round,
@@ -807,7 +843,21 @@ class LeagueManager(BaseGameServer):
         standings_message = None
         if round_complete:
             standings_message = await self._publish_standings_update()
-        
+
+        # Emit standings updated event
+        try:
+            event_bus = get_event_bus()
+            await event_bus.emit(
+                "standings.updated",
+                StandingsUpdatedEvent(
+                    standings=standings.get("standings", []),
+                    round_number=self.current_round,
+                    source="league_manager",
+                )
+            )
+        except Exception as e:
+            logger.error(f"Failed to emit StandingsUpdatedEvent: {e}")
+
         return {
             "success": True,
             "round_complete": round_complete,

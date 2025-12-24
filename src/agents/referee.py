@@ -27,6 +27,13 @@ from ..common.protocol import (
     PROTOCOL_VERSION,
 )
 from ..common.exceptions import TimeoutError, GameError
+from ..common.events import (
+    get_event_bus,
+    MatchStartedEvent,
+    RoundStartedEvent,
+    RoundCompletedEvent,
+    MatchCompletedEvent,
+)
 
 logger = get_logger(__name__)
 
@@ -364,7 +371,23 @@ class RefereeAgent(BaseGameServer):
         session.match.start()
         session.state = "running"
         logger.info(f"Game started: {session.game.game_id}")
-        
+
+        # Emit match started event
+        try:
+            event_bus = get_event_bus()
+            await event_bus.emit(
+                "match.started",
+                MatchStartedEvent(
+                    match_id=session.match.match_id,
+                    game_type="even_odd",
+                    players=[session.game.player1_id, session.game.player2_id],
+                    referee_id=self.referee_id,
+                    source=f"referee:{self.referee_id}",
+                )
+            )
+        except Exception as e:
+            logger.error(f"Failed to emit MatchStartedEvent: {e}")
+
         # Step 3: Run all rounds
         while not session.game.is_complete:
             await self._run_round(session)
@@ -417,13 +440,28 @@ class RefereeAgent(BaseGameServer):
     async def _run_round(self, session: GameSession) -> None:
         """
         Run a single round of the game.
-        
+
         Uses CHOOSE_PARITY_CALL to request player choices.
         """
         game = session.game
         match = session.match
         moves = {}
-        
+
+        # Emit round started event
+        try:
+            event_bus = get_event_bus()
+            await event_bus.emit(
+                "round.started",
+                RoundStartedEvent(
+                    game_id=game.game_id,
+                    round_number=game.current_round,
+                    players=[game.player1_id, game.player2_id],
+                    source=f"referee:{self.referee_id}",
+                )
+            )
+        except Exception as e:
+            logger.error(f"Failed to emit RoundStartedEvent: {e}")
+
         # Calculate deadline (30 seconds from now)
         from datetime import datetime, timedelta
         deadline = (datetime.utcnow() + timedelta(seconds=self.move_timeout)).isoformat() + "Z"
@@ -599,7 +637,33 @@ class RefereeAgent(BaseGameServer):
             winner=result.winner_id,
             sum=result.sum_value,
         )
-        
+
+        # Emit round completed event
+        try:
+            event_bus = get_event_bus()
+            await event_bus.emit(
+                "round.completed",
+                RoundCompletedEvent(
+                    game_id=game.game_id,
+                    round_number=result.round_number,
+                    moves={
+                        game.player1_id: result.player1_move,
+                        game.player2_id: result.player2_move,
+                    },
+                    scores={
+                        game.player1_id: 1 if result.winner_id == game.player1_id else 0,
+                        game.player2_id: 1 if result.winner_id == game.player2_id else 0,
+                    },
+                    cumulative_scores={
+                        game.player1_id: game.player1_score,
+                        game.player2_id: game.player2_score,
+                    },
+                    source=f"referee:{self.referee_id}",
+                )
+            )
+        except Exception as e:
+            logger.error(f"Failed to emit RoundCompletedEvent: {e}")
+
         # Send results to players
         await self._send_round_results(session, result)
         
@@ -688,7 +752,28 @@ class RefereeAgent(BaseGameServer):
             score=f"{game_result.player1_score}-{game_result.player2_score}",
             drawn_number=drawn_number,
         )
-        
+
+        # Emit match completed event
+        try:
+            event_bus = get_event_bus()
+            duration_seconds = (datetime.utcnow() - session.created_at).total_seconds()
+            await event_bus.emit(
+                "match.completed",
+                MatchCompletedEvent(
+                    match_id=match.match_id,
+                    winner=game_result.winner_id,
+                    final_scores={
+                        game.player1_id: game_result.player1_score,
+                        game.player2_id: game_result.player2_score,
+                    },
+                    total_rounds=len(game_result.rounds),
+                    duration_seconds=duration_seconds,
+                    source=f"referee:{self.referee_id}",
+                )
+            )
+        except Exception as e:
+            logger.error(f"Failed to emit MatchCompletedEvent: {e}")
+
         # Step 5.5: Send GAME_OVER to both players
         for player_id in [game.player1_id, game.player2_id]:
             game_over_msg = self.message_factory.game_over(

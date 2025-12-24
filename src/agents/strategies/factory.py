@@ -28,6 +28,7 @@ from .classic import (
     PatternStrategy,
     LLMStrategy,
 )
+from .plugin_registry import get_strategy_plugin_registry
 from ...common.config import LLMConfig
 from ...common.logger import get_logger
 
@@ -264,16 +265,52 @@ class StrategyFactory:
     ) -> Strategy:
         """
         Create a strategy from a string name.
-        
+
+        Checks plugin registry first for custom strategies, then falls back
+        to built-in enum-based strategies. This maintains backward compatibility
+        while enabling plugin extensibility.
+
         Args:
-            strategy_name: Strategy type as string (e.g., "adaptive-bayesian")
+            strategy_name: Strategy type as string (e.g., "adaptive-bayesian" or "my-custom-strategy")
             **kwargs: Additional configuration
-            
+
         Returns:
             Strategy instance
+
+        Raises:
+            ValueError: If strategy name is not found in plugins or built-in strategies
         """
-        strategy_type = StrategyType.from_string(strategy_name)
-        return cls.create(strategy_type, **kwargs)
+        # 1. Check plugin registry first (new plugin system)
+        plugin_registry = get_strategy_plugin_registry()
+        if plugin_registry.is_registered(strategy_name):
+            logger.debug(f"Creating strategy from plugin: {strategy_name}")
+
+            # Build config
+            config = kwargs.get("config")
+            if config is None:
+                config_dict = {
+                    k: v for k, v in kwargs.items()
+                    if k in StrategyConfig.__dataclass_fields__
+                }
+                if config_dict:
+                    config = StrategyConfig(**config_dict)
+
+            return plugin_registry.create_strategy(strategy_name, config=config, **kwargs)
+
+        # 2. Fall back to enum-based system (backward compatible)
+        try:
+            logger.debug(f"Creating strategy from built-in: {strategy_name}")
+            strategy_type = StrategyType.from_string(strategy_name)
+            return cls.create(strategy_type, **kwargs)
+        except ValueError:
+            # Not found in either system
+            available_plugins = list(plugin_registry.list_strategies().keys())
+            available_builtin = [st.value for st in StrategyType]
+            raise ValueError(
+                f"Unknown strategy: '{strategy_name}'. "
+                f"Available plugins: {available_plugins}. "
+                f"Available built-in: {available_builtin}"
+            )
     
     @classmethod
     def get_default_config(cls, strategy_type: StrategyType) -> Dict[str, Any]:
@@ -281,9 +318,26 @@ class StrategyFactory:
         return cls._DEFAULT_CONFIGS.get(strategy_type, {}).copy()
     
     @classmethod
-    def list_strategies(cls) -> Dict[str, str]:
-        """List all available strategies with descriptions."""
-        return StrategyType.list_all()
+    def list_strategies(cls, include_plugins: bool = True) -> Dict[str, str]:
+        """
+        List all available strategies with descriptions.
+
+        Args:
+            include_plugins: Whether to include plugin strategies (default: True)
+
+        Returns:
+            Dictionary mapping strategy names to descriptions
+        """
+        strategies = StrategyType.list_all()
+
+        # Add plugin strategies if requested
+        if include_plugins:
+            plugin_registry = get_strategy_plugin_registry()
+            for name, metadata in plugin_registry.list_strategies().items():
+                description = metadata.get("description", f"Plugin: {name}")
+                strategies[name] = description
+
+        return strategies
     
     @classmethod
     def get_recommended_strategy(cls) -> Strategy:

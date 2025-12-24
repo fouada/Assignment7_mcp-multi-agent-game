@@ -1,0 +1,109 @@
+{
+  "pipeline": {
+    "enabled": true,
+    "timeout_seconds": 30.0,
+    "error_handling": "continue",
+    "comment": "Error handling options: 'continue', 'stop', 'raise'"
+  },
+  "middleware": [
+    {
+      "name": "tracing",
+      "enabled": true,
+      "priority": 100,
+      "config": {
+        "service_name": "mcp_game"
+      },
+      "description": "Distributed tracing with trace IDs"
+    },
+    {
+      "name": "logging",
+      "enabled": true,
+      "priority": 90,
+      "config": {
+        "log_requests": true,
+        "log_responses": true,
+        "log_errors": true
+      },
+      "description": "Request/response logging with timing"
+    },
+    {
+      "name": "authentication",
+      "enabled": true,
+      "priority": 80,
+      "config": {
+        "required": true,
+        "token_field": "auth_token",
+        "cache_tokens": true
+      },
+      "description": "Token-based authentication"
+    },
+    {
+      "name": "rate_limit",
+      "enabled": true,
+      "priority": 70,
+      "config": {
+        "requests_per_minute": 100,
+        "burst_size": 10
+      },
+      "description": "Token bucket rate limiting per client"
+    },
+    {
+      "name": "validation",
+      "enabled": false,
+      "priority": 60,
+      "config": {
+        "strict": false,
+        "schemas": {}
+      },
+      "description": "JSON schema validation (disabled by default)"
+    },
+    {
+      "name": "metrics",
+      "enabled": true,
+      "priority": 50,
+      "config": {},
+      "description": "Performance metrics collection"
+    },
+    {
+      "name": "caching",
+      "enabled": false,
+      "priority": 40,
+      "config": {
+        "max_size": 100,
+        "ttl_seconds": 300
+      },
+      "description": "LRU response caching (disabled by default)"
+    },
+    {
+      "name": "error_handler",
+      "enabled": true,
+      "priority": 10,
+      "config": {
+        "include_traceback": false,
+        "sanitize_errors": true
+      },
+      "description": "Exception to error response conversion"
+    }
+  ],
+  "per_agent_overrides": {
+    "comment": "Agent-specific middleware configuration overrides",
+    "league_manager": {
+      "authentication": {
+        "required": false
+      },
+      "rate_limit": {
+        "requests_per_minute": 200
+      }
+    },
+    "referee": {
+      "rate_limit": {
+        "requests_per_minute": 150
+      }
+    },
+    "player": {
+      "caching": {
+        "enabled": true
+      }
+    }
+  }
+}

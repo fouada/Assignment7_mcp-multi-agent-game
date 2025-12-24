@@ -1,0 +1,63 @@
+{
+  "metrics": {
+    "enabled": true,
+    "port": 9090,
+    "path": "/metrics",
+    "description": "Prometheus-compatible metrics endpoint"
+  },
+  "tracing": {
+    "enabled": true,
+    "service_name": "mcp_game",
+    "sample_rate": 0.1,
+    "endpoint": "http://localhost:4318",
+    "export_interval_seconds": 30,
+    "description": "OpenTelemetry distributed tracing (10% sampling)"
+  },
+  "health_checks": {
+    "enabled": true,
+    "port": 8080,
+    "interval_seconds": 30,
+    "cache_ttl_seconds": 5,
+    "description": "Health check endpoints for monitoring",
+    "checks": {
+      "liveness": {
+        "enabled": true,
+        "path": "/health/live",
+        "description": "Process is alive (K8s liveness probe)"
+      },
+      "readiness": {
+        "enabled": true,
+        "path": "/health/ready",
+        "description": "Service is ready (K8s readiness probe)"
+      },
+      "full": {
+        "enabled": true,
+        "path": "/health",
+        "description": "Full health report with all checks"
+      }
+    },
+    "resource_limits": {
+      "max_cpu_percent": 90.0,
+      "max_memory_percent": 90.0,
+      "max_disk_percent": 90.0
+    }
+  },
+  "per_agent_overrides": {
+    "comment": "Agent-specific observability configuration overrides",
+    "league_manager": {
+      "tracing": {
+        "sample_rate": 0.5
+      }
+    },
+    "referee": {
+      "metrics": {
+        "port": 9091
+      }
+    },
+    "player": {
+      "tracing": {
+        "sample_rate": 0.05
+      }
+    }
+  }
+}

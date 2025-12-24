@@ -1,0 +1,50 @@
+{
+  "event_bus": {
+    "enabled": true,
+    "max_history": 1000,
+    "async_by_default": true,
+    "error_handling": "isolate",
+    "comment": "Error handling options: 'isolate' (continue), 'propagate' (raise), 'stop' (halt)"
+  },
+  "subscriptions": {
+    "comment": "Built-in event subscriptions that are auto-registered",
+    "logging": {
+      "enabled": true,
+      "events": [
+        "*.started",
+        "*.completed",
+        "*.error",
+        "game.*",
+        "match.*",
+        "tournament.*"
+      ],
+      "handler": "builtin.logging_handler",
+      "priority": 0
+    },
+    "metrics": {
+      "enabled": true,
+      "events": [
+        "*.started",
+        "*.completed",
+        "strategy.move.decided",
+        "*.error"
+      ],
+      "handler": "builtin.metrics_handler",
+      "priority": 5
+    }
+  },
+  "event_categories": {
+    "comment": "Event category definitions for filtering and organization",
+    "game": ["game.*", "round.*", "match.*"],
+    "agent": ["agent.*", "player.*"],
+    "strategy": ["strategy.*"],
+    "plugin": ["plugin.*"],
+    "system": ["system.*", "tournament.*"],
+    "errors": ["*.error"]
+  },
+  "performance": {
+    "max_handlers_per_event": 100,
+    "handler_timeout_seconds": 30,
+    "enable_handler_metrics": true
+  }
+}

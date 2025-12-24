@@ -1,0 +1,35 @@
+{
+  "plugin_discovery": {
+    "enabled": true,
+    "entry_point_group": "mcp_game.plugins",
+    "directory_scan": {
+      "enabled": true,
+      "paths": [
+        "plugins",
+        "~/.mcp_game/plugins",
+        "examples/plugins"
+      ],
+      "pattern": "*_plugin.py"
+    },
+    "auto_enable": true,
+    "auto_discover": true
+  },
+  "plugin_validation": {
+    "strict_mode": false,
+    "require_metadata": true,
+    "dependency_resolution": "auto"
+  },
+  "strategy_plugins": {
+    "auto_discover": true,
+    "allow_overrides": false,
+    "priority_order": [
+      "builtin",
+      "local",
+      "installed"
+    ]
+  },
+  "logging": {
+    "log_plugin_loading": true,
+    "log_level": "INFO"
+  }
+}

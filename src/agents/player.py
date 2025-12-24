@@ -29,6 +29,14 @@ from ..common.protocol import (
     PROTOCOL_VERSION,
 )
 from ..common.config import LLMConfig
+from ..common.events import (
+    get_event_bus,
+    PlayerGameInvitedEvent,
+    PlayerGameJoinedEvent,
+    PlayerMoveBeforeEvent,
+    PlayerMoveAfterEvent,
+    StrategySelectedEvent,
+)
 
 # Import strategy framework
 from .strategies import (
@@ -324,7 +332,23 @@ class PlayerAgent(BaseGameServer):
                 await self._client.send_protocol_message("referee", response_msg)
         except Exception as e:
             logger.error(f"Failed to send GAME_JOIN_ACK: {e}")
-        
+
+        # Emit event if accepted
+        if accept:
+            try:
+                event_bus = get_event_bus()
+                await event_bus.emit(
+                    "player.game.joined",
+                    PlayerGameJoinedEvent(
+                        player_id=self.player_name,
+                        game_id=game_id,
+                        role=session.my_role.value,
+                        source=f"player:{self.player_name}",
+                    )
+                )
+            except Exception as e:
+                logger.error(f"Failed to emit PlayerGameJoinedEvent: {e}")
+
         return {"success": True, "accepted": accept}
     
     async def make_move(self, game_id: str) -> int:
@@ -332,8 +356,29 @@ class PlayerAgent(BaseGameServer):
         session = self._games.get(game_id)
         if not session:
             raise ValueError(f"Unknown game: {game_id}")
-        
+
+        # Emit before event
+        try:
+            event_bus = get_event_bus()
+            await event_bus.emit(
+                "player.move.before",
+                PlayerMoveBeforeEvent(
+                    player_id=self.player_name,
+                    game_id=game_id,
+                    round_number=session.current_round,
+                    my_role=session.my_role.value,
+                    my_score=session.my_score,
+                    opponent_score=session.opponent_score,
+                    source=f"player:{self.player_name}",
+                )
+            )
+        except Exception as e:
+            logger.error(f"Failed to emit PlayerMoveBeforeEvent: {e}")
+
         # Use strategy to decide move
+        import time
+        start_time = time.time()
+
         move = await self.strategy.decide_move(
             game_id=game_id,
             round_number=session.current_round,
@@ -342,9 +387,28 @@ class PlayerAgent(BaseGameServer):
             opponent_score=session.opponent_score,
             history=session.history,
         )
-        
+
+        decision_time_ms = (time.time() - start_time) * 1000
+
         logger.info(f"Decided move: {move}", game_id=game_id, round=session.current_round)
-        
+
+        # Emit after event
+        try:
+            event_bus = get_event_bus()
+            await event_bus.emit(
+                "player.move.after",
+                PlayerMoveAfterEvent(
+                    player_id=self.player_name,
+                    game_id=game_id,
+                    round_number=session.current_round,
+                    move=move,
+                    decision_time_ms=decision_time_ms,
+                    source=f"player:{self.player_name}",
+                )
+            )
+        except Exception as e:
+            logger.error(f"Failed to emit PlayerMoveAfterEvent: {e}")
+
         return move
     
     # ========================================================================
@@ -390,7 +454,23 @@ class PlayerAgent(BaseGameServer):
             opponent=opponent_id,
             role=role,
         )
-        
+
+        # Emit event
+        try:
+            event_bus = get_event_bus()
+            await event_bus.emit(
+                "player.game.invited",
+                PlayerGameInvitedEvent(
+                    player_id=self.player_name,
+                    game_id=game_id,
+                    game_type="even_odd",
+                    referee_id=message.get("referee_id", ""),
+                    source=f"player:{self.player_name}",
+                )
+            )
+        except Exception as e:
+            logger.error(f"Failed to emit PlayerGameInvitedEvent: {e}")
+
         # Auto-accept within 5 second timeout
         return await self._respond_to_invitation(game_id, True)
     
