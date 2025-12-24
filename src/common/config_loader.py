@@ -282,6 +282,17 @@ class ConfigLoader:
         self._cache["player_defaults"] = config
         return config
     
+    def load_plugins_config(self) -> Dict[str, Any]:
+        """Load plugins configuration."""
+        if "plugins" in self._cache:
+            return self._cache["plugins"]
+        
+        path = self.config_path / "plugins" / "plugins_config.json"
+        data = self._load_json(path)
+        
+        self._cache["plugins"] = data or {}
+        return self._cache["plugins"]
+    
     def clear_cache(self) -> None:
         """Clear configuration cache."""
         self._cache.clear()
