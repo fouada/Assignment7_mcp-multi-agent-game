@@ -450,11 +450,13 @@ class RefereeAgent(BaseGameServer):
             try:
                 if player_id in self._client.connected_servers:
                     response = await self._client.send_protocol_message(player_id, parity_call)
-                    # CHOOSE_PARITY_RESPONSE contains parity_choice (the move number)
-                    move = response.get("parity_choice") or response.get("move")
+                    # CHOOSE_PARITY_RESPONSE contains:
+                    # - parity_choice: "odd" or "even" (player's role)
+                    # - move: the actual number choice (1-10)
+                    move = response.get("move")
                     if move is not None:
                         moves[player_id] = int(move)
-                        logger.debug(f"Received parity choice from {player_id}: {move}")
+                        logger.debug(f"Received move from {player_id}: {move}")
             except Exception as e:
                 logger.error(f"Failed to get parity choice from {player_id}: {e}")
                 # Default move on error

@@ -7,11 +7,15 @@ AI player agent that:
 - Responds to game invitations
 - Makes moves using strategy (LLM or algorithm)
 - Tracks game state
+
+Strategies:
+- Classic: Random, Pattern, LLM
+- Game Theory: Nash, Best Response, Adaptive Bayesian,
+               Fictitious Play, Regret Matching, UCB, Thompson Sampling
 """
 
 import asyncio
 import random
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional, Any
@@ -26,255 +30,27 @@ from ..common.protocol import (
 )
 from ..common.config import LLMConfig
 
+# Import strategy framework
+from .strategies import (
+    Strategy,
+    StrategyFactory,
+    StrategyType,
+    StrategyConfig,
+    # Classic strategies (backwards compatibility)
+    RandomStrategy,
+    PatternStrategy,
+    LLMStrategy,
+    # Game Theory strategies
+    NashEquilibriumStrategy,
+    BestResponseStrategy,
+    AdaptiveBayesianStrategy,
+    FictitiousPlayStrategy,
+    RegretMatchingStrategy,
+    UCBStrategy,
+    ThompsonSamplingStrategy,
+)
+
 logger = get_logger(__name__)
-
-
-# ============================================================================
-# Strategy Interface
-# ============================================================================
-
-class Strategy(ABC):
-    """Base class for player strategies."""
-    
-    @abstractmethod
-    async def decide_move(
-        self,
-        game_id: str,
-        round_number: int,
-        my_role: GameRole,
-        my_score: int,
-        opponent_score: int,
-        history: List[Dict],
-    ) -> int:
-        """
-        Decide what move to make.
-        
-        Args:
-            game_id: Current game ID
-            round_number: Current round number
-            my_role: My role (ODD or EVEN)
-            my_score: My current score
-            opponent_score: Opponent's current score
-            history: History of previous rounds
-            
-        Returns:
-            Move value (1-5)
-        """
-        pass
-
-
-class RandomStrategy(Strategy):
-    """Random strategy - picks random values."""
-    
-    def __init__(self, min_value: int = 1, max_value: int = 5):
-        self.min_value = min_value
-        self.max_value = max_value
-    
-    async def decide_move(
-        self,
-        game_id: str,
-        round_number: int,
-        my_role: GameRole,
-        my_score: int,
-        opponent_score: int,
-        history: List[Dict],
-    ) -> int:
-        return random.randint(self.min_value, self.max_value)
-
-
-class PatternStrategy(Strategy):
-    """
-    Pattern-based strategy.
-    
-    Analyzes opponent's patterns and tries to counter.
-    """
-    
-    def __init__(self, min_value: int = 1, max_value: int = 5):
-        self.min_value = min_value
-        self.max_value = max_value
-    
-    async def decide_move(
-        self,
-        game_id: str,
-        round_number: int,
-        my_role: GameRole,
-        my_score: int,
-        opponent_score: int,
-        history: List[Dict],
-    ) -> int:
-        if not history:
-            return random.randint(self.min_value, self.max_value)
-        
-        # Analyze opponent's moves
-        opponent_moves = [h.get("opponent_move", 3) for h in history]
-        
-        # Simple pattern: predict opponent will repeat recent average
-        avg_opponent = sum(opponent_moves[-3:]) / min(len(opponent_moves), 3)
-        
-        # Choose move to counter
-        if my_role == GameRole.ODD:
-            # We want sum to be odd
-            # If opponent likely plays X, we play something to make sum odd
-            predicted_sum = avg_opponent + 3  # Our middle value
-            if int(predicted_sum) % 2 == 0:
-                # Sum would be even, adjust
-                return random.choice([1, 3, 5])  # Odd values to shift parity
-            else:
-                return random.choice([2, 4])  # Even values
-        else:
-            # We want sum to be even
-            predicted_sum = avg_opponent + 3
-            if int(predicted_sum) % 2 == 1:
-                # Sum would be odd, adjust
-                return random.choice([1, 3, 5])
-            else:
-                return random.choice([2, 4])
-
-
-class LLMStrategy(Strategy):
-    """
-    LLM-based strategy using Anthropic Claude or OpenAI.
-    
-    Uses an LLM to analyze the game and decide moves.
-    Default: Anthropic Claude (claude-sonnet-4-20250514)
-    """
-    
-    def __init__(self, config: Optional[LLMConfig] = None):
-        self.config = config or LLMConfig()
-        self._client = None
-        logger.info(f"LLM Strategy initialized: {self.config.provider} / {self.config.model}")
-    
-    async def _get_client(self):
-        """Get or create LLM client."""
-        if self._client is not None:
-            return self._client
-        
-        if not self.config.api_key:
-            logger.warning(f"No API key for {self.config.provider}, falling back to random")
-            return None
-        
-        if self.config.provider == "anthropic":
-            try:
-                import anthropic
-                self._client = anthropic.AsyncAnthropic(api_key=self.config.api_key)
-                logger.info("Anthropic Claude client initialized")
-            except ImportError:
-                logger.warning("Anthropic not installed. Install with: pip install anthropic")
-                return None
-        elif self.config.provider == "openai":
-            try:
-                import openai
-                self._client = openai.AsyncOpenAI(api_key=self.config.api_key)
-                logger.info("OpenAI client initialized")
-            except ImportError:
-                logger.warning("OpenAI not installed. Install with: pip install openai")
-                return None
-        
-        return self._client
-    
-    async def decide_move(
-        self,
-        game_id: str,
-        round_number: int,
-        my_role: GameRole,
-        my_score: int,
-        opponent_score: int,
-        history: List[Dict],
-    ) -> int:
-        client = await self._get_client()
-        
-        if client is None:
-            # Fallback to random
-            logger.debug("No LLM client, using random move")
-            return random.randint(1, 5)
-        
-        # Build prompt
-        prompt = self._build_prompt(
-            round_number, my_role, my_score, opponent_score, history
-        )
-        
-        try:
-            if self.config.provider == "anthropic":
-                # Anthropic Claude API
-                response = await client.messages.create(
-                    model=self.config.model,
-                    max_tokens=10,
-                    system="You are an expert game player. Respond with ONLY a single number from 1 to 5.",
-                    messages=[
-                        {"role": "user", "content": prompt},
-                    ],
-                )
-                answer = response.content[0].text.strip()
-                logger.debug(f"Claude response: {answer}")
-            else:
-                # OpenAI API
-                response = await client.chat.completions.create(
-                    model=self.config.model,
-                    messages=[
-                        {"role": "system", "content": "You are an expert game player. Respond with ONLY a single number from 1 to 5."},
-                        {"role": "user", "content": prompt},
-                    ],
-                    temperature=self.config.temperature,
-                    max_tokens=10,
-                )
-                answer = response.choices[0].message.content.strip()
-                logger.debug(f"OpenAI response: {answer}")
-            
-            # Parse response - extract first digit found
-            import re
-            numbers = re.findall(r'[1-5]', answer)
-            if numbers:
-                move = int(numbers[0])
-                logger.info(f"LLM decided move: {move}", game_id=game_id, round=round_number)
-                return move
-            
-        except Exception as e:
-            logger.warning(f"LLM decision failed: {e}")
-        
-        # Fallback
-        logger.debug("LLM failed, using random fallback")
-        return random.randint(1, 5)
-    
-    def _build_prompt(
-        self,
-        round_number: int,
-        my_role: GameRole,
-        my_score: int,
-        opponent_score: int,
-        history: List[Dict],
-    ) -> str:
-        """Build prompt for LLM."""
-        role_explanation = (
-            "You win when the sum of both numbers is ODD" if my_role == GameRole.ODD
-            else "You win when the sum of both numbers is EVEN"
-        )
-        
-        history_str = ""
-        if history:
-            history_str = "\nPrevious rounds:\n"
-            for h in history[-5:]:  # Last 5 rounds
-                history_str += f"  Round {h.get('round', '?')}: You played {h.get('my_move', '?')}, opponent played {h.get('opponent_move', '?')}, sum was {h.get('sum', '?')}\n"
-        
-        return f"""You are playing the Odd/Even game.
-
-Rules:
-- Both players choose a number from 1 to 5
-- Numbers are revealed simultaneously
-- The sum is calculated
-- {role_explanation}
-
-Current situation:
-- Round: {round_number}
-- Your role: {my_role.value.upper()}
-- Your score: {my_score}
-- Opponent score: {opponent_score}
-{history_str}
-Choose your move (a single number from 1 to 5). Consider:
-1. Your role and what sum parity you need
-2. Any patterns in opponent's moves
-3. Game theory and mixed strategies
-
-Reply with ONLY a number from 1 to 5:"""
 
 
 # ============================================================================
@@ -755,6 +531,38 @@ class PlayerAgent(BaseGameServer):
             )
         
         return {"success": True, "won": winner_id == self.player_id}
+    
+    async def _handle_game_over(self, message: Dict) -> Dict:
+        """
+        Handle GAME_OVER message from referee.
+        
+        This is a detailed game completion notification sent by the referee
+        that includes match context, drawn numbers, choices, and reason.
+        """
+        match_id = message.get("match_id")
+        winner_id = message.get("winner_player_id")
+        drawn_number = message.get("drawn_number")
+        number_parity = message.get("number_parity")
+        status = message.get("status")
+        reason = message.get("reason")
+        
+        won = winner_id == self.player_id
+        
+        logger.info(
+            f"Game over notification received",
+            match_id=match_id,
+            winner=winner_id,
+            won=won,
+            drawn_number=drawn_number,
+            parity=number_parity,
+            status=status,
+            reason=reason,
+        )
+        
+        return {
+            "acknowledged": True,
+            "won": won,
+        }
 
 
 # ============================================================================
@@ -766,6 +574,8 @@ def create_player(
     port: int,
     strategy_type: str = "random",
     llm_config: Optional[LLMConfig] = None,
+    strategy_config: Optional[StrategyConfig] = None,
+    **strategy_kwargs,
 ) -> PlayerAgent:
     """
     Create a player agent.
@@ -773,19 +583,60 @@ def create_player(
     Args:
         name: Player name
         port: Server port
-        strategy_type: "random", "pattern", or "llm"
+        strategy_type: Strategy type string. Options:
+            Classic:
+            - "random": Uniform random (Nash-like)
+            - "pattern": Pattern detection
+            - "llm": LLM-powered (Claude/GPT)
+            
+            Game Theory:
+            - "nash": Nash equilibrium (50/50)
+            - "best_response": Exploits opponent bias
+            - "adaptive_bayesian": Learns and adapts (RECOMMENDED)
+            - "fictitious_play": Classic game theory learning
+            - "regret_matching": CFR-inspired
+            - "ucb": Multi-armed bandit (UCB1)
+            - "thompson_sampling": Bayesian bandit
+            
         llm_config: LLM configuration (for llm strategy)
+        strategy_config: Strategy configuration
+        **strategy_kwargs: Additional strategy-specific arguments
         
     Returns:
         PlayerAgent instance
+        
+    Examples:
+        # Basic random player
+        player = create_player("Bot1", 8101)
+        
+        # Adaptive Bayesian (recommended)
+        player = create_player("Bot2", 8102, strategy_type="adaptive_bayesian")
+        
+        # UCB with custom exploration
+        player = create_player(
+            "Bot3", 8103,
+            strategy_type="ucb",
+            ucb_exploration_constant=2.0
+        )
+        
+        # LLM player
+        player = create_player(
+            "ClaudeBot", 8104,
+            strategy_type="llm",
+            llm_config=LLMConfig(provider="anthropic")
+        )
     """
-    if strategy_type == "random":
-        strategy = RandomStrategy()
-    elif strategy_type == "pattern":
-        strategy = PatternStrategy()
-    elif strategy_type == "llm":
-        strategy = LLMStrategy(llm_config)
-    else:
+    try:
+        # Use strategy factory
+        strategy = StrategyFactory.create_from_string(
+            strategy_type,
+            config=strategy_config,
+            llm_config=llm_config,
+            **strategy_kwargs,
+        )
+        logger.info(f"Created player {name} with strategy: {strategy.name}")
+    except ValueError as e:
+        logger.warning(f"Unknown strategy '{strategy_type}', using RandomStrategy: {e}")
         strategy = RandomStrategy()
     
     return PlayerAgent(
@@ -793,4 +644,24 @@ def create_player(
         strategy=strategy,
         port=port,
     )
+
+
+def list_available_strategies() -> Dict[str, str]:
+    """
+    List all available strategy types with descriptions.
+    
+    Returns:
+        Dictionary of strategy_type -> description
+    """
+    return StrategyFactory.list_strategies()
+
+
+def get_recommended_strategy() -> Strategy:
+    """
+    Get the recommended strategy for most scenarios.
+    
+    Returns:
+        AdaptiveBayesianStrategy with optimized defaults
+    """
+    return StrategyFactory.get_recommended_strategy()
 

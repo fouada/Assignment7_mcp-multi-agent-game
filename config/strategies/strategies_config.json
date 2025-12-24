@@ -1,0 +1,184 @@
+{
+  "description": "Strategy configuration for Game Theory strategies",
+  "version": "1.0.0",
+  
+  "default_strategy": "adaptive_bayesian",
+  
+  "strategies": {
+    "random": {
+      "description": "Uniform random selection (Nash-like baseline)",
+      "category": "classic",
+      "config": {
+        "min_value": 1,
+        "max_value": 10
+      }
+    },
+    
+    "pattern": {
+      "description": "Exploits opponent patterns using frequency analysis",
+      "category": "classic",
+      "config": {
+        "min_value": 1,
+        "max_value": 10
+      }
+    },
+    
+    "llm": {
+      "description": "LLM-powered decisions (Claude/GPT)",
+      "category": "classic",
+      "config": {
+        "min_value": 1,
+        "max_value": 10
+      },
+      "llm_config": {
+        "provider": "anthropic",
+        "model": "claude-sonnet-4-20250514",
+        "temperature": 0.7
+      }
+    },
+    
+    "nash": {
+      "description": "Nash equilibrium - optimal 50/50 mixed strategy",
+      "category": "game_theory",
+      "theory": "Cannot be exploited, guarantees 50% win rate",
+      "config": {
+        "min_value": 1,
+        "max_value": 10,
+        "odd_probability": 0.5
+      }
+    },
+    
+    "best_response": {
+      "description": "Exploits opponent's observed bias",
+      "category": "game_theory",
+      "theory": "Optimal against biased opponents, but exploitable",
+      "config": {
+        "min_value": 1,
+        "max_value": 10,
+        "min_observations": 3,
+        "deterministic": false
+      }
+    },
+    
+    "adaptive_bayesian": {
+      "description": "Bayesian learning - adapts between Nash and exploitation",
+      "category": "game_theory",
+      "theory": "Best of both worlds - safe when uncertain, exploitive when confident",
+      "recommended": true,
+      "config": {
+        "min_value": 1,
+        "max_value": 10,
+        "exploration_rate": 0.15,
+        "confidence_threshold": 0.7,
+        "min_observations": 3,
+        "prior_alpha": 1.0,
+        "prior_beta": 1.0
+      }
+    },
+    
+    "fictitious_play": {
+      "description": "Classic game theory learning algorithm",
+      "category": "game_theory",
+      "theory": "Converges to Nash equilibrium in zero-sum games",
+      "config": {
+        "min_value": 1,
+        "max_value": 10,
+        "smoothing": 0.0
+      }
+    },
+    
+    "regret_matching": {
+      "description": "CFR-inspired regret minimization (like poker AI)",
+      "category": "game_theory",
+      "theory": "Minimizes cumulative regret, converges to Nash",
+      "config": {
+        "min_value": 1,
+        "max_value": 10,
+        "learning_rate": 0.1
+      }
+    },
+    
+    "ucb": {
+      "description": "Upper Confidence Bound - multi-armed bandit approach",
+      "category": "game_theory",
+      "theory": "Optimal exploration-exploitation tradeoff",
+      "config": {
+        "min_value": 1,
+        "max_value": 10,
+        "ucb_exploration_constant": 1.414
+      }
+    },
+    
+    "thompson_sampling": {
+      "description": "Bayesian bandit with probability matching",
+      "category": "game_theory",
+      "theory": "Often outperforms UCB in practice",
+      "config": {
+        "min_value": 1,
+        "max_value": 10,
+        "prior_alpha": 1.0,
+        "prior_beta": 1.0
+      }
+    }
+  },
+  
+  "presets": {
+    "tournament_safe": {
+      "description": "Safe for unknown opponents",
+      "strategy": "nash",
+      "config": {}
+    },
+    
+    "tournament_adaptive": {
+      "description": "Learns opponent patterns",
+      "strategy": "adaptive_bayesian",
+      "config": {
+        "exploration_rate": 0.2,
+        "confidence_threshold": 0.6
+      }
+    },
+    
+    "tournament_aggressive": {
+      "description": "Maximum exploitation",
+      "strategy": "best_response",
+      "config": {
+        "deterministic": true,
+        "min_observations": 2
+      }
+    },
+    
+    "research_regret": {
+      "description": "For studying regret-based learning",
+      "strategy": "regret_matching",
+      "config": {}
+    },
+    
+    "research_bandit": {
+      "description": "For studying bandit algorithms",
+      "strategy": "ucb",
+      "config": {
+        "ucb_exploration_constant": 2.0
+      }
+    }
+  },
+  
+  "comparison_guide": {
+    "against_random": {
+      "recommended": "nash",
+      "reason": "Random is Nash, best response would oscillate"
+    },
+    "against_biased": {
+      "recommended": "best_response",
+      "reason": "Exploit the bias directly"
+    },
+    "against_unknown": {
+      "recommended": "adaptive_bayesian",
+      "reason": "Learns while staying safe"
+    },
+    "against_adaptive": {
+      "recommended": "regret_matching",
+      "reason": "Converges to Nash equilibrium"
+    }
+  }
+}
+
