@@ -1,0 +1,164 @@
+repos:
+  # ============================================================================
+  # Ruff - Fast Python linter and formatter
+  # ============================================================================
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.0
+    hooks:
+      # Run the linter
+      - id: ruff
+        args:
+          - --fix
+          - --exit-non-zero-on-fix
+        types_or: [python, pyi]
+
+      # Run the formatter
+      - id: ruff-format
+        types_or: [python, pyi]
+
+  # ============================================================================
+  # MyPy - Static type checker
+  # ============================================================================
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - types-all
+        args:
+          - --ignore-missing-imports
+          - --no-strict-optional
+        exclude: ^(tests/|examples/)
+
+  # ============================================================================
+  # Standard pre-commit hooks
+  # ============================================================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      # File formatting
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+      # Syntax validation
+      - id: check-yaml
+        args: [--safe]
+        exclude: ^\.github/workflows/
+      - id: check-json
+      - id: check-toml
+      - id: check-xml
+
+      # Code quality
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+
+      # Python-specific
+      - id: check-ast
+      - id: check-builtin-literals
+      - id: check-docstring-first
+      - id: debug-statements
+      - id: fix-byte-order-marker
+      - id: name-tests-test
+        args: [--pytest-test-first]
+
+  # ============================================================================
+  # Security checks
+  # ============================================================================
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.9
+    hooks:
+      - id: bandit
+        args:
+          - -c
+          - pyproject.toml
+        additional_dependencies: ["bandit[toml]"]
+        exclude: ^tests/
+
+  # ============================================================================
+  # Secrets detection
+  # ============================================================================
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args:
+          - --baseline
+          - .secrets.baseline
+        exclude: package.lock.json
+
+  # ============================================================================
+  # Markdown
+  # ============================================================================
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.41.0
+    hooks:
+      - id: markdownlint
+        args:
+          - --fix
+          - --disable
+          - MD013  # Line length
+          - MD033  # Inline HTML
+          - MD041  # First line in file should be a top level header
+        exclude: ^(CHANGELOG\.md|\.github/)
+
+  # ============================================================================
+  # YAML formatting
+  # ============================================================================
+  - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+    rev: v2.14.0
+    hooks:
+      - id: pretty-format-yaml
+        args:
+          - --autofix
+          - --indent=2
+        exclude: ^\.github/workflows/
+
+  # ============================================================================
+  # Dockerfile linting
+  # ============================================================================
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.13.0-beta
+    hooks:
+      - id: hadolint-docker
+        args:
+          - --ignore
+          - DL3008  # Pin versions in apt-get install
+          - --ignore
+          - DL3013  # Pin versions in pip
+
+# ============================================================================
+# Configuration
+# ============================================================================
+default_language_version:
+  python: python3.11
+
+# Faster hook execution
+default_stages: [commit]
+fail_fast: false
+
+# Files to exclude from all hooks
+exclude: |
+  (?x)^(
+      \.venv/|
+      \.git/|
+      \.mypy_cache/|
+      \.pytest_cache/|
+      \.ruff_cache/|
+      __pycache__/|
+      \.DS_Store|
+      node_modules/|
+      dist/|
+      build/|
+      \.egg-info/
+  )
+
+# Minimum pre-commit version
+minimum_pre_commit_version: '3.5.0'

@@ -1,0 +1,88 @@
+version: 2
+
+updates:
+  # ============================================================================
+  # Python Dependencies (via uv/pip)
+  # ============================================================================
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "mcp-game-team"
+    assignees:
+      - "mcp-game-team"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      # Group production dependencies together
+      production:
+        patterns:
+          - "httpx"
+          - "aiohttp"
+          - "pydantic*"
+          - "structlog"
+          - "orjson"
+          - "python-dotenv"
+          - "psutil"
+          - "numpy"
+          - "scipy"
+
+      # Group development dependencies together
+      development:
+        patterns:
+          - "pytest*"
+          - "ruff"
+          - "mypy"
+          - "coverage"
+
+      # Group LLM dependencies together
+      llm:
+        patterns:
+          - "openai"
+          - "anthropic"
+
+  # ============================================================================
+  # GitHub Actions
+  # ============================================================================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "mcp-game-team"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+
+  # ============================================================================
+  # Docker
+  # ============================================================================
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "mcp-game-team"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
