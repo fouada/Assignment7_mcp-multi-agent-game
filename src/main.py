@@ -44,6 +44,7 @@ from .common.config import Config, get_config
 from .agents.league_manager import LeagueManager
 from .agents.referee import RefereeAgent
 from .agents.player import PlayerAgent, RandomStrategy, PatternStrategy, LLMStrategy
+from .visualization import get_dashboard_integration
 
 logger = get_logger(__name__)
 
@@ -63,23 +64,30 @@ class GameOrchestrator:
         - 4 Players on ports 8101-8104
     """
     
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, enable_dashboard: bool = False):
         self.config = config
-        
+        self.enable_dashboard = enable_dashboard
+
         # Components
         self.league_manager: Optional[LeagueManager] = None
         self.referees: List[RefereeAgent] = []  # Support multiple referees
         self.players: List[PlayerAgent] = []
-        
+
+        # Dashboard integration (Innovation #4)
+        self.dashboard_integration = None
+        if enable_dashboard:
+            self.dashboard_integration = get_dashboard_integration()
+            logger.info("🎨 Dashboard enabled - will be accessible at http://localhost:8050")
+
         # Backward compatibility
         @property
         def referee(self) -> Optional[RefereeAgent]:
             return self.referees[0] if self.referees else None
-        
+
         # State
         self._running = False
         self._shutdown_event = asyncio.Event()
-        
+
         # Referee round-robin assignment
         self._referee_index = 0
     
@@ -225,18 +233,38 @@ class GameOrchestrator:
         else:  # mixed
             strategies = ["random", "pattern", "random", "pattern"]
         
+        # Start dashboard integration if enabled
+        if self.dashboard_integration:
+            tournament_id = f"tournament_{self.config.league.league_id}"
+            total_rounds = getattr(self.config.game, 'rounds_per_match', 10) * (num_players // 2)
+
+            await self.dashboard_integration.start(
+                tournament_id=tournament_id,
+                total_rounds=total_rounds
+            )
+            logger.info(f"✅ Dashboard started at http://localhost:8050")
+
         # Start players
         for i in range(num_players):
             name = f"Player_{i + 1}"
             port = 8101 + i
             player_strategy = strategies[i % len(strategies)]
-            
+
             player = await self.start_player(name, port, player_strategy)
-            
+
             # Register with league
             await asyncio.sleep(0.2)
             await player.register_with_league()
-        
+
+            # Register with dashboard if enabled
+            if self.dashboard_integration:
+                self.dashboard_integration.register_player(
+                    player_id=player.player_id,
+                    strategy_name=player_strategy
+                    # Note: Innovation engines (opponent modeling, CFR) would be
+                    # passed here if player is using those strategies
+                )
+
         self._running = True
         logger.info(f"League started with {num_players} players")
     
@@ -264,24 +292,29 @@ class GameOrchestrator:
             logger.info(f"\n{'='*50}")
             logger.info(f"Starting Round {round_num + 1}/{total_rounds}")
             logger.info(f"{'='*50}\n")
-            
+
+            # Stream round start event to dashboard
+            if self.dashboard_integration:
+                matches = round_result.get("matches", []) if 'round_result' in locals() else []
+                await self.dashboard_integration.on_round_start(round_num + 1, matches)
+
             # Start round
             round_result = await self.league_manager.start_next_round()
-            
+
             if not round_result.get("success"):
                 if round_result.get("league_complete"):
                     break
                 logger.error(f"Round failed: {round_result.get('error')}")
                 continue
-            
+
             # Run matches
             matches = round_result.get("matches", [])
             for match_data in matches:
-                await self._run_match(match_data)
-            
+                await self._run_match(match_data, round_num=round_num + 1)
+
             # Wait for matches to complete
             await asyncio.sleep(2)
-            
+
             # Show standings
             standings = self.league_manager._get_standings()
             logger.info("\nCurrent Standings:")
@@ -297,18 +330,18 @@ class GameOrchestrator:
         for entry in standings.get("standings", []):
             logger.info(f"  {entry['rank']}. {entry['display_name']}: {entry['points']} pts ({entry['wins']}W-{entry['losses']}L)")
     
-    async def _run_match(self, match_data: Dict) -> None:
+    async def _run_match(self, match_data: Dict, round_num: int = 0) -> None:
         """Run a single match through a referee (round-robin assignment)."""
         try:
             # Get referee in round-robin fashion
             referee = self.get_next_referee()
-            
+
             # Get player IDs from match data
             player_a_id = match_data.get("player_A_id")
             player_b_id = match_data.get("player_B_id")
-            
+
             logger.info(f"Match {match_data.get('match_id')}: {player_a_id} vs {player_b_id} (Referee: {referee.referee_id})")
-            
+
             result = await referee._start_match({
                 "match_id": match_data.get("match_id"),
                 "player1_id": player_a_id,
@@ -317,31 +350,50 @@ class GameOrchestrator:
                 "player2_endpoint": match_data.get("_player_B_endpoint"),
                 "rounds": self.config.game.rounds_per_match,
             })
-            
+
             logger.debug(f"Match started: {result}")
-            
+
+            # Stream match completion to dashboard
+            if self.dashboard_integration and result.get("success"):
+                match_result = result.get("result", {})
+                await self.dashboard_integration.on_round_complete(
+                    round_num=round_num,
+                    player1_id=player_a_id,
+                    player2_id=player_b_id,
+                    moves={},  # Would need to capture actual moves from referee
+                    scores={
+                        player_a_id: match_result.get("player1_score", 0),
+                        player_b_id: match_result.get("player2_score", 0)
+                    }
+                )
+
         except Exception as e:
             logger.error(f"Match error: {e}")
     
     async def stop(self) -> None:
         """Stop all components."""
         logger.info("Stopping league...")
-        
+
+        # Stop dashboard integration
+        if self.dashboard_integration:
+            await self.dashboard_integration.stop()
+            logger.info("Dashboard stopped")
+
         # Stop players
         for player in self.players:
             await player.stop()
         self.players.clear()
-        
+
         # Stop all referees
         for referee in self.referees:
             await referee.stop()
         self.referees.clear()
-        
+
         # Stop league manager
         if self.league_manager:
             await self.league_manager.stop()
             self.league_manager = None
-        
+
         self._running = False
         logger.info("League stopped")
     
@@ -471,7 +523,7 @@ async def run_full_league(args: argparse.Namespace) -> None:
     """Run the full league."""
     setup_logging(level="DEBUG" if args.debug else "INFO")
     config = get_config()
-    
+
     # Update LLM config if specified via command line
     if args.llm_provider:
         config.llm.provider = args.llm_provider
@@ -481,8 +533,11 @@ async def run_full_league(args: argparse.Namespace) -> None:
             config.llm.model = DEFAULT_LLM_MODELS.get(args.llm_provider)
     if args.llm_model:
         config.llm.model = args.llm_model
-    
-    orchestrator = GameOrchestrator(config)
+
+    # Enable dashboard if requested (Innovation #4)
+    enable_dashboard = getattr(args, 'dashboard', False)
+
+    orchestrator = GameOrchestrator(config, enable_dashboard=enable_dashboard)
     
     # Handle shutdown
     loop = asyncio.get_event_loop()
@@ -523,9 +578,17 @@ Examples:
   # Run league with random/pattern strategies (no LLM needed)
   python -m src.main --run --players 4
 
+  # Run league with interactive dashboard (Innovation #4)
+  python -m src.main --run --players 4 --dashboard
+  # Then open http://localhost:8050 in browser
+
   # Run league with LLM (Claude) strategy
   export ANTHROPIC_API_KEY=your-key
   python -m src.main --run --players 4 --strategy llm
+
+  # Run league with LLM and dashboard (full research mode)
+  export ANTHROPIC_API_KEY=your-key
+  python -m src.main --run --players 4 --strategy llm --dashboard
 
   # Run league with OpenAI GPT-4
   export OPENAI_API_KEY=your-key
@@ -621,7 +684,13 @@ Examples:
         action="store_true",
         help="Enable debug logging",
     )
-    
+
+    parser.add_argument(
+        "--dashboard",
+        action="store_true",
+        help="Enable real-time interactive dashboard at http://localhost:8050 (Innovation #4)",
+    )
+
     parser.add_argument(
         "--start-league",
         action="store_true",

@@ -290,6 +290,40 @@ uv run python -m src.main --run --strategy mixed
 uv run python -m src.main --run --debug
 ```
 
+#### Option 2.5: With Real-Time Interactive Dashboard 🎨 (Innovation #4)
+
+```bash
+# Run tournament with live dashboard visualization
+uv run python -m src.main --run --players 4 --dashboard
+
+# Then open your browser to:
+# http://localhost:8050
+
+# What you'll see:
+# ✓ Real-time tournament overview with live standings
+# ✓ Strategy performance charts (win rates over time)
+# ✓ Live game event stream
+# ✓ Interactive Plotly visualizations (zoom, pan, export)
+# ✓ Data export functionality
+
+# Advanced: Run with LLM strategies AND dashboard
+export ANTHROPIC_API_KEY=your-key
+uv run python -m src.main --run --players 4 --strategy llm --dashboard
+
+# Using the demo script:
+python examples/dashboard/run_with_dashboard.py --players 6 --rounds 20
+```
+
+**Dashboard Features:**
+- 📊 **Real-Time Visualization**: Watch tournaments unfold live via WebSocket streaming
+- 🎯 **Strategy Performance**: Compare win rates and scores across different strategies
+- 📈 **Interactive Charts**: Plotly-powered charts with zoom, pan, and export
+- 🏆 **Live Standings**: Updated after each match with rankings and statistics
+- 📝 **Event Log**: Complete timestamped history of all game actions
+- 💾 **Data Export**: Download all data as JSON for further analysis
+
+See [examples/dashboard/README.md](examples/dashboard/README.md) and [docs/DASHBOARD.md](docs/DASHBOARD.md) for complete documentation.
+
 #### Option 3: Manual Multi-Terminal Setup
 
 ```bash
