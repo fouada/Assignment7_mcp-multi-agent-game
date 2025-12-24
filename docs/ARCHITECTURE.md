@@ -11,6 +11,7 @@
 - [Agentic AI Overview](#agentic-ai-overview)
 - [System Overview](#system-overview)
 - [Three-Layer Architecture](#three-layer-architecture)
+- [Extensibility & Plugin Architecture](#extensibility--plugin-architecture)
 - [MCP Client Architecture](#mcp-client-architecture)
 - [MCP Server Architecture](#mcp-server-architecture)
 - [LLM Integration](#llm-integration)
@@ -173,7 +174,7 @@ graph LR
     LM_S -->|"2. {token}"| P1_C
     LM_S -->|"2. {token}"| P2_C
     
-    %% Referee gets assignment (could be via internal queue or tool call)
+    %% Referee assignment (could be via internal queue or tool call)
     LM_C -->|"3. assign_match()"| REF_S
     
     %% Referee invites players
@@ -264,6 +265,8 @@ graph TB
         CLIENT[🔌 MCP Client]
         TRANSPORT[🌐 HTTP Transport]
         JSONRPC[📄 JSON-RPC 2.0]
+        PLUGINS[🔌 Plugin System]
+        EVENTS[📡 Event Bus]
     end
     
     CLI --> LM
@@ -286,6 +289,11 @@ graph TB
     SERVER --> TRANSPORT
     CLIENT --> TRANSPORT
     TRANSPORT --> JSONRPC
+    
+    LM --> EVENTS
+    REF --> EVENTS
+    P1 --> EVENTS
+    EVENTS --> PLUGINS
 ```
 
 ### System Context Diagram
@@ -373,6 +381,55 @@ flowchart LR
     GAME -->|"Replace with<br/>Chess"| CHESS[Chess]
     GAME -->|"Replace with<br/>Any Game"| ANY[Any Game]
 ```
+
+---
+
+## Extensibility & Plugin Architecture
+
+The system features a robust **Plugin Registry** and **Event Bus** to allow extension without core modification.
+
+### Event Bus Architecture
+
+The `EventBus` facilitates decoupled communication between system components and plugins.
+
+```mermaid
+graph LR
+    subgraph "Event Sources"
+        LM[League Manager]
+        REF[Referee]
+        MATCH[Match Logic]
+    end
+    
+    subgraph "Event Bus"
+        BUS[Event Bus Router]
+        QUEUE[Async Queue]
+    end
+    
+    subgraph "Subscribers"
+        PLUGINS[Plugins]
+        LOG[Logger]
+        METRICS[System Monitor]
+    end
+    
+    LM -->|"emit('agent.registered')"| BUS
+    REF -->|"emit('match.started')"| BUS
+    MATCH -->|"emit('round.completed')"| BUS
+    
+    BUS --> QUEUE
+    QUEUE -->|"notify()"| PLUGINS
+    QUEUE -->|"notify()"| LOG
+    QUEUE -->|"notify()"| METRICS
+```
+
+### Plugin Lifecycle
+
+Plugins are managed by the `PluginRegistry` through a defined lifecycle:
+
+1.  **Load**: Import plugin code, validate metadata.
+2.  **Enable**: Call `on_enable()`, register event listeners.
+3.  **Active**: Plugin responds to events and hooks.
+4.  **Disable**: Call `on_disable()`, cleanup resources.
+5.  **Unload**: Remove from memory.
 
 ---
 
@@ -1537,11 +1594,14 @@ src/
 ├── agents/                     # AI Agents
 │   ├── league_manager.py       # League orchestration
 │   ├── referee.py              # Game referee
-│   └── player.py               # Player strategies
+│   ├── player.py               # Player strategies
+│   └── strategies/             # Strategy implementations
 │
 ├── common/                     # Shared
 │   ├── config.py               # Configuration
 │   ├── logger.py               # Logging
+│   ├── events/                 # Event Bus
+│   ├── plugins/                # Plugin Registry
 │   ├── exceptions.py           # Exceptions
 │   └── protocol.py             # Protocol schemas
 │
@@ -1559,6 +1619,7 @@ graph TB
         OBSERVER[Observer Pattern<br/>Event handling]
         CIRCUIT[Circuit Breaker<br/>Fault tolerance]
         RETRY[Retry Pattern<br/>Error recovery]
+        PLUGIN[Plugin Pattern<br/>Extensibility]
     end
 ```
 
@@ -1945,10 +2006,11 @@ flowchart TD
 
 - [Model Context Protocol Specification](https://spec.modelcontextprotocol.io/)
 - [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification)
-- [Project Requirements](../REQUIREMENTS.md)
+- [Project Requirements](../docs/PRD.md)
 - [API Documentation](./API.md)
 - [Command Reference](./COMMAND_REFERENCE.md)
+- [Plugin Documentation](./PLUGINS.md)
 
 ---
 
-*Last Updated: December 2024*
+*Last Updated: December 25, 2024*
