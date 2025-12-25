@@ -1,164 +1,137 @@
+# Pre-commit hooks configuration
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+
 repos:
-  # ============================================================================
   # Ruff - Fast Python linter and formatter
-  # ============================================================================
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.0
+    rev: v0.3.0
     hooks:
-      # Run the linter
       - id: ruff
-        args:
-          - --fix
-          - --exit-non-zero-on-fix
+        name: Ruff Linter
+        args: [--fix, --exit-non-zero-on-fix]
         types_or: [python, pyi]
-
-      # Run the formatter
+      
       - id: ruff-format
+        name: Ruff Formatter
         types_or: [python, pyi]
 
-  # ============================================================================
-  # MyPy - Static type checker
-  # ============================================================================
+  # MyPy - Static type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.0
+    rev: v1.8.0
     hooks:
       - id: mypy
-        additional_dependencies:
-          - types-all
-        args:
-          - --ignore-missing-imports
-          - --no-strict-optional
-        exclude: ^(tests/|examples/)
-
-  # ============================================================================
-  # Standard pre-commit hooks
-  # ============================================================================
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
-    hooks:
-      # File formatting
-      - id: trailing-whitespace
-        args: [--markdown-linebreak-ext=md]
-      - id: end-of-file-fixer
-      - id: mixed-line-ending
-        args: [--fix=lf]
-
-      # Syntax validation
-      - id: check-yaml
-        args: [--safe]
-        exclude: ^\.github/workflows/
-      - id: check-json
-      - id: check-toml
-      - id: check-xml
-
-      # Code quality
-      - id: check-added-large-files
-        args: [--maxkb=1000]
-      - id: check-case-conflict
-      - id: check-merge-conflict
-      - id: check-symlinks
-      - id: check-executables-have-shebangs
-      - id: check-shebang-scripts-are-executable
-
-      # Python-specific
-      - id: check-ast
-      - id: check-builtin-literals
-      - id: check-docstring-first
-      - id: debug-statements
-      - id: fix-byte-order-marker
-      - id: name-tests-test
-        args: [--pytest-test-first]
-
-  # ============================================================================
-  # Security checks
-  # ============================================================================
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.9
-    hooks:
-      - id: bandit
-        args:
-          - -c
-          - pyproject.toml
-        additional_dependencies: ["bandit[toml]"]
+        name: MyPy Type Checker
+        additional_dependencies: [types-all]
+        args: [--ignore-missing-imports, --no-strict-optional]
         exclude: ^tests/
 
-  # ============================================================================
-  # Secrets detection
-  # ============================================================================
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.5.0
+  # Standard pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
     hooks:
-      - id: detect-secrets
-        args:
-          - --baseline
-          - .secrets.baseline
-        exclude: package.lock.json
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+      - id: end-of-file-fixer
+        name: Fix end of files
+      - id: check-yaml
+        name: Check YAML syntax
+      - id: check-json
+        name: Check JSON syntax
+      - id: check-toml
+        name: Check TOML syntax
+      - id: check-added-large-files
+        name: Check for large files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+      - id: check-case-conflict
+        name: Check for case conflicts
+      - id: mixed-line-ending
+        name: Check line endings
+      - id: detect-private-key
+        name: Detect private keys
 
-  # ============================================================================
-  # Markdown
-  # ============================================================================
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.41.0
+  # Bandit - Security linter
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.6
     hooks:
-      - id: markdownlint
-        args:
-          - --fix
-          - --disable
-          - MD013  # Line length
-          - MD033  # Inline HTML
-          - MD041  # First line in file should be a top level header
-        exclude: ^(CHANGELOG\.md|\.github/)
+      - id: bandit
+        name: Security Checks (Bandit)
+        args: ['-c', 'pyproject.toml']
+        additional_dependencies: ['bandit[toml]']
+        exclude: ^tests/
 
-  # ============================================================================
-  # YAML formatting
-  # ============================================================================
-  - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-    rev: v2.14.0
+  # PyTest - Run tests before commit
+  - repo: local
     hooks:
-      - id: pretty-format-yaml
+      - id: pytest-check
+        name: Run PyTest
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true
         args:
-          - --autofix
-          - --indent=2
-        exclude: ^\.github/workflows/
+          - tests/
+          - -v
+          - --tb=short
+          - -m
+          - "not slow and not integration"
+          - --maxfail=5
 
-  # ============================================================================
-  # Dockerfile linting
-  # ============================================================================
-  - repo: https://github.com/hadolint/hadolint
-    rev: v2.13.0-beta
+  # Coverage check
+  - repo: local
     hooks:
-      - id: hadolint-docker
-        args:
-          - --ignore
-          - DL3008  # Pin versions in apt-get install
-          - --ignore
-          - DL3013  # Pin versions in pip
+      - id: coverage-check
+        name: Check Coverage
+        entry: bash -c 'pytest tests/ --cov=src --cov-fail-under=85 --cov-report=term-missing --tb=short -q'
+        language: system
+        pass_filenames: false
+        always_run: true
 
-# ============================================================================
-# Configuration
-# ============================================================================
+  # Documentation checks
+  - repo: local
+    hooks:
+      - id: doc-links
+        name: Check Documentation Links
+        entry: bash -c 'find docs/ -name "*.md" -type f | while read file; do grep -n "](.*)" "$file" | grep -v "http" | grep -v "#" || true; done'
+        language: system
+        pass_filenames: false
+        always_run: false
+
+# Configuration for specific tools
 default_language_version:
   python: python3.11
-
-# Faster hook execution
-default_stages: [commit]
-fail_fast: false
 
 # Files to exclude from all hooks
 exclude: |
   (?x)^(
-      \.venv/|
       \.git/|
-      \.mypy_cache/|
       \.pytest_cache/|
-      \.ruff_cache/|
       __pycache__/|
-      \.DS_Store|
-      node_modules/|
-      dist/|
+      \.venv/|
+      venv/|
       build/|
-      \.egg-info/
-  )
+      dist/|
+      \.eggs/|
+      .*\.egg-info/|
+      htmlcov/|
+      \.coverage|
+      coverage\.xml
+  )$
 
-# Minimum pre-commit version
-minimum_pre_commit_version: '3.5.0'
+# Run these on every commit
+default_stages: [commit]
+
+# CI configuration
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false

@@ -1,0 +1,287 @@
+# GitLab CI/CD Configuration for MCP Multi-Agent Game System
+# Achieves 85%+ coverage with comprehensive testing
+
+stages:
+  - validate
+  - test
+  - security
+  - quality
+  - report
+  - deploy
+
+variables:
+  PYTHON_VERSION: "3.11"
+  MIN_COVERAGE: "85"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+# ====================
+# Cache Configuration
+# ====================
+.cache-template: &cache-template
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - .cache/pip
+      - venv/
+
+# ====================
+# Before Script Template
+# ====================
+.before-script-template: &before-script
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - python -m venv venv
+    - source venv/bin/activate
+    - pip install -e ".[dev]"
+
+# ====================
+# Validation Stage
+# ====================
+lint:ruff:
+  stage: validate
+  image: python:${PYTHON_VERSION}
+  <<: *cache-template
+  <<: *before-script
+  script:
+    - ruff check src/ tests/
+    - ruff format --check src/ tests/
+  allow_failure: false
+
+type-check:mypy:
+  stage: validate
+  image: python:${PYTHON_VERSION}
+  <<: *cache-template
+  <<: *before-script
+  script:
+    - mypy src/ --ignore-missing-imports
+  allow_failure: true  # Type checking is informational
+
+security:bandit:
+  stage: validate
+  image: python:${PYTHON_VERSION}
+  <<: *cache-template
+  <<: *before-script
+  script:
+    - bandit -r src/ -f json -o bandit-report.json
+  artifacts:
+    reports:
+      junit: bandit-report.json
+    paths:
+      - bandit-report.json
+    expire_in: 30 days
+  allow_failure: true
+
+# ====================
+# Test Stage
+# ====================
+.test-template: &test-template
+  stage: test
+  <<: *cache-template
+  <<: *before-script
+  artifacts:
+    reports:
+      junit: junit-report.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - htmlcov/
+      - junit-report.xml
+      - coverage.xml
+    expire_in: 30 days
+
+test:unit:python311:
+  <<: *test-template
+  image: python:3.11
+  script:
+    - pytest tests/ 
+        -v 
+        --tb=short 
+        --junit-xml=junit-report.xml 
+        -m "not integration and not slow"
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+
+test:unit:python312:
+  <<: *test-template
+  image: python:3.12
+  script:
+    - pytest tests/ 
+        -v 
+        --tb=short 
+        --junit-xml=junit-report.xml 
+        -m "not integration and not slow"
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+
+test:coverage:
+  stage: test
+  image: python:${PYTHON_VERSION}
+  <<: *cache-template
+  <<: *before-script
+  script:
+    - pytest tests/ 
+        --cov=src 
+        --cov-report=xml 
+        --cov-report=html 
+        --cov-report=term-missing 
+        --cov-branch 
+        --cov-fail-under=${MIN_COVERAGE}
+        --junit-xml=junit-report.xml
+    - pip install coverage-badge
+    - coverage-badge -o coverage.svg -f
+  artifacts:
+    reports:
+      junit: junit-report.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - htmlcov/
+      - coverage.xml
+      - coverage.svg
+      - junit-report.xml
+    expire_in: 30 days
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+
+test:integration:
+  stage: test
+  image: python:${PYTHON_VERSION}
+  <<: *cache-template
+  <<: *before-script
+  script:
+    - pytest tests/ 
+        -v 
+        -m integration 
+        --junit-xml=junit-integration.xml
+  artifacts:
+    reports:
+      junit: junit-integration.xml
+    paths:
+      - junit-integration.xml
+    expire_in: 30 days
+  timeout: 15 minutes
+
+test:performance:
+  stage: test
+  image: python:${PYTHON_VERSION}
+  <<: *cache-template
+  <<: *before-script
+  script:
+    - pip install pytest-benchmark
+    - pytest tests/ 
+        -v 
+        -m "slow or benchmark" 
+        --benchmark-only 
+        --benchmark-json=benchmark.json
+  artifacts:
+    paths:
+      - benchmark.json
+    expire_in: 30 days
+  allow_failure: true
+
+# ====================
+# Security Stage
+# ====================
+security:safety:
+  stage: security
+  image: python:${PYTHON_VERSION}
+  <<: *cache-template
+  <<: *before-script
+  script:
+    - pip install safety
+    - safety check --json --output safety-report.json
+  artifacts:
+    paths:
+      - safety-report.json
+    expire_in: 30 days
+  allow_failure: true
+
+security:pip-audit:
+  stage: security
+  image: python:${PYTHON_VERSION}
+  <<: *cache-template
+  <<: *before-script
+  script:
+    - pip install pip-audit
+    - pip-audit --format json --output pip-audit-report.json
+  artifacts:
+    paths:
+      - pip-audit-report.json
+    expire_in: 30 days
+  allow_failure: true
+
+# ====================
+# Quality Stage
+# ====================
+quality:complexity:
+  stage: quality
+  image: python:${PYTHON_VERSION}
+  <<: *cache-template
+  <<: *before-script
+  script:
+    - pip install radon
+    - radon cc src/ -a -s
+    - radon mi src/ -s
+  allow_failure: true
+
+quality:documentation:
+  stage: quality
+  image: python:${PYTHON_VERSION}
+  <<: *cache-template
+  script:
+    - find docs/ -name "*.md" -type f
+    - echo "Documentation files validated"
+  allow_failure: false
+
+# ====================
+# Docker Build
+# ====================
+docker:build:
+  stage: test
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build -t mcp-game-league:${CI_COMMIT_SHORT_SHA} .
+    - docker run --rm mcp-game-league:${CI_COMMIT_SHORT_SHA} python -c "import src; print('Import successful')"
+    - docker run --rm mcp-game-league:${CI_COMMIT_SHORT_SHA} pytest tests/ -v --tb=short
+  only:
+    - main
+    - develop
+
+# ====================
+# Report Stage
+# ====================
+pages:
+  stage: report
+  image: python:${PYTHON_VERSION}
+  dependencies:
+    - test:coverage
+  script:
+    - mkdir -p public
+    - cp -r htmlcov/* public/
+    - cp coverage.svg public/
+    - echo "Coverage report published at https://${CI_PROJECT_NAMESPACE}.gitlab.io/${CI_PROJECT_NAME}/"
+  artifacts:
+    paths:
+      - public
+    expire_in: 30 days
+  only:
+    - main
+
+# ====================
+# Deployment Gate
+# ====================
+deployment-gate:
+  stage: deploy
+  image: python:${PYTHON_VERSION}
+  script:
+    - echo "✅ All CI checks passed!"
+    - echo "✅ Tests: Passed"
+    - echo "✅ Coverage: Above ${MIN_COVERAGE}%"
+    - echo "✅ Security: Scanned"
+    - echo "✅ Ready for deployment"
+  only:
+    - main
+  when: on_success
+

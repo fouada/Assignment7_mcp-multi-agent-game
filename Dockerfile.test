@@ -1,0 +1,102 @@
+# Multi-stage Dockerfile for Testing
+# ====================================
+#
+# This Dockerfile creates a testing environment with all dependencies
+# and runs the complete test suite.
+
+# ====================
+# Stage 1: Base
+# ====================
+FROM python:3.11-slim as base
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    --no-install-recommends \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# ====================
+# Stage 2: Dependencies
+# ====================
+FROM base as dependencies
+
+# Copy dependency files
+COPY pyproject.toml uv.lock* ./
+
+# Install Python dependencies
+RUN pip install --upgrade pip && \
+    pip install uv && \
+    uv pip install --system -e ".[dev]"
+
+# ====================
+# Stage 3: Test Environment
+# ====================
+FROM dependencies as test-env
+
+# Copy application code
+COPY . .
+
+# Install the application
+RUN pip install -e ".[dev]"
+
+# ====================
+# Stage 4: Run Tests
+# ====================
+FROM test-env as test-runner
+
+# Create directories for reports
+RUN mkdir -p /app/test-reports /app/htmlcov
+
+# Default command: run all tests with coverage
+CMD ["pytest", "tests/", \
+     "--cov=src", \
+     "--cov-report=html:/app/htmlcov", \
+     "--cov-report=xml:/app/test-reports/coverage.xml", \
+     "--cov-report=term-missing", \
+     "--junit-xml=/app/test-reports/junit.xml", \
+     "-v", \
+     "--tb=short"]
+
+# ====================
+# Stage 5: Quick Tests (for CI)
+# ====================
+FROM test-env as quick-tests
+
+CMD ["pytest", "tests/", \
+     "-v", \
+     "--tb=short", \
+     "-m", "not slow and not integration", \
+     "--maxfail=10"]
+
+# ====================
+# Stage 6: Integration Tests
+# ====================
+FROM test-env as integration-tests
+
+CMD ["pytest", "tests/", \
+     "-v", \
+     "--tb=short", \
+     "-m", "integration", \
+     "--junit-xml=/app/test-reports/junit-integration.xml"]
+
+# ====================
+# Stage 7: Performance Tests
+# ====================
+FROM test-env as performance-tests
+
+CMD ["pytest", "tests/", \
+     "-v", \
+     "--tb=short", \
+     "-m", "slow or benchmark", \
+     "--benchmark-only", \
+     "--benchmark-json=/app/test-reports/benchmark.json"]
+

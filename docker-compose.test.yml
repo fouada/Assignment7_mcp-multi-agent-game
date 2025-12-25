@@ -1,0 +1,103 @@
+# Docker Compose for Testing
+# ===========================
+#
+# Run tests in Docker containers
+# Usage:
+#   docker-compose -f docker-compose.test.yml up
+#   docker-compose -f docker-compose.test.yml run unit-tests
+#   docker-compose -f docker-compose.test.yml run integration-tests
+
+version: '3.8'
+
+services:
+  # ====================
+  # Unit Tests
+  # ====================
+  unit-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      target: test-runner
+    image: mcp-game-tests:latest
+    container_name: mcp-game-unit-tests
+    volumes:
+      - ./test-reports:/app/test-reports
+      - ./htmlcov:/app/htmlcov
+    command: >
+      pytest tests/
+      --cov=src
+      --cov-report=html:/app/htmlcov
+      --cov-report=xml:/app/test-reports/coverage.xml
+      --cov-report=term-missing
+      --junit-xml=/app/test-reports/junit.xml
+      -v
+      --tb=short
+      -m "not slow and not integration"
+    environment:
+      - PYTHONPATH=/app
+      - MIN_COVERAGE=85
+
+  # ====================
+  # Integration Tests
+  # ====================
+  integration-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      target: integration-tests
+    image: mcp-game-integration-tests:latest
+    container_name: mcp-game-integration-tests
+    volumes:
+      - ./test-reports:/app/test-reports
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      - unit-tests
+
+  # ====================
+  # Performance Tests
+  # ====================
+  performance-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      target: performance-tests
+    image: mcp-game-performance-tests:latest
+    container_name: mcp-game-performance-tests
+    volumes:
+      - ./test-reports:/app/test-reports
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      - unit-tests
+
+  # ====================
+  # Quick Tests (CI)
+  # ====================
+  quick-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      target: quick-tests
+    image: mcp-game-quick-tests:latest
+    container_name: mcp-game-quick-tests
+    environment:
+      - PYTHONPATH=/app
+
+  # ====================
+  # Coverage Report Server
+  # ====================
+  coverage-server:
+    image: nginx:alpine
+    container_name: mcp-game-coverage-server
+    ports:
+      - "8080:80"
+    volumes:
+      - ./htmlcov:/usr/share/nginx/html:ro
+    depends_on:
+      - unit-tests
+
+volumes:
+  test-reports:
+  htmlcov:
+
