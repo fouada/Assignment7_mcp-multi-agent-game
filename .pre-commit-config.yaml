@@ -11,7 +11,7 @@ repos:
         name: Ruff Linter
         args: [--fix, --exit-non-zero-on-fix]
         types_or: [python, pyi]
-      
+
       - id: ruff-format
         name: Ruff Formatter
         types_or: [python, pyi]
