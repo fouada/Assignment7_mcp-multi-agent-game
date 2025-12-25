@@ -26,13 +26,16 @@ built from primitive components, creating emergent intelligent behavior.
 
 import random
 import numpy as np
-from typing import Dict, List, Optional, Callable, Union
+from typing import Dict, List, Optional, Callable, Union, Tuple
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from .base import Strategy
-from .types import GameState, Move, StrategyConfig
+from .base import Strategy, StrategyConfig
+from ...common.protocol import GameState
+
+# Type alias for moves (integers 1-10 in odd/even game)
+Move = int
 
 
 # ============================================================================

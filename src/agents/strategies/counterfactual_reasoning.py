@@ -29,8 +29,11 @@ from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass, field
 from collections import defaultdict
 
-from .base import Strategy
-from .types import GameState, Move, StrategyConfig
+from .base import Strategy, StrategyConfig
+from ...common.protocol import GameState
+
+# Type alias for moves (integers 1-10 in odd/even game)
+Move = int
 
 
 # ============================================================================

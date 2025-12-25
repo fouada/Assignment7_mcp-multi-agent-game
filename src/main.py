@@ -253,10 +253,32 @@ class GameOrchestrator:
         if strategy == "llm":
             logger.info(f"  LLM: {self.config.llm.provider} / {self.config.llm.model}")
         logger.info("="*60)
-        
+
         # Initialize Plugins
         await self._init_plugins()
-        
+
+        # Start dashboard if enabled
+        if self.enable_dashboard:
+            from .visualization.integration import get_dashboard_integration
+            from .visualization import get_dashboard
+
+            logger.info("Starting interactive dashboard...")
+            dashboard = get_dashboard()
+            integration = get_dashboard_integration()
+
+            # Start dashboard server in background
+            await dashboard.start_server_background(
+                host="0.0.0.0",
+                port=8050
+            )
+
+            # Connect event bus to dashboard
+            self.event_bus.on("game.round.start", integration.on_round_start)
+            self.event_bus.on("game.move.decision", integration.on_move_decision)
+            self.event_bus.on("game.round.complete", integration.on_round_complete)
+
+            logger.info("✓ Dashboard enabled at http://localhost:8050")
+
         # Start league manager
         await self.start_league_manager()
         
@@ -582,7 +604,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="MCP Multi-Agent Game League",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=\"\"\"
+        epilog="""
 Examples:
   # Run league with random/pattern strategies (no LLM needed)
   python -m src.main --run --players 4
@@ -609,7 +631,7 @@ Examples:
 
   # Get current standings
   python -m src.main --get-standings
-        \"\"\"
+        """
     )
     
     parser.add_argument(

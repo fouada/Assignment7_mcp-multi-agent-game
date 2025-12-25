@@ -28,8 +28,11 @@ from collections import defaultdict, deque
 from scipy.stats import entropy
 from sklearn.cluster import KMeans
 
-from .base import Strategy
-from .types import GameState, Move, StrategyConfig
+from .base import Strategy, StrategyConfig
+from ...common.protocol import GameState
+
+# Type alias for moves (integers 1-10 in odd/even game)
+Move = int
 
 
 # ============================================================================
