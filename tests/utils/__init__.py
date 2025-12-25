@@ -14,6 +14,7 @@ from tests.utils.assertions import (
     assert_game_completed,
     assert_player_registered,
     assert_protocol_message,
+    assert_standings,
     assert_valid_move,
 )
 from tests.utils.factories import (
@@ -22,9 +23,11 @@ from tests.utils.factories import (
     MessageFactory,
     PlayerFactory,
     RefereeFactory,
+    ScenarioFactory,
     TestDataFactory,
 )
 from tests.utils.fixtures import (
+    PerformanceTimer,
     async_test,
     capture_logs,
     mock_time,
@@ -56,14 +59,17 @@ __all__ = [
     "MatchFactory",
     "GameFactory",
     "MessageFactory",
+    "ScenarioFactory",
     # Fixtures
     "async_test",
     "temp_directory",
     "capture_logs",
     "mock_time",
+    "PerformanceTimer",
     # Assertions
     "assert_player_registered",
     "assert_game_completed",
     "assert_valid_move",
     "assert_protocol_message",
+    "assert_standings",
 ]
