@@ -20,7 +20,6 @@ from enum import Enum
 from typing import Any
 
 from ..common.exceptions import (
-    GameError,
     InvalidGameStateError,
     InvalidMoveError,
 )
