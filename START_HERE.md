@@ -47,7 +47,7 @@ This is a **world-class multi-agent AI system** that has achieved:
 
 ### Path 2: Understand the Achievement (5 minutes) 📖
 
-Read: **[ISO/IEC 25010 Quick Reference](ISO_IEC_25010_QUICK_REFERENCE.md)**
+Read: **[ISO/IEC 25010 Quick Reference](docs/certification/ISO_IEC_25010_QUICK_REFERENCE.md)**
 
 **What you'll learn**:
 - ISO/IEC 25010 certification status
@@ -71,7 +71,7 @@ Read: **[Executive Summary](EXECUTIVE_SUMMARY.md)**
 
 ### Path 4: Full Certification Details (30 minutes) 📊
 
-Read: **[Full Certification Document](HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md)**
+Read: **[Full Certification Document](docs/certification/HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md)**
 
 **What you'll learn**:
 - Complete ISO/IEC 25010 compliance
@@ -88,7 +88,7 @@ Read: **[Full Certification Document](HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md)**
 | Document | Purpose | Time | Priority |
 |----------|---------|------|----------|
 | **[START_HERE.md](START_HERE.md)** ⭐ | This file - Quick orientation | 2 min | 🔴 First |
-| **[ISO Quick Reference](ISO_IEC_25010_QUICK_REFERENCE.md)** | 1-page summary | 5 min | 🔴 Essential |
+| **[ISO Quick Reference](docs/certification/ISO_IEC_25010_QUICK_REFERENCE.md)** | 1-page summary | 5 min | 🔴 Essential |
 | **[Executive Summary](EXECUTIVE_SUMMARY.md)** | High-level overview | 10 min | 🟠 Important |
 | **[README.md](README.md)** | Project overview | 10 min | 🟠 Important |
 
@@ -96,7 +96,7 @@ Read: **[Full Certification Document](HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md)**
 
 | Document | Purpose | Time | Priority |
 |----------|---------|------|----------|
-| **[Full Certification](HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md)** | Complete certification details | 30 min | 🟡 Detailed |
+| **[Full Certification](docs/certification/HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md)** | Complete certification details | 30 min | 🟡 Detailed |
 | **[Compliance Matrix](docs/ISO_IEC_25010_COMPLIANCE_MATRIX.md)** | 31 sub-characteristics | 45 min | 🟡 Detailed |
 | **[Verification Guide](CERTIFICATION_VERIFICATION_GUIDE.md)** | How to verify compliance | 20 min | 🟡 Detailed |
 | **[Official Certification](docs/ISO_IEC_25010_CERTIFICATION.md)** | Formal certification | 20 min | 🟢 Optional |
@@ -232,12 +232,12 @@ TOTAL: 31/31 (100% COMPLIANCE)
 
 1. Read [README.md](README.md) - Project overview
 2. Review [Architecture](docs/ARCHITECTURE.md) - System design
-3. Check [Testing Infrastructure](TESTING_INFRASTRUCTURE.md) - Quality standards
+3. Check [Testing Infrastructure](docs/guides/TESTING_INFRASTRUCTURE.md) - Quality standards
 
 ### For Executives
 
 1. Read [Executive Summary](EXECUTIVE_SUMMARY.md) - High-level overview
-2. View [Quick Reference](ISO_IEC_25010_QUICK_REFERENCE.md) - Key metrics
+2. View [Quick Reference](docs/certification/ISO_IEC_25010_QUICK_REFERENCE.md) - Key metrics
 3. Review commercial value section
 
 ---
@@ -289,12 +289,12 @@ TOTAL: 31/31 (100% COMPLIANCE)
 ### Today (30 minutes)
 
 1. ✅ Run verification: `./scripts/verify_compliance.sh`
-2. 📖 Read [Quick Reference](ISO_IEC_25010_QUICK_REFERENCE.md)
+2. 📖 Read [Quick Reference](docs/certification/ISO_IEC_25010_QUICK_REFERENCE.md)
 3. 🏆 Skim [Executive Summary](EXECUTIVE_SUMMARY.md)
 
 ### This Week (2-3 hours)
 
-1. 📚 Read [Full Certification](HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md)
+1. 📚 Read [Full Certification](docs/certification/HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md)
 2. 🎓 Study [MIT Innovations](docs/MIT_LEVEL_INNOVATIONS.md)
 3. 🔧 Explore codebase and examples
 
@@ -312,7 +312,7 @@ TOTAL: 31/31 (100% COMPLIANCE)
 
 - **Overview**: [README.md](README.md)
 - **Certification**: [Executive Summary](EXECUTIVE_SUMMARY.md)
-- **Quick Reference**: [ISO Quick Reference](ISO_IEC_25010_QUICK_REFERENCE.md)
+- **Quick Reference**: [ISO Quick Reference](docs/certification/ISO_IEC_25010_QUICK_REFERENCE.md)
 - **Full Index**: [Documentation Index](DOCUMENTATION_INDEX.md)
 
 ### Verification
@@ -361,9 +361,9 @@ TOTAL: 31/31 (100% COMPLIANCE)
 ---
 
 **Quick Links**:  
-[Quick Reference](ISO_IEC_25010_QUICK_REFERENCE.md) •
+[Quick Reference](docs/certification/ISO_IEC_25010_QUICK_REFERENCE.md) •
 [Executive Summary](EXECUTIVE_SUMMARY.md) •
-[Full Certification](HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md) •
+[Full Certification](docs/certification/HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md) •
 [README](README.md)
 
 **Verification**:  

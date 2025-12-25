@@ -5,9 +5,9 @@
 
 **🏆 ISO/IEC 25010 Certified** | **MIT Research Excellence** | **Production-Grade** | **Comprehensive**
 
-[![ISO Certification](https://img.shields.io/badge/ISO%2FIEC%2025010-100%25%20Compliant-gold?style=for-the-badge&logo=iso)](HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md)
+[![ISO Certification](https://img.shields.io/badge/ISO%2FIEC%2025010-100%25%20Compliant-gold?style=for-the-badge&logo=iso)](certification/HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md)
 [![Documentation](https://img.shields.io/badge/Documentation-2500%2B%20Lines-brightgreen?style=for-the-badge&logo=markdown)](DOCUMENTATION_INDEX.md)
-[![Diagrams](https://img.shields.io/badge/Mermaid%20Diagrams-75%2B-blue?style=for-the-badge&logo=mermaid)](docs/)
+[![Diagrams](https://img.shields.io/badge/Mermaid%20Diagrams-75%2B-blue?style=for-the-badge&logo=mermaid)](./)
 [![Coverage](https://img.shields.io/badge/Coverage-89%25-success?style=for-the-badge&logo=codecov)](htmlcov/)
 
 **Complete Documentation Suite for Research, Development, and Production**
@@ -161,8 +161,8 @@ graph LR
 | **👨‍💻 Developer** | [README](README.md) | [Development Guide](docs/DEVELOPMENT.md) | [Architecture](docs/ARCHITECTURE_COMPREHENSIVE.md) | 1-2h |
 | **🏗️ Architect** | [Architecture](docs/ARCHITECTURE_COMPREHENSIVE.md) | [Deployment](docs/DEPLOYMENT.md) | [Protocol Spec](docs/protocol-spec.md) | 2h |
 | **📊 Product Manager** | [PRD](docs/PRD_COMPREHENSIVE.md) | [Executive Summary](EXECUTIVE_SUMMARY.md) | [Requirements](REQUIREMENTS.md) | 1h |
-| **💼 Executive** | [Executive Summary](EXECUTIVE_SUMMARY.md) | [Quick Reference](ISO_IEC_25010_QUICK_REFERENCE.md) | [Full Cert](HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md) | 30m |
-| **🧪 QA Engineer** | [Testing Infrastructure](TESTING_INFRASTRUCTURE.md) | [CI/CD Guide](docs/CI_CD_GUIDE.md) | [Edge Cases](docs/EDGE_CASES_CATALOG.md) | 1.5h |
+| **💼 Executive** | [Executive Summary](product/EXECUTIVE_SUMMARY.md) | [Quick Reference](certification/ISO_IEC_25010_QUICK_REFERENCE.md) | [Full Cert](certification/HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md) | 30m |
+| **🧪 QA Engineer** | [Testing Infrastructure](guides/TESTING_INFRASTRUCTURE.md) | [CI/CD Guide](CI_CD_GUIDE.md) | [Edge Cases](EDGE_CASES_CATALOG.md) | 1.5h |
 | **🔧 DevOps** | [Deployment](docs/DEPLOYMENT.md) | [Docker Setup](docker-compose.yml) | [Monitoring](docs/DASHBOARD.md) | 1h |
 
 ---
@@ -575,6 +575,7 @@ graph LR
         D1[HIGHEST_MIT_LEVEL_<br/>ISO_CERTIFICATION.md<br/>Complete Details]
         D2[ISO_IEC_25010_<br/>QUICK_REFERENCE.md<br/>1-Page Summary]
         D3[CERTIFICATION_<br/>VERIFICATION_GUIDE.md<br/>How to Verify]
+        D4[PROJECT_ORGANIZATION_<br/>MIT_LEVEL_VERIFICATION.md<br/>🆕 Structure Verification]
     end
     
     subgraph "📊 Detailed Docs"
@@ -620,10 +621,10 @@ journey
 ```
 
 **Steps:**
-1. ✅ Read [START_HERE.md](START_HERE.md) (5 min)
-2. ✅ Read [ISO Quick Reference](ISO_IEC_25010_QUICK_REFERENCE.md) (5 min)
+1. ✅ Read [START_HERE.md](../START_HERE.md) (5 min)
+2. ✅ Read [ISO Quick Reference](certification/ISO_IEC_25010_QUICK_REFERENCE.md) (5 min)
 3. ✅ Run `./scripts/verify_compliance.sh` (1 min)
-4. ✅ Browse [README.md](README.md) (10 min)
+4. ✅ Browse [README.md](../README.md) (10 min)
 5. ✅ Try a quick example (10 min)
 
 ### Path 2: Researcher Track (3-4 hours)
@@ -679,7 +680,7 @@ journey
 3. [ARCHITECTURE_COMPREHENSIVE.md](docs/ARCHITECTURE_COMPREHENSIVE.md) (45 min)
 4. [DEVELOPMENT.md](docs/DEVELOPMENT.md) (30 min)
 5. [API.md](docs/API.md) (30 min)
-6. [TESTING_INFRASTRUCTURE.md](TESTING_INFRASTRUCTURE.md) (30 min)
+6. [TESTING_INFRASTRUCTURE.md](guides/TESTING_INFRASTRUCTURE.md) (30 min)
 7. Hands-on coding (60 min)
 
 ### Path 4: Executive Track (30-60 minutes)
@@ -701,8 +702,8 @@ journey
 ```
 
 **Recommended Sequence:**
-1. [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) (15 min)
-2. [ISO_IEC_25010_QUICK_REFERENCE.md](ISO_IEC_25010_QUICK_REFERENCE.md) (5 min)
+1. [EXECUTIVE_SUMMARY.md](product/EXECUTIVE_SUMMARY.md) (15 min)
+2. [ISO_IEC_25010_QUICK_REFERENCE.md](certification/ISO_IEC_25010_QUICK_REFERENCE.md) (5 min)
 3. [PRD_COMPREHENSIVE.md](docs/PRD_COMPREHENSIVE.md) - Business sections (20 min)
 4. Commercial value & ROI sections (15 min)
 
@@ -1140,8 +1141,8 @@ graph LR
 
 ### Quick Access
 
-[📘 README](README.md) •
-[🏆 Certification](HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md) •
+[📘 README](../README.md) •
+[🏆 Certification](certification/HIGHEST_MIT_LEVEL_ISO_CERTIFICATION.md) •
 [🎓 Innovations](docs/MIT_LEVEL_INNOVATIONS.md) •
 [🏗️ Architecture](docs/ARCHITECTURE_COMPREHENSIVE.md) •
 [📚 Full Index](DOCUMENTATION_INDEX.md)
