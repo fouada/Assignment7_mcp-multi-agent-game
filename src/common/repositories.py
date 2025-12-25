@@ -13,15 +13,13 @@ File access permissions:
 - logs/*: Write by each agent (own log only)
 """
 
-import json
-import os
 import fcntl
+import json
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, asdict, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypeVar, Generic
-import asyncio
+from typing import Any, Generic, TypeVar
 
 from .logger import get_logger
 
@@ -33,38 +31,38 @@ T = TypeVar('T')
 class Repository(ABC, Generic[T]):
     """
     Abstract base repository.
-    
+
     Provides common file-based persistence operations.
     """
-    
+
     def __init__(self, base_path: Path):
         self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
-    
+
     @abstractmethod
     def save(self, data: T) -> None:
         """Save data to storage."""
         pass
-    
+
     @abstractmethod
-    def load(self) -> Optional[T]:
+    def load(self) -> T | None:
         """Load data from storage."""
         pass
-    
-    def _read_json(self, path: Path) -> Optional[Dict]:
+
+    def _read_json(self, path: Path) -> dict | None:
         """Read JSON file with file locking."""
         if not path.exists():
             return None
-        
-        with open(path, 'r', encoding='utf-8') as f:
+
+        with open(path, encoding='utf-8') as f:
             # Acquire shared lock for reading
             fcntl.flock(f.fileno(), fcntl.LOCK_SH)
             try:
                 return json.load(f)
             finally:
                 fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-    
-    def _write_json(self, path: Path, data: Dict) -> None:
+
+    def _write_json(self, path: Path, data: dict) -> None:
         """Write JSON file with file locking."""
         # Write to temp file first, then rename (atomic)
         temp_path = path.with_suffix('.tmp')
@@ -81,7 +79,7 @@ class Repository(ABC, Generic[T]):
 @dataclass
 class StandingsEntry:
     """A single entry in the standings table."""
-    
+
     rank: int
     player_id: str
     display_name: str
@@ -90,30 +88,30 @@ class StandingsEntry:
     draws: int = 0
     losses: int = 0
     points: int = 0
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
 @dataclass
 class StandingsData:
     """Full standings data structure."""
-    
+
     league_id: str
     round_id: int
     timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
-    standings: List[StandingsEntry] = field(default_factory=list)
-    
-    def to_dict(self) -> Dict[str, Any]:
+    standings: list[StandingsEntry] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "league_id": self.league_id,
             "round_id": self.round_id,
             "timestamp": self.timestamp,
             "standings": [s.to_dict() for s in self.standings],
         }
-    
+
     @classmethod
-    def from_dict(cls, data: Dict) -> "StandingsData":
+    def from_dict(cls, data: dict) -> "StandingsData":
         standings = [
             StandingsEntry(**s) for s in data.get("standings", [])
         ]
@@ -128,29 +126,29 @@ class StandingsData:
 class StandingsRepository(Repository[StandingsData]):
     """
     Repository for league standings.
-    
+
     File: data/leagues/<league_id>/standings.json
     Write access: League Manager only
     """
-    
+
     def __init__(self, base_path: Path, league_id: str):
         super().__init__(base_path / "leagues" / league_id)
         self.league_id = league_id
         self.file_path = self.base_path / "standings.json"
-    
+
     def save(self, data: StandingsData) -> None:
         """Save standings to file."""
         self._write_json(self.file_path, data.to_dict())
         logger.debug(f"Saved standings for round {data.round_id}")
-    
-    def load(self) -> Optional[StandingsData]:
+
+    def load(self) -> StandingsData | None:
         """Load standings from file."""
         data = self._read_json(self.file_path)
         if data:
             return StandingsData.from_dict(data)
         return None
-    
-    def get_player_rank(self, player_id: str) -> Optional[int]:
+
+    def get_player_rank(self, player_id: str) -> int | None:
         """Get a player's current rank."""
         standings = self.load()
         if standings:
@@ -163,36 +161,36 @@ class StandingsRepository(Repository[StandingsData]):
 @dataclass
 class RoundEntry:
     """A single round's data."""
-    
+
     round_id: int
     started_at: str
-    completed_at: Optional[str] = None
-    matches: List[Dict[str, Any]] = field(default_factory=list)
-    results: List[Dict[str, Any]] = field(default_factory=list)
-    
-    def to_dict(self) -> Dict[str, Any]:
+    completed_at: str | None = None
+    matches: list[dict[str, Any]] = field(default_factory=list)
+    results: list[dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
 @dataclass
 class RoundsData:
     """Full rounds history data."""
-    
+
     league_id: str
     total_rounds: int
     current_round: int
-    rounds: List[RoundEntry] = field(default_factory=list)
-    
-    def to_dict(self) -> Dict[str, Any]:
+    rounds: list[RoundEntry] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "league_id": self.league_id,
             "total_rounds": self.total_rounds,
             "current_round": self.current_round,
             "rounds": [r.to_dict() for r in self.rounds],
         }
-    
+
     @classmethod
-    def from_dict(cls, data: Dict) -> "RoundsData":
+    def from_dict(cls, data: dict) -> "RoundsData":
         rounds = [RoundEntry(**r) for r in data.get("rounds", [])]
         return cls(
             league_id=data["league_id"],
@@ -205,28 +203,28 @@ class RoundsData:
 class RoundsRepository(Repository[RoundsData]):
     """
     Repository for round history.
-    
+
     File: data/leagues/<league_id>/rounds.json
     Write access: League Manager only
     """
-    
+
     def __init__(self, base_path: Path, league_id: str):
         super().__init__(base_path / "leagues" / league_id)
         self.league_id = league_id
         self.file_path = self.base_path / "rounds.json"
-    
+
     def save(self, data: RoundsData) -> None:
         """Save rounds history."""
         self._write_json(self.file_path, data.to_dict())
         logger.debug(f"Saved rounds history (current: {data.current_round})")
-    
-    def load(self) -> Optional[RoundsData]:
+
+    def load(self) -> RoundsData | None:
         """Load rounds history."""
         data = self._read_json(self.file_path)
         if data:
             return RoundsData.from_dict(data)
         return None
-    
+
     def add_round(self, round_entry: RoundEntry) -> None:
         """Add a new round to history."""
         data = self.load()
@@ -237,12 +235,12 @@ class RoundsRepository(Repository[RoundsData]):
                 current_round=0,
                 rounds=[],
             )
-        
+
         data.rounds.append(round_entry)
         data.current_round = round_entry.round_id
         self.save(data)
-    
-    def complete_round(self, round_id: int, results: List[Dict]) -> None:
+
+    def complete_round(self, round_id: int, results: list[dict]) -> None:
         """Mark a round as complete with results."""
         data = self.load()
         if data:
@@ -257,7 +255,7 @@ class RoundsRepository(Repository[RoundsData]):
 @dataclass
 class MatchData:
     """Data for a single match."""
-    
+
     match_id: str
     league_id: str
     round_id: int
@@ -267,56 +265,56 @@ class MatchData:
     player_A_role: str = "odd"
     player_B_role: str = "even"
     status: str = "pending"  # pending, in_progress, completed, cancelled
-    winner_id: Optional[str] = None
+    winner_id: str | None = None
     player_A_score: int = 0
     player_B_score: int = 0
     rounds_played: int = 0
-    started_at: Optional[str] = None
-    completed_at: Optional[str] = None
-    round_history: List[Dict[str, Any]] = field(default_factory=list)
-    
-    def to_dict(self) -> Dict[str, Any]:
+    started_at: str | None = None
+    completed_at: str | None = None
+    round_history: list[dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-    
+
     @classmethod
-    def from_dict(cls, data: Dict) -> "MatchData":
+    def from_dict(cls, data: dict) -> "MatchData":
         return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
 
 
 class MatchRepository(Repository[MatchData]):
     """
     Repository for match data.
-    
+
     File: data/matches/<league_id>/<match_id>.json
     Write access: Referee only
     """
-    
+
     def __init__(self, base_path: Path, league_id: str):
         super().__init__(base_path / "matches" / league_id)
         self.league_id = league_id
-    
+
     def _match_path(self, match_id: str) -> Path:
         return self.base_path / f"{match_id}.json"
-    
+
     def save(self, data: MatchData) -> None:
         """Save match data."""
         self._write_json(self._match_path(data.match_id), data.to_dict())
         logger.debug(f"Saved match {data.match_id}")
-    
-    def load(self, match_id: str = "") -> Optional[MatchData]:
+
+    def load(self, match_id: str = "") -> MatchData | None:
         """Load match data by ID."""
         path = self._match_path(match_id)
         data = self._read_json(path)
         if data:
             return MatchData.from_dict(data)
         return None
-    
-    def list_matches(self) -> List[str]:
+
+    def list_matches(self) -> list[str]:
         """List all match IDs."""
         if not self.base_path.exists():
             return []
         return [p.stem for p in self.base_path.glob("*.json")]
-    
+
     def update_status(self, match_id: str, status: str) -> None:
         """Update match status."""
         data = self.load(match_id)
@@ -327,11 +325,11 @@ class MatchRepository(Repository[MatchData]):
             elif status == "completed" and not data.completed_at:
                 data.completed_at = datetime.utcnow().isoformat() + "Z"
             self.save(data)
-    
+
     def record_result(
         self,
         match_id: str,
-        winner_id: Optional[str],
+        winner_id: str | None,
         player_A_score: int,
         player_B_score: int,
         rounds_played: int,
@@ -351,7 +349,7 @@ class MatchRepository(Repository[MatchData]):
 @dataclass
 class PlayerHistoryEntry:
     """A single game in player history."""
-    
+
     match_id: str
     opponent_id: str
     opponent_name: str
@@ -361,24 +359,24 @@ class PlayerHistoryEntry:
     my_role: str
     played_at: str
     round_id: int
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
 @dataclass
 class PlayerHistoryData:
     """Player's game history."""
-    
+
     player_id: str
     display_name: str
     total_games: int = 0
     wins: int = 0
     losses: int = 0
     draws: int = 0
-    games: List[PlayerHistoryEntry] = field(default_factory=list)
-    
-    def to_dict(self) -> Dict[str, Any]:
+    games: list[PlayerHistoryEntry] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "player_id": self.player_id,
             "display_name": self.display_name,
@@ -388,9 +386,9 @@ class PlayerHistoryData:
             "draws": self.draws,
             "games": [g.to_dict() for g in self.games],
         }
-    
+
     @classmethod
-    def from_dict(cls, data: Dict) -> "PlayerHistoryData":
+    def from_dict(cls, data: dict) -> "PlayerHistoryData":
         games = [PlayerHistoryEntry(**g) for g in data.get("games", [])]
         return cls(
             player_id=data["player_id"],
@@ -406,28 +404,28 @@ class PlayerHistoryData:
 class PlayerHistoryRepository(Repository[PlayerHistoryData]):
     """
     Repository for player game history.
-    
+
     File: data/players/<player_id>/history.json
     Write access: Owning player only
     """
-    
+
     def __init__(self, base_path: Path, player_id: str):
         super().__init__(base_path / "players" / player_id)
         self.player_id = player_id
         self.file_path = self.base_path / "history.json"
-    
+
     def save(self, data: PlayerHistoryData) -> None:
         """Save player history."""
         self._write_json(self.file_path, data.to_dict())
         logger.debug(f"Saved history for player {self.player_id}")
-    
-    def load(self) -> Optional[PlayerHistoryData]:
+
+    def load(self) -> PlayerHistoryData | None:
         """Load player history."""
         data = self._read_json(self.file_path)
         if data:
             return PlayerHistoryData.from_dict(data)
         return None
-    
+
     def add_game(self, entry: PlayerHistoryEntry) -> None:
         """Add a game to history."""
         data = self.load()
@@ -436,27 +434,27 @@ class PlayerHistoryRepository(Repository[PlayerHistoryData]):
                 player_id=self.player_id,
                 display_name="",
             )
-        
+
         data.games.append(entry)
         data.total_games += 1
-        
+
         if entry.result == "win":
             data.wins += 1
         elif entry.result == "loss":
             data.losses += 1
         else:
             data.draws += 1
-        
+
         self.save(data)
-    
-    def get_recent_games(self, count: int = 10) -> List[PlayerHistoryEntry]:
+
+    def get_recent_games(self, count: int = 10) -> list[PlayerHistoryEntry]:
         """Get most recent games."""
         data = self.load()
         if data:
             return data.games[-count:]
         return []
-    
-    def get_opponent_history(self, opponent_id: str) -> List[PlayerHistoryEntry]:
+
+    def get_opponent_history(self, opponent_id: str) -> list[PlayerHistoryEntry]:
         """Get history against a specific opponent."""
         data = self.load()
         if data:
@@ -467,20 +465,20 @@ class PlayerHistoryRepository(Repository[PlayerHistoryData]):
 class DataManager:
     """
     Central data management class.
-    
+
     Provides access to all repositories.
     """
-    
+
     def __init__(self, base_path: str = "data"):
         self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
-        
+
         # Cache for repositories
-        self._standings_repos: Dict[str, StandingsRepository] = {}
-        self._rounds_repos: Dict[str, RoundsRepository] = {}
-        self._match_repos: Dict[str, MatchRepository] = {}
-        self._player_history_repos: Dict[str, PlayerHistoryRepository] = {}
-    
+        self._standings_repos: dict[str, StandingsRepository] = {}
+        self._rounds_repos: dict[str, RoundsRepository] = {}
+        self._match_repos: dict[str, MatchRepository] = {}
+        self._player_history_repos: dict[str, PlayerHistoryRepository] = {}
+
     def standings(self, league_id: str) -> StandingsRepository:
         """Get standings repository for a league."""
         if league_id not in self._standings_repos:
@@ -488,7 +486,7 @@ class DataManager:
                 self.base_path, league_id
             )
         return self._standings_repos[league_id]
-    
+
     def rounds(self, league_id: str) -> RoundsRepository:
         """Get rounds repository for a league."""
         if league_id not in self._rounds_repos:
@@ -496,7 +494,7 @@ class DataManager:
                 self.base_path, league_id
             )
         return self._rounds_repos[league_id]
-    
+
     def matches(self, league_id: str) -> MatchRepository:
         """Get match repository for a league."""
         if league_id not in self._match_repos:
@@ -504,7 +502,7 @@ class DataManager:
                 self.base_path, league_id
             )
         return self._match_repos[league_id]
-    
+
     def player_history(self, player_id: str) -> PlayerHistoryRepository:
         """Get player history repository."""
         if player_id not in self._player_history_repos:
@@ -515,7 +513,7 @@ class DataManager:
 
 
 # Global data manager instance
-_data_manager: Optional[DataManager] = None
+_data_manager: DataManager | None = None
 
 
 def get_data_manager(base_path: str = "data") -> DataManager:

@@ -15,29 +15,26 @@ Test Coverage:
 - Middleware enable/disable
 """
 
-import pytest
 import asyncio
-import time
-from typing import Any, Dict, Optional
-from unittest.mock import Mock, AsyncMock
+from typing import Any
+
+import pytest
 
 from src.middleware import (
-    Middleware,
-    RequestContext,
-    ResponseContext,
-    MiddlewareError,
-    MiddlewareTimeoutError,
-    MiddlewarePipeline,
-    LoggingMiddleware,
     AuthenticationMiddleware,
-    RateLimitMiddleware,
-    MetricsMiddleware,
-    ValidationMiddleware,
     CachingMiddleware,
     ErrorHandlerMiddleware,
+    LoggingMiddleware,
+    MetricsMiddleware,
+    Middleware,
+    MiddlewarePipeline,
+    MiddlewareTimeoutError,
+    RateLimitMiddleware,
+    RequestContext,
+    ResponseContext,
     TracingMiddleware,
+    ValidationMiddleware,
 )
-
 
 # ============================================================================
 # Test Fixtures
@@ -70,7 +67,7 @@ def sample_request():
 def sample_handler():
     """Sample async handler for testing."""
 
-    async def handler(request: Dict[str, Any]) -> Dict[str, Any]:
+    async def handler(request: dict[str, Any]) -> dict[str, Any]:
         return {"success": True, "message": "Processed successfully"}
 
     return handler
@@ -105,7 +102,7 @@ class TestMiddleware(Middleware):
 
     async def on_error(
         self, context: RequestContext, error: Exception
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         self.error_called = True
         self.call_order.append("error")
         return None
@@ -137,9 +134,9 @@ async def test_middleware_base_class():
     middleware = TestMiddleware(name="test")
 
     assert middleware.name == "test"
-    assert middleware.enabled == True
-    assert middleware.before_called == False
-    assert middleware.after_called == False
+    assert middleware.enabled
+    assert not middleware.before_called
+    assert not middleware.after_called
 
 
 @pytest.mark.asyncio
@@ -156,11 +153,11 @@ async def test_request_context():
     assert context.metadata["key"] == "value"
     assert context.state["count"] == 1
     assert context.client_id == "client_123"
-    assert context.has_response() == False
+    assert not context.has_response()
 
     # Test set_response
     context.set_response({"result": "success"})
-    assert context.has_response() == True
+    assert context.has_response()
     assert context.response == {"result": "success"}
 
 
@@ -194,10 +191,10 @@ async def test_pipeline_basic_execution(clean_pipeline, sample_request, sample_h
 
     response = await clean_pipeline.execute(sample_request, handler=sample_handler)
 
-    assert response["success"] == True
-    assert middleware.before_called == True
-    assert middleware.after_called == True
-    assert middleware.error_called == False
+    assert response["success"]
+    assert middleware.before_called
+    assert middleware.after_called
+    assert not middleware.error_called
 
 
 @pytest.mark.asyncio
@@ -214,14 +211,14 @@ async def test_pipeline_priority_ordering(clean_pipeline, sample_request, sample
     response = await clean_pipeline.execute(sample_request, handler=sample_handler)
 
     # Check before hooks run high to low
-    assert response["high_priority_after"] == True
-    assert response["medium_priority_after"] == True
-    assert response["low_priority_after"] == True
+    assert response["high_priority_after"]
+    assert response["medium_priority_after"]
+    assert response["low_priority_after"]
 
     # Verify order: high priority runs first in before, last in after
-    assert m2.before_called == True
-    assert m3.before_called == True
-    assert m1.before_called == True
+    assert m2.before_called
+    assert m3.before_called
+    assert m1.before_called
 
 
 @pytest.mark.asyncio
@@ -238,17 +235,17 @@ async def test_pipeline_short_circuit(clean_pipeline, sample_request, sample_han
     response = await clean_pipeline.execute(sample_request, handler=sample_handler)
 
     # Check short-circuit response
-    assert response["short_circuit"] == True
+    assert response["short_circuit"]
     assert response["middleware"] == "short_circuit"
 
     # m1 should run before hook
-    assert m1.before_called == True
+    assert m1.before_called
 
     # m2 short-circuits, so m3 before hook should not run
-    assert m3.before_called == False
+    assert not m3.before_called
 
     # After hooks should still run for cleanup
-    assert m1.after_called == True
+    assert m1.after_called
 
 
 @pytest.mark.asyncio
@@ -265,13 +262,13 @@ async def test_pipeline_error_handling_continue(sample_request, sample_handler):
     pipeline.add_middleware(m3, priority=10)
 
     # Should continue despite error
-    response = await pipeline.execute(sample_request, handler=sample_handler)
+    await pipeline.execute(sample_request, handler=sample_handler)
 
     # m1 runs successfully
-    assert m1.before_called == True
+    assert m1.before_called
 
     # m3 should still run (continue mode)
-    assert m3.before_called == True
+    assert m3.before_called
 
 
 @pytest.mark.asyncio
@@ -377,14 +374,14 @@ async def test_add_remove_middleware(clean_pipeline):
 
     # Remove middleware
     removed = clean_pipeline.remove_middleware("middleware1")
-    assert removed == True
+    assert removed
 
     middleware_list = clean_pipeline.get_middleware_list()
     assert len(middleware_list) == 1
 
     # Try removing non-existent
     removed = clean_pipeline.remove_middleware("nonexistent")
-    assert removed == False
+    assert not removed
 
 
 @pytest.mark.asyncio
@@ -394,21 +391,21 @@ async def test_enable_disable_middleware(clean_pipeline, sample_request, sample_
     clean_pipeline.add_middleware(m1, priority=100)
 
     # Middleware enabled by default
-    response = await clean_pipeline.execute(sample_request, handler=sample_handler)
-    assert m1.before_called == True
+    await clean_pipeline.execute(sample_request, handler=sample_handler)
+    assert m1.before_called
 
     # Reset
     m1.before_called = False
 
     # Disable middleware
     clean_pipeline.disable_middleware("test")
-    response = await clean_pipeline.execute(sample_request, handler=sample_handler)
-    assert m1.before_called == False
+    await clean_pipeline.execute(sample_request, handler=sample_handler)
+    assert not m1.before_called
 
     # Enable middleware
     clean_pipeline.enable_middleware("test")
-    response = await clean_pipeline.execute(sample_request, handler=sample_handler)
-    assert m1.before_called == True
+    await clean_pipeline.execute(sample_request, handler=sample_handler)
+    assert m1.before_called
 
 
 @pytest.mark.asyncio
@@ -448,7 +445,7 @@ async def test_logging_middleware(clean_pipeline, sample_request, sample_handler
 
     response = await clean_pipeline.execute(sample_request, handler=sample_handler)
 
-    assert response["success"] == True
+    assert response["success"]
 
 
 @pytest.mark.asyncio
@@ -476,7 +473,7 @@ async def test_authentication_middleware_required(
 
     response = await clean_pipeline.execute(request_with_token, handler=sample_handler)
 
-    assert response["success"] == True
+    assert response["success"]
 
 
 @pytest.mark.asyncio
@@ -495,7 +492,7 @@ async def test_authentication_middleware_optional(
     # Request without token - should succeed (optional)
     response = await clean_pipeline.execute(sample_request, handler=sample_handler)
 
-    assert response["success"] == True
+    assert response["success"]
 
 
 @pytest.mark.asyncio
@@ -511,13 +508,13 @@ async def test_rate_limit_middleware(clean_pipeline, sample_request, sample_hand
 
     # First request - should succeed
     response = await clean_pipeline.execute(sample_request, handler=sample_handler)
-    assert response["success"] == True
+    assert response["success"]
     assert "rate_limit" in response
     assert response["rate_limit"]["remaining"] == 1
 
     # Second request - should succeed (within burst)
     response = await clean_pipeline.execute(sample_request, handler=sample_handler)
-    assert response["success"] == True
+    assert response["success"]
     assert response["rate_limit"]["remaining"] == 0
 
     # Third request - should be rate limited
@@ -536,7 +533,7 @@ async def test_metrics_middleware(clean_pipeline, sample_request, sample_handler
     # Execute a few requests
     for _ in range(3):
         response = await clean_pipeline.execute(sample_request, handler=sample_handler)
-        assert response["success"] == True
+        assert response["success"]
 
     # Check metrics
     metrics = metrics_middleware.get_metrics()
@@ -571,7 +568,7 @@ async def test_validation_middleware(clean_pipeline, sample_handler):
     }
 
     response = await clean_pipeline.execute(valid_request, handler=sample_handler)
-    assert response["success"] == True
+    assert response["success"]
 
     # Invalid request (missing required field)
     invalid_request = {
@@ -606,12 +603,12 @@ async def test_caching_middleware(clean_pipeline, sample_handler):
     # First request - should hit handler
     response1 = await clean_pipeline.execute(request, handler=counting_handler)
     assert response1["call_count"] == 1
-    assert response1.get("cached") != True
+    assert not response1.get("cached")
 
     # Second request with same params - should be cached
     response2 = await clean_pipeline.execute(request, handler=counting_handler)
     assert response2["call_count"] == 1  # Same as first (cached)
-    assert response2.get("cached") == True
+    assert response2.get("cached")
 
     # Check cache stats
     stats = caching_middleware.get_stats()
@@ -634,7 +631,7 @@ async def test_error_handler_middleware(clean_pipeline, sample_request):
 
     response = await clean_pipeline.execute(sample_request, handler=error_handler)
 
-    assert response["success"] == False
+    assert not response["success"]
     assert "error" in response
     assert response["error_type"] == "ValueError"
 
@@ -648,7 +645,7 @@ async def test_tracing_middleware(clean_pipeline, sample_request, sample_handler
 
     response = await clean_pipeline.execute(sample_request, handler=sample_handler)
 
-    assert response["success"] == True
+    assert response["success"]
     assert "trace_id" in response
     assert len(response["trace_id"]) == 16  # UUID first 16 chars
 
@@ -681,7 +678,7 @@ async def test_full_pipeline_integration(sample_request, sample_handler):
     response = await pipeline.execute(sample_request, handler=sample_handler)
 
     # Verify response
-    assert response["success"] == True
+    assert response["success"]
     assert "trace_id" in response
     assert "rate_limit" in response
 

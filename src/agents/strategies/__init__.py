@@ -25,45 +25,41 @@ Usage:
 """
 
 from .base import (
-    Strategy,
     GameTheoryStrategy,
-    StrategyConfig,
     OpponentModel,
     ParityChoice,
+    Strategy,
+    StrategyConfig,
 )
-
 from .classic import (
-    RandomStrategy,
-    PatternStrategy,
     LLMStrategy,
+    PatternStrategy,
+    RandomStrategy,
 )
-
-from .game_theory import (
-    NashEquilibriumStrategy,
-    BestResponseStrategy,
-    AdaptiveBayesianStrategy,
-    FictitiousPlayStrategy,
-    RegretMatchingStrategy,
-    UCBStrategy,
-    ThompsonSamplingStrategy,
-)
-
 from .factory import (
-    StrategyType,
     StrategyFactory,
+    StrategyType,
     create_strategy,
-    list_strategies,
     get_recommended,
+    list_strategies,
 )
-
+from .game_theory import (
+    AdaptiveBayesianStrategy,
+    BestResponseStrategy,
+    FictitiousPlayStrategy,
+    NashEquilibriumStrategy,
+    RegretMatchingStrategy,
+    ThompsonSamplingStrategy,
+    UCBStrategy,
+)
 from .plugin_registry import (
     StrategyPluginRegistry,
-    get_strategy_plugin_registry,
-    strategy_plugin,
-    register_strategy_plugin,
-    list_strategy_plugins,
-    get_strategy_plugin,
     create_strategy_plugin,
+    get_strategy_plugin,
+    get_strategy_plugin_registry,
+    list_strategy_plugins,
+    register_strategy_plugin,
+    strategy_plugin,
 )
 
 __all__ = [

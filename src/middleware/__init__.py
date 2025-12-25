@@ -32,24 +32,24 @@ Usage:
 
 from .base import (
     Middleware,
-    RequestContext,
-    ResponseContext,
-    MiddlewareError,
     MiddlewareConfigError,
+    MiddlewareError,
     MiddlewareTimeoutError,
     MiddlewareValidationError,
+    RequestContext,
+    ResponseContext,
 )
-from .pipeline import MiddlewarePipeline, MiddlewareMetadata
 from .builtin import (
-    LoggingMiddleware,
     AuthenticationMiddleware,
-    RateLimitMiddleware,
-    MetricsMiddleware,
-    ValidationMiddleware,
     CachingMiddleware,
     ErrorHandlerMiddleware,
+    LoggingMiddleware,
+    MetricsMiddleware,
+    RateLimitMiddleware,
     TracingMiddleware,
+    ValidationMiddleware,
 )
+from .pipeline import MiddlewareMetadata, MiddlewarePipeline
 
 __all__ = [
     # Base classes

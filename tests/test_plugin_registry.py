@@ -10,17 +10,18 @@ Tests the core plugin registry functionality including:
 """
 
 import pytest
+
+from src.common.logger import get_logger
 from src.common.plugins import (
+    PluginAlreadyRegisteredError,
+    PluginContext,
+    PluginDependencyError,
     PluginInterface,
     PluginMetadata,
-    PluginContext,
+    PluginNotFoundError,
     PluginRegistry,
     get_plugin_registry,
-    PluginAlreadyRegisteredError,
-    PluginNotFoundError,
-    PluginDependencyError,
 )
-from src.common.logger import get_logger
 
 logger = get_logger(__name__)
 

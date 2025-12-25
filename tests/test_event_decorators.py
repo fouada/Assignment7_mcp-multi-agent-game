@@ -12,16 +12,18 @@ Tests the event decorator functionality including:
 Run with: pytest tests/test_event_decorators.py -v
 """
 
-import pytest
 import asyncio
+
+import pytest
+
 from src.common.events import (
-    get_event_bus,
-    on_event,
-    before,
-    after,
-    on_error,
-    emit_on_exception,
     BaseEvent,
+    after,
+    before,
+    emit_on_exception,
+    get_event_bus,
+    on_error,
+    on_event,
 )
 from src.common.logger import get_logger
 

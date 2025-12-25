@@ -37,8 +37,9 @@ import fnmatch
 import inspect
 import traceback
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Deque, Dict, List, Optional, Union
+from typing import Any, Optional
 from uuid import uuid4
 
 from ..logger import get_logger
@@ -57,7 +58,7 @@ class HandlerMetadata:
     priority: int = 0
     is_async: bool = True
     description: str = ""
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
 
 
 class EventBus:
@@ -82,9 +83,9 @@ class EventBus:
         if self._initialized:
             return
 
-        self._handlers: Dict[str, List[HandlerMetadata]] = {}
-        self._handler_registry: Dict[str, HandlerMetadata] = {}
-        self._event_history: Deque[BaseEvent] = deque(maxlen=1000)
+        self._handlers: dict[str, list[HandlerMetadata]] = {}
+        self._handler_registry: dict[str, HandlerMetadata] = {}
+        self._event_history: deque[BaseEvent] = deque(maxlen=1000)
         self._enabled = True
         self._max_history = 1000
         self._async_by_default = True
@@ -131,7 +132,7 @@ class EventBus:
         handler: Callable,
         priority: int = 0,
         description: str = "",
-        tags: Optional[List[str]] = None,
+        tags: list[str] | None = None,
     ) -> str:
         """
         Register an event handler.
@@ -240,7 +241,7 @@ class EventBus:
         """
         return fnmatch.fnmatch(event_type, pattern)
 
-    def _get_matching_handlers(self, event_type: str) -> List[HandlerMetadata]:
+    def _get_matching_handlers(self, event_type: str) -> list[HandlerMetadata]:
         """
         Get all handlers matching event type, sorted by priority.
 
@@ -264,9 +265,9 @@ class EventBus:
     async def emit(
         self,
         event_type: str,
-        event: Optional[BaseEvent] = None,
+        event: BaseEvent | None = None,
         **kwargs,
-    ) -> List[Any]:
+    ) -> list[Any]:
         """
         Emit an event asynchronously.
 
@@ -339,9 +340,9 @@ class EventBus:
     def emit_sync(
         self,
         event_type: str,
-        event: Optional[BaseEvent] = None,
+        event: BaseEvent | None = None,
         **kwargs,
-    ) -> List[Any]:
+    ) -> list[Any]:
         """
         Emit an event synchronously.
 
@@ -400,7 +401,7 @@ class EventBus:
 
         return results
 
-    def get_handlers(self, pattern: Optional[str] = None) -> List[HandlerMetadata]:
+    def get_handlers(self, pattern: str | None = None) -> list[HandlerMetadata]:
         """
         Get registered handlers.
 
@@ -419,7 +420,7 @@ class EventBus:
         """Get total number of registered handlers."""
         return len(self._handler_registry)
 
-    def get_event_history(self, limit: Optional[int] = None) -> List[BaseEvent]:
+    def get_event_history(self, limit: int | None = None) -> list[BaseEvent]:
         """
         Get event history.
 
@@ -434,7 +435,7 @@ class EventBus:
             history = history[:limit]
         return history
 
-    def get_stats(self) -> Dict[str, int]:
+    def get_stats(self) -> dict[str, int]:
         """
         Get event bus statistics.
 
@@ -468,7 +469,7 @@ class EventBus:
 
 
 # Singleton instance accessor
-_event_bus_instance: Optional[EventBus] = None
+_event_bus_instance: EventBus | None = None
 
 
 def get_event_bus() -> EventBus:

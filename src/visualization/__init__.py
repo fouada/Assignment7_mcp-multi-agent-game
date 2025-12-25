@@ -42,21 +42,20 @@ Open http://localhost:8050 in browser to view live dashboard.
 """
 
 from .dashboard import (
+    CounterfactualVisualization,
     DashboardAPI,
     GameEvent,
-    StrategyPerformance,
     OpponentModelVisualization,
-    CounterfactualVisualization,
+    StrategyPerformance,
     get_dashboard,
-    reset_dashboard
+    reset_dashboard,
 )
-
 from .integration import (
     DashboardIntegration,
     PlayerDashboardState,
     TournamentDashboardState,
     get_dashboard_integration,
-    reset_dashboard_integration
+    reset_dashboard_integration,
 )
 
 __all__ = [

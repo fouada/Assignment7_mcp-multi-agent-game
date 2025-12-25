@@ -27,11 +27,11 @@ Usage:
     strategy = registry.create_strategy("my_strategy", config=...)
 """
 
-from typing import Dict, Type, Optional, Any, Callable
-from functools import wraps
+from collections.abc import Callable
+from typing import Any, Optional
 
-from .base import Strategy, StrategyConfig
 from ...common.logger import get_logger
+from .base import Strategy, StrategyConfig
 
 logger = get_logger(__name__)
 
@@ -64,9 +64,9 @@ class StrategyPluginRegistry:
         if self._initialized:
             return
 
-        self._strategies: Dict[str, Type[Strategy]] = {}
-        self._metadata: Dict[str, Dict[str, Any]] = {}
-        self._factories: Dict[str, Callable] = {}
+        self._strategies: dict[str, type[Strategy]] = {}
+        self._metadata: dict[str, dict[str, Any]] = {}
+        self._factories: dict[str, Callable] = {}
         self._initialized = True
 
         logger.info("StrategyPluginRegistry initialized")
@@ -74,9 +74,9 @@ class StrategyPluginRegistry:
     def register_strategy(
         self,
         name: str,
-        strategy_class: Type[Strategy],
-        metadata: Optional[Dict[str, Any]] = None,
-        factory: Optional[Callable] = None,
+        strategy_class: type[Strategy],
+        metadata: dict[str, Any] | None = None,
+        factory: Callable | None = None,
     ) -> None:
         """
         Register a strategy plugin.
@@ -127,7 +127,7 @@ class StrategyPluginRegistry:
             return True
         return False
 
-    def get_strategy_class(self, name: str) -> Optional[Type[Strategy]]:
+    def get_strategy_class(self, name: str) -> type[Strategy] | None:
         """
         Get strategy class by name.
 
@@ -142,7 +142,7 @@ class StrategyPluginRegistry:
     def create_strategy(
         self,
         name: str,
-        config: Optional[StrategyConfig] = None,
+        config: StrategyConfig | None = None,
         **kwargs,
     ) -> Strategy:
         """
@@ -184,7 +184,7 @@ class StrategyPluginRegistry:
         else:
             return strategy_class()
 
-    def list_strategies(self) -> Dict[str, Dict[str, Any]]:
+    def list_strategies(self) -> dict[str, dict[str, Any]]:
         """
         List all registered strategy plugins.
 
@@ -212,7 +212,7 @@ class StrategyPluginRegistry:
         """
         return name in self._strategies
 
-    def get_metadata(self, name: str) -> Optional[Dict[str, Any]]:
+    def get_metadata(self, name: str) -> dict[str, Any] | None:
         """
         Get metadata for a strategy.
 
@@ -237,7 +237,7 @@ class StrategyPluginRegistry:
 
 
 # Global instance
-_strategy_registry: Optional[StrategyPluginRegistry] = None
+_strategy_registry: StrategyPluginRegistry | None = None
 
 
 def get_strategy_plugin_registry() -> StrategyPluginRegistry:
@@ -261,8 +261,8 @@ def strategy_plugin(
     version: str = "1.0.0",
     description: str = "",
     category: str = "custom",
-    config_schema: Optional[Dict] = None,
-    factory: Optional[Callable] = None,
+    config_schema: dict | None = None,
+    factory: Callable | None = None,
 ):
     """
     Decorator to register a strategy as a plugin.
@@ -290,10 +290,10 @@ def strategy_plugin(
         Decorator function
     """
 
-    def decorator(cls: Type[Strategy]) -> Type[Strategy]:
+    def decorator(cls: type[Strategy]) -> type[Strategy]:
         # Validate
         if not issubclass(cls, Strategy):
-            raise ValueError(f"@strategy_plugin can only decorate Strategy subclasses")
+            raise ValueError("@strategy_plugin can only decorate Strategy subclasses")
 
         # Build metadata
         metadata = {
@@ -325,7 +325,7 @@ def strategy_plugin(
 
 def register_strategy_plugin(
     name: str,
-    strategy_class: Type[Strategy],
+    strategy_class: type[Strategy],
     version: str = "1.0.0",
     description: str = "",
     **metadata,
@@ -348,7 +348,7 @@ def register_strategy_plugin(
     registry.register_strategy(name, strategy_class, metadata=full_metadata)
 
 
-def list_strategy_plugins() -> Dict[str, Dict[str, Any]]:
+def list_strategy_plugins() -> dict[str, dict[str, Any]]:
     """
     List all registered strategy plugins.
 
@@ -359,7 +359,7 @@ def list_strategy_plugins() -> Dict[str, Dict[str, Any]]:
     return registry.list_strategies()
 
 
-def get_strategy_plugin(name: str) -> Optional[Type[Strategy]]:
+def get_strategy_plugin(name: str) -> type[Strategy] | None:
     """
     Get a strategy plugin class by name.
 
@@ -374,7 +374,7 @@ def get_strategy_plugin(name: str) -> Optional[Type[Strategy]]:
 
 
 def create_strategy_plugin(
-    name: str, config: Optional[StrategyConfig] = None, **kwargs
+    name: str, config: StrategyConfig | None = None, **kwargs
 ) -> Strategy:
     """
     Create a strategy plugin instance.

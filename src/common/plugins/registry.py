@@ -24,18 +24,17 @@ Usage:
     plugins = registry.list_plugins(filter_enabled=True)
 """
 
-from typing import Dict, List, Optional, Any
-import asyncio
+from typing import Any, Optional
 
+from ..logger import get_logger
 from .base import (
+    PluginAlreadyRegisteredError,
+    PluginContext,
+    PluginDependencyError,
     PluginInterface,
     PluginMetadata,
-    PluginContext,
-    PluginAlreadyRegisteredError,
     PluginNotFoundError,
-    PluginDependencyError,
 )
-from ..logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -85,10 +84,10 @@ class PluginRegistry:
         if self._initialized:
             return
 
-        self._plugins: Dict[str, PluginInterface] = {}
-        self._enabled: Dict[str, bool] = {}
-        self._metadata: Dict[str, PluginMetadata] = {}
-        self._context: Optional[PluginContext] = None
+        self._plugins: dict[str, PluginInterface] = {}
+        self._enabled: dict[str, bool] = {}
+        self._metadata: dict[str, PluginMetadata] = {}
+        self._context: PluginContext | None = None
         self._initialized = True
 
         logger.info("PluginRegistry initialized")
@@ -276,7 +275,7 @@ class PluginRegistry:
         logger.info(f"Plugin disabled: {name}")
         return True
 
-    def get_plugin(self, name: str) -> Optional[PluginInterface]:
+    def get_plugin(self, name: str) -> PluginInterface | None:
         """
         Get a plugin by name.
 
@@ -288,7 +287,7 @@ class PluginRegistry:
         """
         return self._plugins.get(name)
 
-    def get_metadata(self, name: str) -> Optional[PluginMetadata]:
+    def get_metadata(self, name: str) -> PluginMetadata | None:
         """
         Get plugin metadata by name.
 
@@ -300,7 +299,7 @@ class PluginRegistry:
         """
         return self._metadata.get(name)
 
-    def list_plugins(self, filter_enabled: bool = False) -> List[PluginMetadata]:
+    def list_plugins(self, filter_enabled: bool = False) -> list[PluginMetadata]:
         """
         List all plugins.
 
@@ -344,7 +343,7 @@ class PluginRegistry:
 
     def validate_dependencies(
         self, metadata: PluginMetadata
-    ) -> tuple[bool, List[str]]:
+    ) -> tuple[bool, list[str]]:
         """
         Validate plugin dependencies.
 
@@ -372,7 +371,7 @@ class PluginRegistry:
         """Get total count of registered plugins."""
         return len(self._plugins)
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """
         Get registry summary.
 
@@ -432,7 +431,7 @@ class PluginRegistry:
 
 
 # Global registry instance
-_registry: Optional[PluginRegistry] = None
+_registry: PluginRegistry | None = None
 
 
 def get_plugin_registry() -> PluginRegistry:

@@ -5,10 +5,11 @@ PyTest Configuration and Fixtures
 Global configuration and shared fixtures for all tests.
 """
 
-import pytest
 import asyncio
 import logging
 from pathlib import Path
+
+import pytest
 
 # ====================
 # PyTest Configuration
@@ -33,7 +34,7 @@ def pytest_configure(config):
         "markers",
         "unit: mark test as a unit test (default)"
     )
-    
+
     # Configure logging
     logging.basicConfig(
         level=logging.WARNING,
@@ -45,7 +46,7 @@ def pytest_collection_modifyitems(config, items):
     """Modify test collection to add markers automatically."""
     for item in items:
         # Add 'unit' marker to tests without other markers
-        if not any(marker.name in ['integration', 'slow', 'benchmark'] 
+        if not any(marker.name in ['integration', 'slow', 'benchmark']
                    for marker in item.iter_markers()):
             item.add_marker(pytest.mark.unit)
 

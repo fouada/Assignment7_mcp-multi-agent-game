@@ -6,10 +6,10 @@ Full implementation of JSON-RPC 2.0 specification.
 https://www.jsonrpc.org/specification
 """
 
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional, Union
 import json
 import uuid
+from dataclasses import dataclass, field
+from typing import Any
 
 # JSON-RPC 2.0 version
 JSONRPC_VERSION = "2.0"
@@ -37,51 +37,51 @@ ERROR_MESSAGES = {
 @dataclass
 class JsonRpcError:
     """JSON-RPC 2.0 error object."""
-    
+
     code: int
     message: str
-    data: Optional[Any] = None
-    
-    def to_dict(self) -> Dict[str, Any]:
+    data: Any | None = None
+
+    def to_dict(self) -> dict[str, Any]:
         result = {"code": self.code, "message": self.message}
         if self.data is not None:
             result["data"] = self.data
         return result
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "JsonRpcError":
+    def from_dict(cls, data: dict[str, Any]) -> "JsonRpcError":
         return cls(
             code=data["code"],
             message=data["message"],
             data=data.get("data"),
         )
-    
+
     @classmethod
     def parse_error(cls, data: Any = None) -> "JsonRpcError":
         return cls(PARSE_ERROR, ERROR_MESSAGES[PARSE_ERROR], data)
-    
+
     @classmethod
     def invalid_request(cls, data: Any = None) -> "JsonRpcError":
         return cls(INVALID_REQUEST, ERROR_MESSAGES[INVALID_REQUEST], data)
-    
+
     @classmethod
     def method_not_found(cls, method: str) -> "JsonRpcError":
         return cls(METHOD_NOT_FOUND, f"Method not found: {method}")
-    
+
     @classmethod
     def invalid_params(cls, details: str = None) -> "JsonRpcError":
         msg = ERROR_MESSAGES[INVALID_PARAMS]
         if details:
             msg = f"{msg}: {details}"
         return cls(INVALID_PARAMS, msg)
-    
+
     @classmethod
     def internal_error(cls, details: str = None) -> "JsonRpcError":
         msg = ERROR_MESSAGES[INTERNAL_ERROR]
         if details:
             msg = f"{msg}: {details}"
         return cls(INTERNAL_ERROR, msg)
-    
+
     @classmethod
     def server_error(cls, code: int, message: str, data: Any = None) -> "JsonRpcError":
         if not (SERVER_ERROR_START <= code <= SERVER_ERROR_END):
@@ -92,37 +92,37 @@ class JsonRpcError:
 @dataclass
 class JsonRpcRequest:
     """JSON-RPC 2.0 request object."""
-    
+
     method: str
-    params: Optional[Union[List, Dict]] = None
-    id: Optional[Union[str, int]] = field(default_factory=lambda: str(uuid.uuid4()))
+    params: list | dict | None = None
+    id: str | int | None = field(default_factory=lambda: str(uuid.uuid4()))
     jsonrpc: str = JSONRPC_VERSION
-    
+
     @property
     def is_notification(self) -> bool:
         """Check if this is a notification (no id means no response expected)."""
         return self.id is None
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         result = {"jsonrpc": self.jsonrpc, "method": self.method}
         if self.params is not None:
             result["params"] = self.params
         if self.id is not None:
             result["id"] = self.id
         return result
-    
+
     def to_json(self) -> str:
         return json.dumps(self.to_dict())
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "JsonRpcRequest":
+    def from_dict(cls, data: dict[str, Any]) -> "JsonRpcRequest":
         return cls(
             method=data["method"],
             params=data.get("params"),
             id=data.get("id"),
             jsonrpc=data.get("jsonrpc", JSONRPC_VERSION),
         )
-    
+
     @classmethod
     def from_json(cls, json_str: str) -> "JsonRpcRequest":
         return cls.from_dict(json.loads(json_str))
@@ -131,35 +131,35 @@ class JsonRpcRequest:
 @dataclass
 class JsonRpcResponse:
     """JSON-RPC 2.0 response object."""
-    
-    id: Optional[Union[str, int]]
-    result: Optional[Any] = None
-    error: Optional[JsonRpcError] = None
+
+    id: str | int | None
+    result: Any | None = None
+    error: JsonRpcError | None = None
     jsonrpc: str = JSONRPC_VERSION
-    
+
     @property
     def is_success(self) -> bool:
         """Check if response is successful."""
         return self.error is None
-    
+
     @property
     def is_error(self) -> bool:
         """Check if response is an error."""
         return self.error is not None
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         result = {"jsonrpc": self.jsonrpc, "id": self.id}
         if self.error is not None:
             result["error"] = self.error.to_dict()
         else:
             result["result"] = self.result
         return result
-    
+
     def to_json(self) -> str:
         return json.dumps(self.to_dict())
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "JsonRpcResponse":
+    def from_dict(cls, data: dict[str, Any]) -> "JsonRpcResponse":
         error = None
         if "error" in data:
             error = JsonRpcError.from_dict(data["error"])
@@ -169,7 +169,7 @@ class JsonRpcResponse:
             error=error,
             jsonrpc=data.get("jsonrpc", JSONRPC_VERSION),
         )
-    
+
     @classmethod
     def from_json(cls, json_str: str) -> "JsonRpcResponse":
         return cls.from_dict(json.loads(json_str))
@@ -178,17 +178,17 @@ class JsonRpcResponse:
 @dataclass
 class JsonRpcBatch:
     """JSON-RPC 2.0 batch request/response."""
-    
-    items: List[Union[JsonRpcRequest, JsonRpcResponse]]
-    
-    def to_dict(self) -> List[Dict[str, Any]]:
+
+    items: list[JsonRpcRequest | JsonRpcResponse]
+
+    def to_dict(self) -> list[dict[str, Any]]:
         return [item.to_dict() for item in self.items]
-    
+
     def to_json(self) -> str:
         return json.dumps(self.to_dict())
-    
+
     @classmethod
-    def from_list(cls, data: List[Dict[str, Any]]) -> "JsonRpcBatch":
+    def from_list(cls, data: list[dict[str, Any]]) -> "JsonRpcBatch":
         items = []
         for item in data:
             if "method" in item:
@@ -204,42 +204,42 @@ class JsonRpcBatch:
 
 def create_request(
     method: str,
-    params: Optional[Union[List, Dict]] = None,
-    request_id: Optional[Union[str, int]] = None,
+    params: list | dict | None = None,
+    request_id: str | int | None = None,
     notification: bool = False,
 ) -> JsonRpcRequest:
     """
     Create a JSON-RPC request.
-    
+
     Args:
         method: The method name to call
         params: Optional parameters (list for positional, dict for named)
         request_id: Optional request ID (auto-generated if not provided)
         notification: If True, creates a notification (no response expected)
-        
+
     Returns:
         JsonRpcRequest object
     """
     if notification:
         return JsonRpcRequest(method=method, params=params, id=None)
-    
+
     if request_id is None:
         request_id = str(uuid.uuid4())
-    
+
     return JsonRpcRequest(method=method, params=params, id=request_id)
 
 
 def create_response(
-    request_id: Union[str, int],
+    request_id: str | int,
     result: Any = None,
 ) -> JsonRpcResponse:
     """
     Create a successful JSON-RPC response.
-    
+
     Args:
         request_id: The ID from the original request
         result: The result data
-        
+
     Returns:
         JsonRpcResponse object
     """
@@ -247,16 +247,16 @@ def create_response(
 
 
 def create_error_response(
-    request_id: Optional[Union[str, int]],
+    request_id: str | int | None,
     error: JsonRpcError,
 ) -> JsonRpcResponse:
     """
     Create an error JSON-RPC response.
-    
+
     Args:
         request_id: The ID from the original request (or None for parse errors)
         error: The error object
-        
+
     Returns:
         JsonRpcResponse object
     """
@@ -264,14 +264,14 @@ def create_error_response(
 
 
 def parse_message(
-    data: Union[str, bytes, Dict, List]
-) -> Union[JsonRpcRequest, JsonRpcResponse, JsonRpcBatch, JsonRpcError]:
+    data: str | bytes | dict | list
+) -> JsonRpcRequest | JsonRpcResponse | JsonRpcBatch | JsonRpcError:
     """
     Parse a JSON-RPC message.
-    
+
     Args:
         data: Raw message data (string, bytes, or already parsed dict/list)
-        
+
     Returns:
         Parsed message object, or JsonRpcError if parsing fails
     """
@@ -283,24 +283,24 @@ def parse_message(
             data = json.loads(data)
         except json.JSONDecodeError as e:
             return JsonRpcError.parse_error(str(e))
-    
+
     # Handle batch
     if isinstance(data, list):
         if not data:
             return JsonRpcError.invalid_request("Empty batch")
         return JsonRpcBatch.from_list(data)
-    
+
     # Validate structure
     if not isinstance(data, dict):
         return JsonRpcError.invalid_request("Message must be an object")
-    
+
     # Check for required fields
     if "jsonrpc" not in data:
         return JsonRpcError.invalid_request("Missing 'jsonrpc' field")
-    
+
     if data.get("jsonrpc") != JSONRPC_VERSION:
         return JsonRpcError.invalid_request(f"Invalid JSON-RPC version: {data.get('jsonrpc')}")
-    
+
     # Determine if request or response
     if "method" in data:
         # It's a request
@@ -320,43 +320,43 @@ def parse_message(
 
 class MCPMethods:
     """Standard MCP method names."""
-    
+
     # Initialize
     INITIALIZE = "initialize"
     INITIALIZED = "notifications/initialized"
-    
+
     # Tools
     TOOLS_LIST = "tools/list"
     TOOLS_CALL = "tools/call"
-    
+
     # Resources
     RESOURCES_LIST = "resources/list"
     RESOURCES_READ = "resources/read"
     RESOURCES_SUBSCRIBE = "resources/subscribe"
     RESOURCES_UNSUBSCRIBE = "resources/unsubscribe"
-    
+
     # Prompts
     PROMPTS_LIST = "prompts/list"
     PROMPTS_GET = "prompts/get"
-    
+
     # Progress
     PROGRESS_NOTIFICATION = "notifications/progress"
-    
+
     # Cancellation
     CANCELLED = "notifications/cancelled"
 
 
 def create_mcp_request(
     method: str,
-    params: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    params: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """
     Create an MCP-compliant JSON-RPC request.
-    
+
     Args:
         method: MCP method name
         params: Method parameters
-        
+
     Returns:
         Request as dictionary
     """
@@ -366,8 +366,8 @@ def create_mcp_request(
 def create_initialize_request(
     client_name: str,
     client_version: str,
-    capabilities: Optional[Dict] = None,
-) -> Dict[str, Any]:
+    capabilities: dict | None = None,
+) -> dict[str, Any]:
     """Create MCP initialize request."""
     return create_mcp_request(
         MCPMethods.INITIALIZE,
@@ -382,15 +382,15 @@ def create_initialize_request(
     )
 
 
-def create_tools_list_request() -> Dict[str, Any]:
+def create_tools_list_request() -> dict[str, Any]:
     """Create tools/list request."""
     return create_mcp_request(MCPMethods.TOOLS_LIST)
 
 
 def create_tools_call_request(
     tool_name: str,
-    arguments: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    arguments: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Create tools/call request."""
     return create_mcp_request(
         MCPMethods.TOOLS_CALL,
@@ -401,12 +401,12 @@ def create_tools_call_request(
     )
 
 
-def create_resources_list_request() -> Dict[str, Any]:
+def create_resources_list_request() -> dict[str, Any]:
     """Create resources/list request."""
     return create_mcp_request(MCPMethods.RESOURCES_LIST)
 
 
-def create_resources_read_request(uri: str) -> Dict[str, Any]:
+def create_resources_read_request(uri: str) -> dict[str, Any]:
     """Create resources/read request."""
     return create_mcp_request(
         MCPMethods.RESOURCES_READ,

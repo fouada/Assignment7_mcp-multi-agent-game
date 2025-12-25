@@ -9,30 +9,27 @@ Full Model Context Protocol server with support for:
 """
 
 import asyncio
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Callable, Union, Awaitable
-from datetime import datetime
 import json
-import uuid
-from enum import Enum
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any
 
 from aiohttp import web
 
-from ..common.logger import get_logger, PerformanceTracker
 from ..common.exceptions import (
     MCPError,
     ValidationError,
-    ProtocolError,
 )
+from ..common.logger import PerformanceTracker, get_logger
 from ..transport.json_rpc import (
+    JsonRpcError,
     JsonRpcRequest,
     JsonRpcResponse,
-    JsonRpcError,
-    parse_message,
-    create_response,
-    create_error_response,
     MCPMethods,
-    JSONRPC_VERSION,
+    create_error_response,
+    create_response,
+    parse_message,
 )
 
 logger = get_logger(__name__)
@@ -46,16 +43,16 @@ logger = get_logger(__name__)
 class Tool:
     """
     MCP Tool definition.
-    
+
     Tools are active operations that perform actions and return results.
     """
-    
+
     name: str
     description: str
     handler: Callable[..., Awaitable[Any]]
-    input_schema: Dict[str, Any] = field(default_factory=dict)
-    
-    def to_dict(self) -> Dict[str, Any]:
+    input_schema: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert to MCP tool format."""
         return {
             "name": self.name,
@@ -71,17 +68,17 @@ class Tool:
 class Resource:
     """
     MCP Resource definition.
-    
+
     Resources are read-only data sources.
     """
-    
+
     uri: str
     name: str
     description: str = ""
     mime_type: str = "application/json"
-    handler: Optional[Callable[..., Awaitable[Any]]] = None
-    
-    def to_dict(self) -> Dict[str, Any]:
+    handler: Callable[..., Awaitable[Any]] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert to MCP resource format."""
         return {
             "uri": self.uri,
@@ -95,23 +92,23 @@ class Resource:
 class Prompt:
     """
     MCP Prompt definition.
-    
+
     Prompts are templates for agent interactions.
     """
-    
+
     name: str
     description: str
-    arguments: List[Dict[str, Any]] = field(default_factory=list)
+    arguments: list[dict[str, Any]] = field(default_factory=list)
     template: str = ""
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert to MCP prompt format."""
         return {
             "name": self.name,
             "description": self.description,
             "arguments": self.arguments,
         }
-    
+
     def render(self, **kwargs) -> str:
         """Render the prompt with arguments."""
         return self.template.format(**kwargs)
@@ -124,14 +121,14 @@ class Prompt:
 class MCPServer:
     """
     Model Context Protocol Server.
-    
+
     Implements the MCP specification with support for:
     - Tools (tools/list, tools/call)
     - Resources (resources/list, resources/read, subscriptions)
     - Prompts (prompts/list, prompts/get)
     - Progress notifications
     """
-    
+
     def __init__(
         self,
         name: str,
@@ -143,23 +140,23 @@ class MCPServer:
         self.version = version
         self.host = host
         self.port = port
-        
+
         # MCP primitives
-        self._tools: Dict[str, Tool] = {}
-        self._resources: Dict[str, Resource] = {}
-        self._prompts: Dict[str, Prompt] = {}
-        
+        self._tools: dict[str, Tool] = {}
+        self._resources: dict[str, Resource] = {}
+        self._prompts: dict[str, Prompt] = {}
+
         # Subscriptions for resources
-        self._subscriptions: Dict[str, set] = {}  # uri -> set of client IDs
-        
+        self._subscriptions: dict[str, set] = {}  # uri -> set of client IDs
+
         # Server state
         self._running = False
-        self._start_time: Optional[datetime] = None
-        self._app: Optional[web.Application] = None
-        self._runner: Optional[web.AppRunner] = None
-        
+        self._start_time: datetime | None = None
+        self._app: web.Application | None = None
+        self._runner: web.AppRunner | None = None
+
         # Request handlers
-        self._handlers: Dict[str, Callable] = {
+        self._handlers: dict[str, Callable] = {
             MCPMethods.INITIALIZE: self._handle_initialize,
             MCPMethods.TOOLS_LIST: self._handle_tools_list,
             MCPMethods.TOOLS_CALL: self._handle_tools_call,
@@ -170,27 +167,27 @@ class MCPServer:
             MCPMethods.PROMPTS_LIST: self._handle_prompts_list,
             MCPMethods.PROMPTS_GET: self._handle_prompts_get,
         }
-        
+
         logger.bind(server=name, port=port)
-    
+
     # ========================================================================
     # Registration Methods
     # ========================================================================
-    
+
     def register_tool(self, tool: Tool) -> None:
         """Register a tool with the server."""
         self._tools[tool.name] = tool
         logger.debug(f"Registered tool: {tool.name}")
-    
+
     def tool(
         self,
         name: str,
         description: str,
-        input_schema: Optional[Dict] = None,
+        input_schema: dict | None = None,
     ) -> Callable:
         """
         Decorator to register a tool.
-        
+
         Usage:
             @server.tool("my_tool", "Does something")
             async def my_tool(params):
@@ -206,12 +203,12 @@ class MCPServer:
             self.register_tool(tool)
             return func
         return decorator
-    
+
     def register_resource(self, resource: Resource) -> None:
         """Register a resource with the server."""
         self._resources[resource.uri] = resource
         logger.debug(f"Registered resource: {resource.uri}")
-    
+
     def resource(
         self,
         uri: str,
@@ -221,7 +218,7 @@ class MCPServer:
     ) -> Callable:
         """
         Decorator to register a resource.
-        
+
         Usage:
             @server.resource("game://state", "Game State")
             async def get_game_state(params):
@@ -238,21 +235,21 @@ class MCPServer:
             self.register_resource(resource)
             return func
         return decorator
-    
+
     def register_prompt(self, prompt: Prompt) -> None:
         """Register a prompt with the server."""
         self._prompts[prompt.name] = prompt
         logger.debug(f"Registered prompt: {prompt.name}")
-    
+
     def register_handler(self, method: str, handler: Callable) -> None:
         """Register a custom method handler."""
         self._handlers[method] = handler
-    
+
     # ========================================================================
     # MCP Protocol Handlers
     # ========================================================================
-    
-    async def _handle_initialize(self, params: Optional[Dict]) -> Dict[str, Any]:
+
+    async def _handle_initialize(self, params: dict | None) -> dict[str, Any]:
         """Handle initialize request."""
         return {
             "protocolVersion": "2024-11-05",
@@ -266,28 +263,28 @@ class MCPServer:
                 "version": self.version,
             }
         }
-    
-    async def _handle_tools_list(self, params: Optional[Dict]) -> Dict[str, Any]:
+
+    async def _handle_tools_list(self, params: dict | None) -> dict[str, Any]:
         """Handle tools/list request."""
         return {
             "tools": [tool.to_dict() for tool in self._tools.values()]
         }
-    
-    async def _handle_tools_call(self, params: Optional[Dict]) -> Dict[str, Any]:
+
+    async def _handle_tools_call(self, params: dict | None) -> dict[str, Any]:
         """Handle tools/call request."""
         if not params:
             raise ValidationError("Missing params for tools/call")
-        
+
         tool_name = params.get("name")
         arguments = params.get("arguments", {})
-        
+
         if not tool_name:
             raise ValidationError("Missing tool name")
-        
+
         tool = self._tools.get(tool_name)
         if not tool:
             raise ValidationError(f"Unknown tool: {tool_name}")
-        
+
         # Execute tool
         with PerformanceTracker(f"tool.{tool_name}", logger):
             try:
@@ -311,32 +308,32 @@ class MCPServer:
                     ],
                     "isError": True,
                 }
-    
-    async def _handle_resources_list(self, params: Optional[Dict]) -> Dict[str, Any]:
+
+    async def _handle_resources_list(self, params: dict | None) -> dict[str, Any]:
         """Handle resources/list request."""
         return {
             "resources": [res.to_dict() for res in self._resources.values()]
         }
-    
-    async def _handle_resources_read(self, params: Optional[Dict]) -> Dict[str, Any]:
+
+    async def _handle_resources_read(self, params: dict | None) -> dict[str, Any]:
         """Handle resources/read request."""
         if not params:
             raise ValidationError("Missing params for resources/read")
-        
+
         uri = params.get("uri")
         if not uri:
             raise ValidationError("Missing resource URI")
-        
+
         resource = self._resources.get(uri)
         if not resource:
             raise ValidationError(f"Unknown resource: {uri}")
-        
+
         # Read resource
         if resource.handler:
             content = await resource.handler(params)
         else:
             content = {}
-        
+
         return {
             "contents": [
                 {
@@ -346,65 +343,65 @@ class MCPServer:
                 }
             ]
         }
-    
-    async def _handle_resources_subscribe(self, params: Optional[Dict]) -> Dict[str, Any]:
+
+    async def _handle_resources_subscribe(self, params: dict | None) -> dict[str, Any]:
         """Handle resources/subscribe request."""
         if not params:
             raise ValidationError("Missing params")
-        
+
         uri = params.get("uri")
         if not uri:
             raise ValidationError("Missing resource URI")
-        
+
         if uri not in self._resources:
             raise ValidationError(f"Unknown resource: {uri}")
-        
+
         # Add subscription
         if uri not in self._subscriptions:
             self._subscriptions[uri] = set()
-        
+
         # In a real implementation, we'd track the client
         # For now, just acknowledge
         return {"success": True}
-    
-    async def _handle_resources_unsubscribe(self, params: Optional[Dict]) -> Dict[str, Any]:
+
+    async def _handle_resources_unsubscribe(self, params: dict | None) -> dict[str, Any]:
         """Handle resources/unsubscribe request."""
         if not params:
             raise ValidationError("Missing params")
-        
+
         uri = params.get("uri")
         if not uri:
             raise ValidationError("Missing resource URI")
-        
+
         return {"success": True}
-    
-    async def _handle_prompts_list(self, params: Optional[Dict]) -> Dict[str, Any]:
+
+    async def _handle_prompts_list(self, params: dict | None) -> dict[str, Any]:
         """Handle prompts/list request."""
         return {
             "prompts": [prompt.to_dict() for prompt in self._prompts.values()]
         }
-    
-    async def _handle_prompts_get(self, params: Optional[Dict]) -> Dict[str, Any]:
+
+    async def _handle_prompts_get(self, params: dict | None) -> dict[str, Any]:
         """Handle prompts/get request."""
         if not params:
             raise ValidationError("Missing params")
-        
+
         name = params.get("name")
         if not name:
             raise ValidationError("Missing prompt name")
-        
+
         prompt = self._prompts.get(name)
         if not prompt:
             raise ValidationError(f"Unknown prompt: {name}")
-        
+
         # Get arguments for rendering
         arguments = params.get("arguments", {})
-        
+
         try:
             rendered = prompt.render(**arguments)
         except KeyError as e:
-            raise ValidationError(f"Missing prompt argument: {e}")
-        
+            raise ValidationError(f"Missing prompt argument: {e}") from e
+
         return {
             "description": prompt.description,
             "messages": [
@@ -417,63 +414,63 @@ class MCPServer:
                 }
             ]
         }
-    
+
     # ========================================================================
     # HTTP Server
     # ========================================================================
-    
+
     async def _handle_http_request(self, request: web.Request) -> web.Response:
         """Handle incoming HTTP request."""
         try:
             # Read body
             body = await request.read()
-            
+
             # Parse JSON-RPC message
             message = parse_message(body)
-            
+
             if isinstance(message, JsonRpcError):
                 response = create_error_response(None, message)
                 return web.json_response(response.to_dict())
-            
+
             if isinstance(message, JsonRpcRequest):
                 response = await self._process_request(message)
-                
+
                 # Don't respond to notifications
                 if message.is_notification:
                     return web.Response(status=204)
-                
+
                 return web.json_response(response.to_dict())
-            
+
             # Invalid message
             error = JsonRpcError.invalid_request("Expected request")
             response = create_error_response(None, error)
             return web.json_response(response.to_dict())
-            
+
         except Exception as e:
             logger.exception(f"Request handling error: {e}")
             error = JsonRpcError.internal_error(str(e))
             response = create_error_response(None, error)
             return web.json_response(response.to_dict(), status=500)
-    
+
     async def _process_request(self, request: JsonRpcRequest) -> JsonRpcResponse:
         """Process a single JSON-RPC request."""
         method = request.method
         params = request.params
-        
+
         logger.debug(f"Processing request: {method}", request_id=request.id)
-        
+
         # Find handler
         handler = self._handlers.get(method)
-        
+
         if handler is None:
             error = JsonRpcError.method_not_found(method)
             return create_error_response(request.id, error)
-        
+
         try:
             # Execute handler
             result = await handler(params)
             return create_response(request.id, result)
-            
+
         except ValidationError as e:
             error = JsonRpcError.invalid_params(str(e))
             return create_error_response(request.id, error)
@@ -484,13 +481,13 @@ class MCPServer:
             logger.exception(f"Handler error: {e}")
             error = JsonRpcError.internal_error(str(e))
             return create_error_response(request.id, error)
-    
+
     async def _handle_health(self, request: web.Request) -> web.Response:
         """Health check endpoint."""
         uptime = 0.0
         if self._start_time:
             uptime = (datetime.now() - self._start_time).total_seconds()
-        
+
         return web.json_response({
             "status": "healthy",
             "server": self.name,
@@ -499,55 +496,55 @@ class MCPServer:
             "tools_count": len(self._tools),
             "resources_count": len(self._resources),
         })
-    
+
     # ========================================================================
     # Server Lifecycle
     # ========================================================================
-    
+
     async def start(self) -> None:
         """Start the MCP server."""
         if self._running:
             logger.warning("Server already running")
             return
-        
+
         # Create aiohttp app
         self._app = web.Application()
         self._app.router.add_post("/mcp", self._handle_http_request)
         self._app.router.add_get("/health", self._handle_health)
-        
+
         # Create runner
         self._runner = web.AppRunner(self._app)
         await self._runner.setup()
-        
+
         # Create site
         site = web.TCPSite(self._runner, self.host, self.port)
         await site.start()
-        
+
         self._running = True
         self._start_time = datetime.now()
-        
+
         logger.info(
-            f"MCP Server started",
+            "MCP Server started",
             host=self.host,
             port=self.port,
             url=f"http://{self.host}:{self.port}/mcp"
         )
-    
+
     async def stop(self) -> None:
         """Stop the MCP server."""
         if not self._running:
             return
-        
+
         if self._runner:
             await self._runner.cleanup()
-        
+
         self._running = False
         logger.info("MCP Server stopped")
-    
+
     async def run_forever(self) -> None:
         """Start server and run until interrupted."""
         await self.start()
-        
+
         try:
             # Keep running
             while self._running:
@@ -556,12 +553,12 @@ class MCPServer:
             pass
         finally:
             await self.stop()
-    
+
     @property
     def url(self) -> str:
         """Get server URL."""
         return f"http://{self.host}:{self.port}/mcp"
-    
+
     @property
     def is_running(self) -> bool:
         """Check if server is running."""
@@ -576,14 +573,14 @@ def create_tool(
     name: str,
     description: str,
     handler: Callable,
-    parameters: Optional[Dict[str, Any]] = None,
+    parameters: dict[str, Any] | None = None,
 ) -> Tool:
     """Create a tool with proper schema."""
     schema = {
         "type": "object",
         "properties": parameters or {},
     }
-    
+
     return Tool(
         name=name,
         description=description,
@@ -613,7 +610,7 @@ def create_prompt(
     name: str,
     description: str,
     template: str,
-    arguments: Optional[List[Dict]] = None,
+    arguments: list[dict] | None = None,
 ) -> Prompt:
     """Create a prompt template."""
     return Prompt(

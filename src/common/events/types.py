@@ -23,8 +23,9 @@ Usage:
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import uuid4
+
 from pydantic import BaseModel, Field
 
 
@@ -35,7 +36,7 @@ class BaseEvent(BaseModel):
     event_type: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     source: str = ""
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
     class Config:
         """Pydantic config."""
@@ -54,7 +55,7 @@ class GameStartedEvent(BaseEvent):
     event_type: str = "game.started"
     game_id: str
     game_type: str
-    players: List[str]
+    players: list[str]
     referee_id: str = ""
 
 
@@ -64,8 +65,8 @@ class GameEndedEvent(BaseEvent):
     event_type: str = "game.ended"
     game_id: str
     game_type: str
-    winner: Optional[str] = None
-    final_scores: Dict[str, int] = Field(default_factory=dict)
+    winner: str | None = None
+    final_scores: dict[str, int] = Field(default_factory=dict)
     total_rounds: int = 0
 
 
@@ -75,7 +76,7 @@ class RoundStartedEvent(BaseEvent):
     event_type: str = "round.started"
     game_id: str
     round_number: int
-    players: List[str]
+    players: list[str]
 
 
 class RoundCompletedEvent(BaseEvent):
@@ -84,9 +85,9 @@ class RoundCompletedEvent(BaseEvent):
     event_type: str = "round.completed"
     game_id: str
     round_number: int
-    moves: Dict[str, int] = Field(default_factory=dict)
-    scores: Dict[str, int] = Field(default_factory=dict)
-    cumulative_scores: Dict[str, int] = Field(default_factory=dict)
+    moves: dict[str, int] = Field(default_factory=dict)
+    scores: dict[str, int] = Field(default_factory=dict)
+    cumulative_scores: dict[str, int] = Field(default_factory=dict)
 
 
 # ============================================================================
@@ -299,7 +300,7 @@ class MatchStartedEvent(BaseEvent):
     event_type: str = "match.started"
     match_id: str
     game_type: str
-    players: List[str]
+    players: list[str]
     referee_id: str
 
 
@@ -308,8 +309,8 @@ class MatchCompletedEvent(BaseEvent):
 
     event_type: str = "match.completed"
     match_id: str
-    winner: Optional[str] = None
-    final_scores: Dict[str, int] = Field(default_factory=dict)
+    winner: str | None = None
+    final_scores: dict[str, int] = Field(default_factory=dict)
     total_rounds: int = 0
     duration_seconds: float = 0.0
 
@@ -325,14 +326,14 @@ class TournamentRoundStartedEvent(BaseEvent):
     event_type: str = "tournament.round.started"
     round_number: int
     total_rounds: int
-    matches: List[str] = Field(default_factory=list)
+    matches: list[str] = Field(default_factory=list)
 
 
 class StandingsUpdatedEvent(BaseEvent):
     """Event emitted when standings are updated."""
 
     event_type: str = "standings.updated"
-    standings: List[Dict[str, Any]] = Field(default_factory=list)
+    standings: list[dict[str, Any]] = Field(default_factory=list)
     round_number: int = 0
 
 
@@ -340,7 +341,7 @@ class TournamentCompletedEvent(BaseEvent):
     """Event emitted when a tournament completes."""
 
     event_type: str = "tournament.completed"
-    winner: Optional[str] = None
-    final_standings: List[Dict[str, Any]] = Field(default_factory=list)
+    winner: str | None = None
+    final_standings: list[dict[str, Any]] = Field(default_factory=list)
     total_rounds: int = 0
     total_matches: int = 0

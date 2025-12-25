@@ -5,35 +5,33 @@ Base Game Server
 Base class for game-specific MCP servers (League Manager, Referee, Player).
 """
 
-from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
-from datetime import datetime
 import asyncio
+from datetime import datetime
+from typing import Any
 
-from .mcp_server import MCPServer, Tool, Resource
+from ..common.exceptions import ProtocolError, ValidationError
 from ..common.logger import get_logger
 from ..common.protocol import (
     PROTOCOL_VERSION,
-    MessageType,
     MessageFactory,
     validate_message,
 )
-from ..common.exceptions import ProtocolError, ValidationError
 from ..middleware import (
-    MiddlewarePipeline,
-    LoggingMiddleware,
     AuthenticationMiddleware,
-    RateLimitMiddleware,
-    MetricsMiddleware,
     ErrorHandlerMiddleware,
+    LoggingMiddleware,
+    MetricsMiddleware,
+    MiddlewarePipeline,
+    RateLimitMiddleware,
     TracingMiddleware,
 )
 from ..observability import (
+    Timer,
+    get_health_monitor,
     get_metrics_collector,
     get_tracing_manager,
-    get_health_monitor,
-    Timer,
 )
+from .mcp_server import MCPServer
 
 logger = get_logger(__name__)
 
@@ -41,13 +39,13 @@ logger = get_logger(__name__)
 class BaseGameServer(MCPServer):
     """
     Base class for game servers.
-    
+
     Extends MCPServer with game-specific functionality:
     - Protocol message handling
     - League protocol validation
     - Common game tools
     """
-    
+
     def __init__(
         self,
         name: str,
@@ -240,7 +238,7 @@ class BaseGameServer(MCPServer):
 
         # Heartbeat tool
         @self.tool("heartbeat", "Check server health")
-        async def heartbeat(params: Dict) -> Dict:
+        async def heartbeat(params: dict) -> dict:
             uptime = 0.0
             if self._start_time:
                 uptime = (datetime.now() - self._start_time).total_seconds()
@@ -249,7 +247,7 @@ class BaseGameServer(MCPServer):
 
         # Protocol info tool
         @self.tool("get_protocol_info", "Get protocol version information")
-        async def get_protocol_info(params: Dict) -> Dict:
+        async def get_protocol_info(params: dict) -> dict:
             return {
                 "protocol": PROTOCOL_VERSION,
                 "server_type": self.server_type,
@@ -262,7 +260,7 @@ class BaseGameServer(MCPServer):
 
             # Metrics endpoint - Prometheus format
             @self.tool("get_metrics", "Get Prometheus metrics")
-            async def get_metrics(params: Dict) -> Dict:
+            async def get_metrics(params: dict) -> dict:
                 """
                 Export metrics in Prometheus text format.
 
@@ -279,7 +277,7 @@ class BaseGameServer(MCPServer):
 
             # Full health check
             @self.tool("get_health", "Get full health report")
-            async def get_health(params: Dict) -> Dict:
+            async def get_health(params: dict) -> dict:
                 """
                 Get comprehensive health report with all checks.
 
@@ -294,7 +292,7 @@ class BaseGameServer(MCPServer):
 
             # Liveness probe (Kubernetes)
             @self.tool("get_health_live", "Liveness health check")
-            async def get_health_live(params: Dict) -> Dict:
+            async def get_health_live(params: dict) -> dict:
                 """
                 Liveness check for Kubernetes probes.
 
@@ -311,7 +309,7 @@ class BaseGameServer(MCPServer):
 
             # Readiness probe (Kubernetes)
             @self.tool("get_health_ready", "Readiness health check")
-            async def get_health_ready(params: Dict) -> Dict:
+            async def get_health_ready(params: dict) -> dict:
                 """
                 Readiness check for Kubernetes probes.
 
@@ -325,8 +323,8 @@ class BaseGameServer(MCPServer):
                     "success": True,
                     **readiness,
                 }
-    
-    async def _handle_protocol_message(self, params: Optional[Dict]) -> Dict[str, Any]:
+
+    async def _handle_protocol_message(self, params: dict | None) -> dict[str, Any]:
         """
         Handle a league protocol message through middleware pipeline.
 
@@ -370,7 +368,7 @@ class BaseGameServer(MCPServer):
             else:
                 return await self._execute_protocol_message(message, None)
 
-        except Exception as e:
+        except Exception:
             # Record error metrics
             if self.enable_observability:
                 self.metrics.increment(
@@ -384,8 +382,8 @@ class BaseGameServer(MCPServer):
             raise
 
     async def _execute_protocol_message(
-        self, message: Dict[str, Any], span: Optional[Any] = None
-    ) -> Dict[str, Any]:
+        self, message: dict[str, Any], span: Any | None = None
+    ) -> dict[str, Any]:
         """
         Execute protocol message handling with observability.
 
@@ -445,7 +443,7 @@ class BaseGameServer(MCPServer):
                 return response
 
             # Execute through middleware pipeline
-            async def protocol_handler(request: Dict[str, Any]) -> Dict[str, Any]:
+            async def protocol_handler(request: dict[str, Any]) -> dict[str, Any]:
                 """
                 Inner handler that validates and dispatches protocol messages.
 
@@ -489,38 +487,38 @@ class BaseGameServer(MCPServer):
             # Close timer
             if timer:
                 timer.__exit__(None, None, None)
-    
+
     async def send_protocol_message(
         self,
         target_url: str,
-        message: Dict[str, Any],
+        message: dict[str, Any],
         timeout: float = 30.0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Send a protocol message to another server.
-        
+
         Args:
             target_url: The target server URL
             message: The protocol message
             timeout: Request timeout
-            
+
         Returns:
             Response from target server
         """
         from ..transport.http_transport import HTTPTransport
         from ..transport.json_rpc import create_request
-        
+
         # Validate our outgoing message
         is_valid, error = validate_message(message)
         if not is_valid:
             raise ProtocolError(f"Invalid outgoing message: {error}")
-        
+
         # Create JSON-RPC request
         request = create_request(
             method="protocol/message",
             params={"message": message},
         )
-        
+
         # Send via HTTP transport
         transport = HTTPTransport()
         try:
@@ -529,24 +527,24 @@ class BaseGameServer(MCPServer):
             return response
         finally:
             await transport.disconnect()
-    
+
     # ========================================================================
     # Override in subclasses
     # ========================================================================
-    
+
     async def on_start(self) -> None:
         """Called when server starts. Override in subclasses."""
         pass
-    
+
     async def on_stop(self) -> None:
         """Called when server stops. Override in subclasses."""
         pass
-    
+
     async def start(self) -> None:
         """Start the server."""
         await super().start()
         await self.on_start()
-    
+
     async def stop(self) -> None:
         """Stop the server."""
         await self.on_stop()
@@ -556,20 +554,20 @@ class BaseGameServer(MCPServer):
 class GameServerRegistry:
     """
     Registry for tracking game servers.
-    
+
     Used by league manager to track all servers.
     """
-    
+
     def __init__(self):
-        self._servers: Dict[str, Dict[str, Any]] = {}
+        self._servers: dict[str, dict[str, Any]] = {}
         self._lock = asyncio.Lock()
-    
+
     async def register(
         self,
         server_id: str,
         server_type: str,
         endpoint: str,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> None:
         """Register a server."""
         async with self._lock:
@@ -582,32 +580,32 @@ class GameServerRegistry:
                 "status": "active",
             }
             logger.info(f"Registered server: {server_id} at {endpoint}")
-    
+
     async def unregister(self, server_id: str) -> None:
         """Unregister a server."""
         async with self._lock:
             if server_id in self._servers:
                 del self._servers[server_id]
                 logger.info(f"Unregistered server: {server_id}")
-    
-    async def get(self, server_id: str) -> Optional[Dict[str, Any]]:
+
+    async def get(self, server_id: str) -> dict[str, Any] | None:
         """Get server info."""
         async with self._lock:
             return self._servers.get(server_id)
-    
-    async def get_by_type(self, server_type: str) -> list[Dict[str, Any]]:
+
+    async def get_by_type(self, server_type: str) -> list[dict[str, Any]]:
         """Get all servers of a type."""
         async with self._lock:
             return [
                 s for s in self._servers.values()
                 if s["type"] == server_type
             ]
-    
-    async def get_all(self) -> list[Dict[str, Any]]:
+
+    async def get_all(self) -> list[dict[str, Any]]:
         """Get all registered servers."""
         async with self._lock:
             return list(self._servers.values())
-    
+
     async def update_status(self, server_id: str, status: str) -> None:
         """Update server status."""
         async with self._lock:

@@ -25,13 +25,12 @@ Usage:
         span.add_event("Processing completed")
 """
 
+import threading
 import time
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
-from datetime import datetime
-import threading
 from contextlib import contextmanager
+from dataclasses import dataclass, field
+from typing import Any, Optional
 
 from ..common.logger import get_logger
 
@@ -49,7 +48,7 @@ class SpanEvent:
 
     name: str
     timestamp: float
-    attributes: Dict[str, Any] = field(default_factory=dict)
+    attributes: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -62,12 +61,12 @@ class Span:
 
     trace_id: str
     span_id: str
-    parent_span_id: Optional[str]
+    parent_span_id: str | None
     name: str
     start_time: float
-    end_time: Optional[float] = None
-    attributes: Dict[str, Any] = field(default_factory=dict)
-    events: List[SpanEvent] = field(default_factory=list)
+    end_time: float | None = None
+    attributes: dict[str, Any] = field(default_factory=dict)
+    events: list[SpanEvent] = field(default_factory=list)
     status: str = "ok"  # ok, error
     status_message: str = ""
 
@@ -75,7 +74,7 @@ class Span:
         """Set span attribute."""
         self.attributes[key] = value
 
-    def add_event(self, name: str, attributes: Optional[Dict[str, Any]] = None) -> None:
+    def add_event(self, name: str, attributes: dict[str, Any] | None = None) -> None:
         """Add event to span."""
         event = SpanEvent(
             name=name,
@@ -100,7 +99,7 @@ class Span:
             return 0.0
         return (self.end_time - self.start_time) * 1000
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert span to dictionary."""
         return {
             "trace_id": self.trace_id,
@@ -212,7 +211,7 @@ class TracingManager:
         self._current_span = threading.local()
 
         # Completed spans (for export)
-        self._completed_spans: List[Span] = []
+        self._completed_spans: list[Span] = []
         self._span_lock = threading.Lock()
 
         # Statistics
@@ -265,8 +264,8 @@ class TracingManager:
     def start_span(
         self,
         name: str,
-        parent_context: Optional[SpanContext] = None,
-        attributes: Optional[Dict[str, Any]] = None,
+        parent_context: SpanContext | None = None,
+        attributes: dict[str, Any] | None = None,
     ) -> Span:
         """
         Start a new span.
@@ -349,7 +348,7 @@ class TracingManager:
     def span(
         self,
         name: str,
-        attributes: Optional[Dict[str, Any]] = None,
+        attributes: dict[str, Any] | None = None,
     ):
         """
         Context manager for creating spans.
@@ -368,11 +367,11 @@ class TracingManager:
         finally:
             self.end_span(span)
 
-    def get_current_span(self) -> Optional[Span]:
+    def get_current_span(self) -> Span | None:
         """Get the current span for this thread."""
         return getattr(self._current_span, "span", None)
 
-    def _set_current_span(self, span: Optional[Span]) -> None:
+    def _set_current_span(self, span: Span | None) -> None:
         """Set the current span for this thread."""
         self._current_span.span = span
 
@@ -390,7 +389,7 @@ class TracingManager:
     # Context Propagation
     # ========================================================================
 
-    def inject_context(self, headers: Dict[str, str]) -> Dict[str, str]:
+    def inject_context(self, headers: dict[str, str]) -> dict[str, str]:
         """
         Inject trace context into headers for distributed tracing.
 
@@ -415,7 +414,7 @@ class TracingManager:
 
         return headers
 
-    def extract_context(self, headers: Dict[str, str]) -> Optional[SpanContext]:
+    def extract_context(self, headers: dict[str, str]) -> SpanContext | None:
         """
         Extract trace context from headers.
 
@@ -441,7 +440,7 @@ class TracingManager:
     # Export and Statistics
     # ========================================================================
 
-    def get_completed_spans(self, clear: bool = True) -> List[Span]:
+    def get_completed_spans(self, clear: bool = True) -> list[Span]:
         """
         Get all completed spans.
 
@@ -457,7 +456,7 @@ class TracingManager:
                 self._completed_spans.clear()
             return spans
 
-    def export_spans_json(self, clear: bool = True) -> List[Dict[str, Any]]:
+    def export_spans_json(self, clear: bool = True) -> list[dict[str, Any]]:
         """
         Export completed spans as JSON-serializable list.
 
@@ -470,7 +469,7 @@ class TracingManager:
         spans = self.get_completed_spans(clear=clear)
         return [span.to_dict() for span in spans]
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get tracing statistics."""
         return {
             **self._stats,
@@ -508,7 +507,7 @@ def get_tracing_manager() -> TracingManager:
 # ============================================================================
 
 
-def trace_function(name: Optional[str] = None, attributes: Optional[Dict[str, Any]] = None):
+def trace_function(name: str | None = None, attributes: dict[str, Any] | None = None):
     """
     Decorator to automatically trace a function.
 

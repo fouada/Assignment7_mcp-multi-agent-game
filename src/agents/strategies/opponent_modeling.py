@@ -21,15 +21,14 @@ This implementation could form the basis of a research paper on opponent modelin
 in multi-agent systems.
 """
 
-import numpy as np
-from typing import Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
 from collections import defaultdict, deque
-from scipy.stats import entropy
-from sklearn.cluster import KMeans
+from dataclasses import dataclass, field
 
-from .base import Strategy, StrategyConfig
+import numpy as np
+from scipy.stats import entropy
+
 from ...common.protocol import GameState
+from .base import Strategy, StrategyConfig
 
 # Type alias for moves (integers 1-10 in odd/even game)
 Move = int
@@ -47,8 +46,8 @@ class OpponentObservation:
     round: int
     game_state: GameState
     opponent_move: Move
-    context: Dict  # Game-specific context
-    outcome: Dict  # Result of this round
+    context: dict  # Game-specific context
+    outcome: dict  # Result of this round
 
 
 @dataclass
@@ -60,8 +59,8 @@ class OpponentModel:
     confidence: float  # Confidence in prediction [0, 1]
 
     # Behavioral patterns
-    move_distribution: Dict[Move, float]  # P(move)
-    conditional_move_probs: Dict[Tuple, float]  # P(move | context)
+    move_distribution: dict[Move, float]  # P(move)
+    conditional_move_probs: dict[tuple, float]  # P(move | context)
 
     # Meta-features
     determinism: float  # How deterministic is opponent? [0, 1]
@@ -74,7 +73,7 @@ class OpponentModel:
 
     # Performance tracking
     prediction_accuracy: float
-    observations: List[OpponentObservation] = field(default_factory=list)
+    observations: list[OpponentObservation] = field(default_factory=list)
 
 
 # ============================================================================
@@ -97,24 +96,24 @@ class OpponentModelingEngine:
         self.min_observations = min_observations
 
         # Models: opponent_id -> OpponentModel
-        self.models: Dict[str, OpponentModel] = {}
+        self.models: dict[str, OpponentModel] = {}
 
         # Known strategy signatures (for classification)
         self.strategy_signatures = self._initialize_strategy_signatures()
 
         # Observation buffer
-        self.observations: Dict[str, deque] = defaultdict(lambda: deque(maxlen=100))
+        self.observations: dict[str, deque] = defaultdict(lambda: deque(maxlen=100))
 
         # Prediction history (for accuracy tracking)
-        self.predictions: Dict[str, List[Tuple[Move, Move, bool]]] = defaultdict(list)
+        self.predictions: dict[str, list[tuple[Move, Move, bool]]] = defaultdict(list)
 
     def observe(
         self,
         opponent_id: str,
         game_state: GameState,
         opponent_move: Move,
-        context: Dict,
-        outcome: Dict
+        context: dict,
+        outcome: dict
     ) -> None:
         """Record an observation of opponent behavior."""
         observation = OpponentObservation(
@@ -135,8 +134,8 @@ class OpponentModelingEngine:
         self,
         opponent_id: str,
         game_state: GameState,
-        context: Dict
-    ) -> Tuple[Move, float]:
+        context: dict
+    ) -> tuple[Move, float]:
         """
         Predict opponent's next move with confidence.
 
@@ -164,8 +163,8 @@ class OpponentModelingEngine:
         self,
         opponent_id: str,
         game_state: GameState,
-        context: Dict
-    ) -> Dict[Move, float]:
+        context: dict
+    ) -> dict[Move, float]:
         """Get full probability distribution over opponent moves."""
         if opponent_id not in self.models:
             # Uniform prior
@@ -175,7 +174,7 @@ class OpponentModelingEngine:
         model = self.models[opponent_id]
         return self._compute_conditional_probabilities(model, game_state, context)
 
-    def get_opponent_profile(self, opponent_id: str) -> Optional[OpponentModel]:
+    def get_opponent_profile(self, opponent_id: str) -> OpponentModel | None:
         """Get complete opponent model."""
         return self.models.get(opponent_id)
 
@@ -188,7 +187,7 @@ class OpponentModelingEngine:
 
         # Extract features from observations
         moves = [obs.opponent_move for obs in observations]
-        contexts = [obs.context for obs in observations]
+        [obs.context for obs in observations]
 
         # Compute basic statistics
         move_dist = self._compute_move_distribution(moves)
@@ -228,7 +227,7 @@ class OpponentModelingEngine:
 
         self.models[opponent_id] = model
 
-    def _compute_move_distribution(self, moves: List[Move]) -> Dict[Move, float]:
+    def _compute_move_distribution(self, moves: list[Move]) -> dict[Move, float]:
         """Compute empirical move distribution."""
         from collections import Counter
 
@@ -239,8 +238,8 @@ class OpponentModelingEngine:
 
     def _classify_strategy(
         self,
-        observations: List[OpponentObservation]
-    ) -> Tuple[str, float]:
+        observations: list[OpponentObservation]
+    ) -> tuple[str, float]:
         """
         Classify opponent strategy using signature matching.
 
@@ -272,7 +271,7 @@ class OpponentModelingEngine:
 
         return best_match or "unknown", confidence
 
-    def _compute_determinism(self, moves: List[Move]) -> float:
+    def _compute_determinism(self, moves: list[Move]) -> float:
         """
         Measure how deterministic opponent is.
 
@@ -288,7 +287,7 @@ class OpponentModelingEngine:
 
         return 1.0 - (h / max_h if max_h > 0 else 0)
 
-    def _compute_reactivity(self, observations: List[OpponentObservation]) -> float:
+    def _compute_reactivity(self, observations: list[OpponentObservation]) -> float:
         """
         Measure how reactive opponent is to our moves.
 
@@ -317,7 +316,7 @@ class OpponentModelingEngine:
 
         return np.mean(correlations)
 
-    def _compute_adaptability(self, observations: List[OpponentObservation]) -> float:
+    def _compute_adaptability(self, observations: list[OpponentObservation]) -> float:
         """
         Measure how quickly opponent adapts strategy.
 
@@ -359,7 +358,7 @@ class OpponentModelingEngine:
         # High divergence = high adaptability
         return min(1.0, np.mean(divergences))
 
-    def _detect_pattern_length(self, moves: List[Move]) -> int:
+    def _detect_pattern_length(self, moves: list[Move]) -> int:
         """Detect if opponent uses a repeating pattern."""
         if len(moves) < 6:
             return 0
@@ -379,8 +378,8 @@ class OpponentModelingEngine:
 
     def _build_conditional_probabilities(
         self,
-        observations: List[OpponentObservation]
-    ) -> Dict[Tuple, float]:
+        observations: list[OpponentObservation]
+    ) -> dict[tuple, float]:
         """
         Build P(opponent_move | context) table.
 
@@ -419,8 +418,8 @@ class OpponentModelingEngine:
         self,
         model: OpponentModel,
         game_state: GameState,
-        context: Dict
-    ) -> Dict[Move, float]:
+        context: dict
+    ) -> dict[Move, float]:
         """Compute P(move | context) for current context."""
         # Extract current context features
         current_context = (
@@ -451,7 +450,7 @@ class OpponentModelingEngine:
     def _detect_concept_drift(
         self,
         opponent_id: str,
-        observations: List[OpponentObservation]
+        observations: list[OpponentObservation]
     ) -> bool:
         """
         Detect if opponent has changed strategy (concept drift).
@@ -497,15 +496,15 @@ class OpponentModelingEngine:
 
     def _signature_similarity(
         self,
-        features: Dict[str, float],
-        signature: Dict[str, float]
+        features: dict[str, float],
+        signature: dict[str, float]
     ) -> float:
         """Compute similarity between feature vector and strategy signature."""
         # Euclidean distance in feature space
         diff = sum((features.get(k, 0) - v) ** 2 for k, v in signature.items())
         return 1.0 / (1.0 + diff)  # Convert to similarity [0, 1]
 
-    def _initialize_strategy_signatures(self) -> Dict[str, Dict[str, float]]:
+    def _initialize_strategy_signatures(self) -> dict[str, dict[str, float]]:
         """
         Initialize known strategy signatures for classification.
 
@@ -635,7 +634,7 @@ class OpponentModelingStrategy(Strategy):
                 outcome
             )
 
-    def _build_context(self, game_state: GameState) -> Dict:
+    def _build_context(self, game_state: GameState) -> dict:
         """Build context for opponent modeling."""
         return {
             'our_last_move': self.our_moves[-1] if self.our_moves else None,

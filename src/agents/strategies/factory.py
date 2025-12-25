@@ -11,26 +11,26 @@ Provides:
 """
 
 from enum import Enum
-from typing import Dict, Any, Optional, Type
+from typing import Any
 
-from .base import Strategy, StrategyConfig
-from .game_theory import (
-    NashEquilibriumStrategy,
-    BestResponseStrategy,
-    AdaptiveBayesianStrategy,
-    FictitiousPlayStrategy,
-    RegretMatchingStrategy,
-    UCBStrategy,
-    ThompsonSamplingStrategy,
-)
-from .classic import (
-    RandomStrategy,
-    PatternStrategy,
-    LLMStrategy,
-)
-from .plugin_registry import get_strategy_plugin_registry
 from ...common.config import LLMConfig
 from ...common.logger import get_logger
+from .base import Strategy, StrategyConfig
+from .classic import (
+    LLMStrategy,
+    PatternStrategy,
+    RandomStrategy,
+)
+from .game_theory import (
+    AdaptiveBayesianStrategy,
+    BestResponseStrategy,
+    FictitiousPlayStrategy,
+    NashEquilibriumStrategy,
+    RegretMatchingStrategy,
+    ThompsonSamplingStrategy,
+    UCBStrategy,
+)
+from .plugin_registry import get_strategy_plugin_registry
 
 logger = get_logger(__name__)
 
@@ -38,17 +38,17 @@ logger = get_logger(__name__)
 class StrategyType(Enum):
     """
     Available strategy types.
-    
+
     Categories:
     - CLASSIC: Original strategies (Random, Pattern, LLM)
     - GAME_THEORY: Game-theoretic strategies (Nash, Best Response, etc.)
     """
-    
+
     # Classic strategies
     RANDOM = "random"
     PATTERN = "pattern"
     LLM = "llm"
-    
+
     # Game Theory strategies
     NASH = "nash"
     BEST_RESPONSE = "best_response"
@@ -57,12 +57,12 @@ class StrategyType(Enum):
     REGRET_MATCHING = "regret_matching"
     UCB = "ucb"
     THOMPSON_SAMPLING = "thompson_sampling"
-    
+
     @classmethod
     def from_string(cls, s: str) -> "StrategyType":
         """
         Convert string to StrategyType.
-        
+
         Supports various formats:
         - Exact enum value: "random"
         - With underscores: "best_response"
@@ -74,9 +74,9 @@ class StrategyType(Enum):
             if member.value == normalized:
                 return member
         raise ValueError(f"Unknown strategy type: {s}")
-    
+
     @classmethod
-    def list_all(cls) -> Dict[str, str]:
+    def list_all(cls) -> dict[str, str]:
         """List all strategies with descriptions."""
         descriptions = {
             cls.RANDOM: "Uniform random selection (Nash-like)",
@@ -91,7 +91,7 @@ class StrategyType(Enum):
             cls.THOMPSON_SAMPLING: "Bayesian bandit sampling",
         }
         return {st.value: descriptions.get(st, "") for st in cls}
-    
+
     def is_game_theory(self) -> bool:
         """Check if this is a game theory strategy."""
         return self in {
@@ -108,23 +108,23 @@ class StrategyType(Enum):
 class StrategyFactory:
     """
     Factory for creating strategy instances.
-    
+
     Usage:
         # Create with defaults
         strategy = StrategyFactory.create(StrategyType.ADAPTIVE_BAYESIAN)
-        
+
         # Create with custom config
         strategy = StrategyFactory.create(
             StrategyType.UCB,
             exploration_constant=2.0,
         )
-        
+
         # Create from string
         strategy = StrategyFactory.create_from_string("adaptive-bayesian")
     """
-    
+
     # Strategy class mapping
-    _STRATEGY_CLASSES: Dict[StrategyType, Type[Strategy]] = {
+    _STRATEGY_CLASSES: dict[StrategyType, type[Strategy]] = {
         StrategyType.RANDOM: RandomStrategy,
         StrategyType.PATTERN: PatternStrategy,
         StrategyType.LLM: LLMStrategy,
@@ -136,9 +136,9 @@ class StrategyFactory:
         StrategyType.UCB: UCBStrategy,
         StrategyType.THOMPSON_SAMPLING: ThompsonSamplingStrategy,
     }
-    
+
     # Default configurations per strategy type
-    _DEFAULT_CONFIGS: Dict[StrategyType, Dict[str, Any]] = {
+    _DEFAULT_CONFIGS: dict[StrategyType, dict[str, Any]] = {
         StrategyType.RANDOM: {
             "min_value": 1,
             "max_value": 10,
@@ -190,35 +190,35 @@ class StrategyFactory:
             "prior_beta": 1.0,
         },
     }
-    
+
     @classmethod
     def create(
         cls,
         strategy_type: StrategyType,
-        config: Optional[StrategyConfig] = None,
-        llm_config: Optional[LLMConfig] = None,
+        config: StrategyConfig | None = None,
+        llm_config: LLMConfig | None = None,
         **kwargs,
     ) -> Strategy:
         """
         Create a strategy instance.
-        
+
         Args:
             strategy_type: Type of strategy to create
             config: Strategy configuration (optional)
             llm_config: LLM configuration for LLM strategy (optional)
             **kwargs: Additional arguments merged into config
-            
+
         Returns:
             Strategy instance
-            
+
         Example:
             # Basic creation
             strategy = StrategyFactory.create(StrategyType.NASH)
-            
+
             # With custom config
             config = StrategyConfig(exploration_rate=0.1)
             strategy = StrategyFactory.create(StrategyType.ADAPTIVE_BAYESIAN, config=config)
-            
+
             # With kwargs (merged into config)
             strategy = StrategyFactory.create(
                 StrategyType.UCB,
@@ -229,7 +229,7 @@ class StrategyFactory:
         strategy_class = cls._STRATEGY_CLASSES.get(strategy_type)
         if strategy_class is None:
             raise ValueError(f"Unknown strategy type: {strategy_type}")
-        
+
         # Build config
         if config is None:
             # Start with defaults
@@ -237,10 +237,10 @@ class StrategyFactory:
             # Override with kwargs
             default_config.update(kwargs)
             config = StrategyConfig(**{
-                k: v for k, v in default_config.items() 
+                k: v for k, v in default_config.items()
                 if k in StrategyConfig.__dataclass_fields__
             })
-        
+
         # Create strategy
         if strategy_type == StrategyType.LLM:
             return strategy_class(config=config, llm_config=llm_config)
@@ -256,7 +256,7 @@ class StrategyFactory:
             return strategy_class(config=config, smoothing=smoothing)
         else:
             return strategy_class(config=config)
-    
+
     @classmethod
     def create_from_string(
         cls,
@@ -310,15 +310,15 @@ class StrategyFactory:
                 f"Unknown strategy: '{strategy_name}'. "
                 f"Available plugins: {available_plugins}. "
                 f"Available built-in: {available_builtin}"
-            )
-    
+            ) from None
+
     @classmethod
-    def get_default_config(cls, strategy_type: StrategyType) -> Dict[str, Any]:
+    def get_default_config(cls, strategy_type: StrategyType) -> dict[str, Any]:
         """Get default configuration for a strategy type."""
         return cls._DEFAULT_CONFIGS.get(strategy_type, {}).copy()
-    
+
     @classmethod
-    def list_strategies(cls, include_plugins: bool = True) -> Dict[str, str]:
+    def list_strategies(cls, include_plugins: bool = True) -> dict[str, str]:
         """
         List all available strategies with descriptions.
 
@@ -338,12 +338,12 @@ class StrategyFactory:
                 strategies[name] = description
 
         return strategies
-    
+
     @classmethod
     def get_recommended_strategy(cls) -> Strategy:
         """
         Get the recommended strategy for most scenarios.
-        
+
         Returns AdaptiveBayesianStrategy with optimized defaults.
         """
         return cls.create(StrategyType.ADAPTIVE_BAYESIAN)
@@ -356,21 +356,21 @@ class StrategyFactory:
 def create_strategy(strategy_name: str, **kwargs) -> Strategy:
     """
     Convenience function to create a strategy.
-    
+
     Args:
         strategy_name: Strategy type as string
         **kwargs: Configuration options
-        
+
     Returns:
         Strategy instance
-        
+
     Example:
         strategy = create_strategy("adaptive-bayesian", exploration_rate=0.1)
     """
     return StrategyFactory.create_from_string(strategy_name, **kwargs)
 
 
-def list_strategies() -> Dict[str, str]:
+def list_strategies() -> dict[str, str]:
     """List all available strategies."""
     return StrategyFactory.list_strategies()
 

@@ -24,13 +24,13 @@ Based on "Regret Minimization in Games with Incomplete Information" (Zinkevich e
 Proven to converge to Nash equilibrium at rate O(1/√T).
 """
 
-import numpy as np
-from typing import Dict, List, Tuple, Optional
-from dataclasses import dataclass, field
 from collections import defaultdict
+from dataclasses import dataclass, field
 
-from .base import Strategy, StrategyConfig
+import numpy as np
+
 from ...common.protocol import GameState
+from .base import Strategy, StrategyConfig
 
 # Type alias for moves (integers 1-10 in odd/even game)
 Move = int
@@ -69,12 +69,12 @@ class RegretTable:
     """
 
     # cumulative_regret[infoset][action] = sum of regrets
-    cumulative_regret: Dict[str, Dict[Move, float]] = field(
+    cumulative_regret: dict[str, dict[Move, float]] = field(
         default_factory=lambda: defaultdict(lambda: defaultdict(float))
     )
 
     # strategy_sum[infoset][action] = sum of strategy probabilities
-    strategy_sum: Dict[str, Dict[Move, float]] = field(
+    strategy_sum: dict[str, dict[Move, float]] = field(
         default_factory=lambda: defaultdict(lambda: defaultdict(float))
     )
 
@@ -111,7 +111,7 @@ class CounterfactualReasoningEngine:
         self.regret_table = RegretTable()
 
         # History of counterfactual analyses
-        self.counterfactual_history: List[CounterfactualOutcome] = []
+        self.counterfactual_history: list[CounterfactualOutcome] = []
 
         # Opponent model for counterfactual estimation
         from .opponent_modeling import OpponentModelingEngine
@@ -121,9 +121,9 @@ class CounterfactualReasoningEngine:
         self,
         game_state: GameState,
         chosen_move: Move,
-        actual_outcome: Dict,
-        available_moves: List[Move]
-    ) -> List[CounterfactualOutcome]:
+        actual_outcome: dict,
+        available_moves: list[Move]
+    ) -> list[CounterfactualOutcome]:
         """
         Perform counterfactual analysis: what if we chose differently?
 
@@ -168,7 +168,7 @@ class CounterfactualReasoningEngine:
     def update_strategy(
         self,
         game_state: GameState,
-        counterfactuals: List[CounterfactualOutcome]
+        counterfactuals: list[CounterfactualOutcome]
     ) -> None:
         """
         Update strategy based on counterfactual regrets.
@@ -194,7 +194,7 @@ class CounterfactualReasoningEngine:
 
         self.regret_table.iterations += 1
 
-    def get_current_strategy(self, game_state: GameState) -> Dict[Move, float]:
+    def get_current_strategy(self, game_state: GameState) -> dict[Move, float]:
         """
         Get current strategy using regret matching.
 
@@ -231,7 +231,7 @@ class CounterfactualReasoningEngine:
 
         return strategy
 
-    def get_average_strategy(self, game_state: GameState) -> Dict[Move, float]:
+    def get_average_strategy(self, game_state: GameState) -> dict[Move, float]:
         """
         Get average strategy over all iterations.
 
@@ -268,7 +268,7 @@ class CounterfactualReasoningEngine:
         our_move: Move,
         opponent_move: Move,
         opponent_id: str
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         """
         Estimate what reward we would have gotten with alternative move.
 
@@ -310,7 +310,7 @@ class CounterfactualReasoningEngine:
         # In more complex games, would include partial observations only
         return f"round_{game_state.round}_score_{game_state.scores.get('us', 0)}"
 
-    def get_regret_analysis(self) -> Dict:
+    def get_regret_analysis(self) -> dict:
         """
         Get comprehensive analysis of regrets.
 
@@ -455,7 +455,7 @@ class CounterfactualRegretStrategy(Strategy):
                 outcome
             )
 
-    def get_explanation(self, game_state: GameState) -> Dict:
+    def get_explanation(self, game_state: GameState) -> dict:
         """
         Explain current decision using counterfactual reasoning.
 
@@ -479,7 +479,7 @@ class CounterfactualRegretStrategy(Strategy):
             "explanation": self._generate_explanation(strategy, regret_analysis)
         }
 
-    def _generate_explanation(self, strategy: Dict, regret_analysis: Dict) -> str:
+    def _generate_explanation(self, strategy: dict, regret_analysis: dict) -> str:
         """Generate human-readable explanation of strategy."""
         # Find most likely action
         best_move = max(strategy.items(), key=lambda x: x[1])[0]
@@ -508,7 +508,7 @@ class CounterfactualRegretStrategy(Strategy):
 
 
 def visualize_counterfactual_tree(
-    counterfactuals: List[CounterfactualOutcome]
+    counterfactuals: list[CounterfactualOutcome]
 ) -> str:
     """
     Visualize counterfactual analysis as decision tree.

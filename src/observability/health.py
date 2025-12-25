@@ -21,15 +21,16 @@ Usage:
     print(report)
 """
 
-import time
 import asyncio
-import psutil
-from typing import Any, Dict, List, Optional
+import threading
+import time
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from abc import ABC, abstractmethod
-import threading
+from typing import Any
+
+import psutil
 
 from ..common.logger import get_logger
 
@@ -56,7 +57,7 @@ class HealthCheckResult:
 
     status: HealthStatus
     message: str = ""
-    details: Dict[str, Any] = None
+    details: dict[str, Any] = None
     timestamp: float = None
 
     def __post_init__(self):
@@ -65,7 +66,7 @@ class HealthCheckResult:
         if self.details is None:
             self.details = {}
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "status": self.status.value,
@@ -157,7 +158,7 @@ class ReadinessCheck(HealthCheck):
     Use for Kubernetes readiness probes.
     """
 
-    def __init__(self, required_checks: Optional[List[str]] = None):
+    def __init__(self, required_checks: list[str] | None = None):
         super().__init__(
             name="readiness",
             description="Service is ready to accept requests",
@@ -236,7 +237,7 @@ class DependencyCheck(HealthCheck):
                             },
                         )
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return HealthCheckResult(
                 status=HealthStatus.UNHEALTHY,
                 message=f"Dependency timeout after {self.timeout}s",
@@ -347,12 +348,12 @@ class HealthMonitor:
         if self._initialized:
             return
 
-        self._checks: Dict[str, HealthCheck] = {}
+        self._checks: dict[str, HealthCheck] = {}
         self._check_lock = threading.Lock()
 
         # Last check results cache
-        self._last_results: Dict[str, HealthCheckResult] = {}
-        self._last_check_time: Optional[float] = None
+        self._last_results: dict[str, HealthCheckResult] = {}
+        self._last_check_time: float | None = None
 
         # Configuration
         self.enabled = True
@@ -399,11 +400,11 @@ class HealthMonitor:
                 return True
             return False
 
-    def get_check(self, name: str) -> Optional[HealthCheck]:
+    def get_check(self, name: str) -> HealthCheck | None:
         """Get a health check by name."""
         return self._checks.get(name)
 
-    def list_checks(self) -> List[str]:
+    def list_checks(self) -> list[str]:
         """List all registered check names."""
         return list(self._checks.keys())
 
@@ -437,7 +438,7 @@ class HealthMonitor:
                 details={"error": str(e)},
             )
 
-    async def run_all_checks(self, use_cache: bool = True) -> Dict[str, HealthCheckResult]:
+    async def run_all_checks(self, use_cache: bool = True) -> dict[str, HealthCheckResult]:
         """
         Run all health checks.
 
@@ -486,8 +487,8 @@ class HealthMonitor:
         return results
 
     async def get_health(
-        self, check_names: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        self, check_names: list[str] | None = None
+    ) -> dict[str, Any]:
         """
         Get health report.
 
@@ -515,7 +516,7 @@ class HealthMonitor:
             "checks": {name: result.to_dict() for name, result in results.items()},
         }
 
-    async def get_liveness(self) -> Dict[str, Any]:
+    async def get_liveness(self) -> dict[str, Any]:
         """
         Get liveness health (for Kubernetes liveness probe).
 
@@ -529,7 +530,7 @@ class HealthMonitor:
             "details": result.details,
         }
 
-    async def get_readiness(self) -> Dict[str, Any]:
+    async def get_readiness(self) -> dict[str, Any]:
         """
         Get readiness health (for Kubernetes readiness probe).
 
@@ -544,7 +545,7 @@ class HealthMonitor:
         }
 
     def _determine_overall_status(
-        self, results: Dict[str, HealthCheckResult]
+        self, results: dict[str, HealthCheckResult]
     ) -> HealthStatus:
         """
         Determine overall status from individual check results.

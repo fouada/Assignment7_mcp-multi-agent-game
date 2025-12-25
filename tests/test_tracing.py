@@ -5,14 +5,14 @@ Tests the TracingManager, Span creation, W3C Trace Context propagation,
 sampling, and distributed tracing integration.
 """
 
-import pytest
 import time
-from typing import Dict, Optional
+
+import pytest
+
 from src.observability.tracing import (
+    SpanContext,
     TracingManager,
     get_tracing_manager,
-    Span,
-    SpanContext,
 )
 
 
@@ -240,7 +240,7 @@ def test_span_error_status(tracing_manager):
 
 def test_inject_trace_context(tracing_manager):
     """Test injecting trace context into headers."""
-    with tracing_manager.span("outgoing_request") as span:
+    with tracing_manager.span("outgoing_request"):
         headers = {}
         headers = tracing_manager.inject_context(headers)
 
@@ -355,7 +355,7 @@ def test_disabled_tracing():
     manager = TracingManager()
     manager.initialize(service_name="test", enabled=False, sample_rate=1.0)
 
-    with manager.span("disabled_operation") as span:
+    with manager.span("disabled_operation"):
         pass
 
     # No spans should be created
@@ -419,8 +419,8 @@ def test_global_tracing_manager_singleton():
 
 def test_global_tracing_usage(global_tracing):
     """Test using the global tracing manager."""
-    with global_tracing.span("global_test_operation") as span:
-        trace_id = span.trace_id
+    with global_tracing.span("global_test_operation"):
+        pass
 
     # Should be accessible from any call to get_tracing_manager()
     manager = get_tracing_manager()

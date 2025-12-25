@@ -13,8 +13,7 @@ This module defines the foundational interfaces and data structures for plugins:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional
-from datetime import datetime
+from typing import Any
 
 from ..logger import get_logger
 
@@ -39,10 +38,10 @@ class PluginMetadata:
     version: str
     author: str = ""
     description: str = ""
-    dependencies: List[str] = field(default_factory=list)
+    dependencies: list[str] = field(default_factory=list)
     entry_point: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert metadata to dictionary for serialization."""
         return {
             "name": self.name,
@@ -54,7 +53,7 @@ class PluginMetadata:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "PluginMetadata":
+    def from_dict(cls, data: dict[str, Any]) -> "PluginMetadata":
         """Create metadata from dictionary."""
         return cls(
             name=data["name"],
@@ -79,9 +78,9 @@ class PluginConfig:
 
     enabled: bool = True
     priority: int = 0
-    settings: Dict[str, Any] = field(default_factory=dict)
+    settings: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert config to dictionary."""
         return {
             "enabled": self.enabled,
@@ -104,10 +103,10 @@ class PluginContext:
     """
 
     registry: Any  # PluginRegistry
-    config: Dict[str, Any]
+    config: dict[str, Any]
     logger: Any
-    event_bus: Optional[Any] = None
-    strategy_registry: Optional[Any] = None
+    event_bus: Any | None = None
+    strategy_registry: Any | None = None
 
     def get_config(self, key: str, default: Any = None) -> Any:
         """Get configuration value by key."""
@@ -147,7 +146,7 @@ class PluginInterface(ABC):
         """Initialize plugin."""
         self._enabled = False
         self._loaded = False
-        self._context: Optional[PluginContext] = None
+        self._context: PluginContext | None = None
 
     @abstractmethod
     def get_metadata(self) -> PluginMetadata:
@@ -231,7 +230,7 @@ class PluginInterface(ABC):
         return self._loaded
 
     @property
-    def context(self) -> Optional[PluginContext]:
+    def context(self) -> PluginContext | None:
         """Get plugin context."""
         return self._context
 
@@ -251,7 +250,7 @@ class PluginLoadError(PluginError):
 class PluginDependencyError(PluginError):
     """Exception raised when plugin dependencies are not met."""
 
-    def __init__(self, plugin_name: str, missing_dependencies: List[str]):
+    def __init__(self, plugin_name: str, missing_dependencies: list[str]):
         self.plugin_name = plugin_name
         self.missing_dependencies = missing_dependencies
         super().__init__(

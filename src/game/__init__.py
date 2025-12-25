@@ -1,13 +1,13 @@
 """Game layer implementation."""
 
-from .odd_even import OddEvenGame, OddEvenRules, Move, RoundResult, GameResult, GameRole
 from .match import Match, MatchState
+from .odd_even import GameResult, GameRole, Move, OddEvenGame, OddEvenRules, RoundResult
 from .registry import (
-    GameRegistry,
     GameInterface,
-    GameTypeInfo,
     GameMove,
+    GameRegistry,
     GameRoundResult,
+    GameTypeInfo,
     register_default_games,
 )
 

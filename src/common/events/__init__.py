@@ -36,54 +36,54 @@ Usage:
 # Event Bus
 from .bus import EventBus, HandlerMetadata, get_event_bus
 
+# Decorators
+from .decorators import (
+    after,
+    before,
+    emit_on_exception,
+    on_error,
+    on_event,
+)
+
 # Event Types
 from .types import (
-    # Base
-    BaseEvent,
-    # Game Events
-    GameStartedEvent,
-    GameEndedEvent,
-    RoundStartedEvent,
-    RoundCompletedEvent,
-    # Agent Events
-    AgentRegisteredEvent,
     AgentConnectedEvent,
     AgentDisconnectedEvent,
     AgentErrorEvent,
-    # Strategy Events
-    StrategySelectedEvent,
+    # Agent Events
+    AgentRegisteredEvent,
+    # Base
+    BaseEvent,
+    GameEndedEvent,
+    # Game Events
+    GameStartedEvent,
+    MatchCompletedEvent,
+    # Match Events
+    MatchStartedEvent,
     MoveDecidedEvent,
-    StrategyErrorEvent,
     # Player Events
     PlayerGameInvitedEvent,
     PlayerGameJoinedEvent,
-    PlayerMoveBeforeEvent,
     PlayerMoveAfterEvent,
+    PlayerMoveBeforeEvent,
+    PluginDisabledEvent,
+    PluginEnabledEvent,
+    PluginErrorEvent,
     # Plugin Events
     PluginLoadedEvent,
-    PluginEnabledEvent,
-    PluginDisabledEvent,
-    PluginErrorEvent,
+    RoundCompletedEvent,
+    RoundStartedEvent,
+    StandingsUpdatedEvent,
+    StrategyErrorEvent,
+    # Strategy Events
+    StrategySelectedEvent,
+    SystemErrorEvent,
+    SystemShutdownEvent,
     # System Events
     SystemStartupEvent,
-    SystemShutdownEvent,
-    SystemErrorEvent,
-    # Match Events
-    MatchStartedEvent,
-    MatchCompletedEvent,
+    TournamentCompletedEvent,
     # Tournament Events
     TournamentRoundStartedEvent,
-    StandingsUpdatedEvent,
-    TournamentCompletedEvent,
-)
-
-# Decorators
-from .decorators import (
-    on_event,
-    before,
-    after,
-    on_error,
-    emit_on_exception,
 )
 
 __all__ = [

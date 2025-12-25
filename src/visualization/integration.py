@@ -22,25 +22,23 @@ First real-time visualization of internal agent reasoning:
 """
 
 import asyncio
-from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from .dashboard import (
-    DashboardAPI,
-    GameEvent,
-    StrategyPerformance,
-    OpponentModelVisualization,
-    CounterfactualVisualization,
-    get_dashboard
-)
-from ..agents.strategies.opponent_modeling import OpponentModelingEngine, OpponentModel
 from ..agents.strategies.counterfactual_reasoning import (
     CounterfactualReasoningEngine,
-    CounterfactualOutcome
 )
 from ..agents.strategies.hierarchical_composition import CompositeStrategy
+from ..agents.strategies.opponent_modeling import OpponentModel, OpponentModelingEngine
 from ..common.logger import get_logger
+from .dashboard import (
+    CounterfactualVisualization,
+    DashboardAPI,
+    GameEvent,
+    OpponentModelVisualization,
+    StrategyPerformance,
+    get_dashboard,
+)
 
 logger = get_logger(__name__)
 
@@ -65,21 +63,21 @@ class PlayerDashboardState:
     avg_score_per_round: float = 0.0
 
     # Opponent modeling state
-    opponent_models: Dict[str, OpponentModel] = field(default_factory=dict)
-    recent_predictions: List[Dict] = field(default_factory=list)
+    opponent_models: dict[str, OpponentModel] = field(default_factory=dict)
+    recent_predictions: list[dict] = field(default_factory=list)
 
     # Counterfactual state
-    recent_regrets: List[Dict] = field(default_factory=list)
-    cumulative_regret: Dict[str, float] = field(default_factory=dict)
+    recent_regrets: list[dict] = field(default_factory=list)
+    cumulative_regret: dict[str, float] = field(default_factory=dict)
 
     # Strategy composition state
-    strategy_tree: Optional[str] = None
-    component_usage: Dict[str, int] = field(default_factory=dict)
+    strategy_tree: str | None = None
+    component_usage: dict[str, int] = field(default_factory=dict)
 
     # History for charts
-    round_history: List[int] = field(default_factory=list)
-    score_history: List[float] = field(default_factory=list)
-    win_rate_history: List[float] = field(default_factory=list)
+    round_history: list[int] = field(default_factory=list)
+    score_history: list[float] = field(default_factory=list)
+    win_rate_history: list[float] = field(default_factory=list)
 
 
 @dataclass
@@ -92,13 +90,13 @@ class TournamentDashboardState:
     total_rounds: int = 0
 
     # Player states
-    players: Dict[str, PlayerDashboardState] = field(default_factory=dict)
+    players: dict[str, PlayerDashboardState] = field(default_factory=dict)
 
     # Match history
-    matches: List[Dict] = field(default_factory=list)
+    matches: list[dict] = field(default_factory=list)
 
     # Real-time events
-    event_buffer: List[GameEvent] = field(default_factory=list)
+    event_buffer: list[GameEvent] = field(default_factory=list)
     max_buffer_size: int = 100
 
 
@@ -127,15 +125,15 @@ class DashboardIntegration:
     ```
     """
 
-    def __init__(self, dashboard: Optional[DashboardAPI] = None):
+    def __init__(self, dashboard: DashboardAPI | None = None):
         self.dashboard = dashboard or get_dashboard()
-        self.tournament_state: Optional[TournamentDashboardState] = None
+        self.tournament_state: TournamentDashboardState | None = None
         self.enabled = False
 
         # Track innovation engines per player
-        self.opponent_modeling_engines: Dict[str, OpponentModelingEngine] = {}
-        self.cfr_engines: Dict[str, CounterfactualReasoningEngine] = {}
-        self.strategy_compositions: Dict[str, CompositeStrategy] = {}
+        self.opponent_modeling_engines: dict[str, OpponentModelingEngine] = {}
+        self.cfr_engines: dict[str, CounterfactualReasoningEngine] = {}
+        self.strategy_compositions: dict[str, CompositeStrategy] = {}
 
         logger.info("DashboardIntegration initialized")
 
@@ -168,9 +166,9 @@ class DashboardIntegration:
         self,
         player_id: str,
         strategy_name: str,
-        opponent_modeling_engine: Optional[OpponentModelingEngine] = None,
-        cfr_engine: Optional[CounterfactualReasoningEngine] = None,
-        strategy_composition: Optional[CompositeStrategy] = None
+        opponent_modeling_engine: OpponentModelingEngine | None = None,
+        cfr_engine: CounterfactualReasoningEngine | None = None,
+        strategy_composition: CompositeStrategy | None = None
     ):
         """
         Register a player and their innovation engines with dashboard.
@@ -205,7 +203,7 @@ class DashboardIntegration:
     # Event Handlers - Game Events
     # ========================================================================
 
-    async def on_round_start(self, round_num: int, matches: List[Dict]):
+    async def on_round_start(self, round_num: int, matches: list[dict]):
         """Handle round start event."""
         if not self.enabled:
             return
@@ -234,7 +232,7 @@ class DashboardIntegration:
         opponent_id: str,
         round_num: int,
         move: str,
-        game_state: Dict
+        game_state: dict
     ):
         """Handle move decision event."""
         if not self.enabled:
@@ -265,8 +263,8 @@ class DashboardIntegration:
         round_num: int,
         player1_id: str,
         player2_id: str,
-        moves: Dict[str, str],
-        scores: Dict[str, float]
+        moves: dict[str, str],
+        scores: dict[str, float]
     ):
         """Handle round complete event."""
         if not self.enabled:
@@ -467,9 +465,9 @@ class DashboardIntegration:
             return
 
         # Aggregate performance by strategy type
-        strategy_stats: Dict[str, Dict[str, List]] = {}
+        strategy_stats: dict[str, dict[str, list]] = {}
 
-        for player_id, state in self.tournament_state.players.items():
+        for _player_id, state in self.tournament_state.players.items():
             strategy_name = state.strategy_name
 
             if strategy_name not in strategy_stats:
@@ -514,7 +512,7 @@ class DashboardIntegration:
     # API Endpoints Data Providers
     # ========================================================================
 
-    def get_tournament_state(self) -> Dict:
+    def get_tournament_state(self) -> dict:
         """Get current tournament state for API endpoint."""
         if not self.tournament_state:
             return {}
@@ -528,7 +526,7 @@ class DashboardIntegration:
             "matches_played": len(self.tournament_state.matches)
         }
 
-    def get_player_standings(self) -> List[Dict]:
+    def get_player_standings(self) -> list[dict]:
         """Get current player standings sorted by win rate."""
         if not self.tournament_state:
             return []
@@ -550,7 +548,7 @@ class DashboardIntegration:
 
         return standings
 
-    def get_strategy_performance(self, strategy_name: str) -> Optional[Dict]:
+    def get_strategy_performance(self, strategy_name: str) -> dict | None:
         """Get performance data for a specific strategy."""
         if not self.tournament_state:
             return None
@@ -582,7 +580,7 @@ class DashboardIntegration:
             "avg_scores": all_scores
         }
 
-    def get_opponent_model(self, player_id: str, opponent_id: str) -> Optional[Dict]:
+    def get_opponent_model(self, player_id: str, opponent_id: str) -> dict | None:
         """Get opponent model data for visualization."""
         if not self.tournament_state or player_id not in self.tournament_state.players:
             return None
@@ -605,7 +603,7 @@ class DashboardIntegration:
             "accuracy": model.prediction_accuracy
         }
 
-    def get_counterfactual_data(self, player_id: str, round_num: Optional[int] = None) -> Optional[Dict]:
+    def get_counterfactual_data(self, player_id: str, round_num: int | None = None) -> dict | None:
         """Get counterfactual reasoning data for visualization."""
         if not self.tournament_state or player_id not in self.tournament_state.players:
             return None
@@ -633,7 +631,7 @@ class DashboardIntegration:
 # Global Integration Instance
 # ============================================================================
 
-_dashboard_integration: Optional[DashboardIntegration] = None
+_dashboard_integration: DashboardIntegration | None = None
 
 
 def get_dashboard_integration() -> DashboardIntegration:

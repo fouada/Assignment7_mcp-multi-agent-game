@@ -25,18 +25,17 @@ Usage:
 
 import asyncio
 import time
-from typing import Any, Callable, Dict, List, Optional
 from dataclasses import dataclass, field
+from typing import Any
 
+from ..common.logger import get_logger
 from .base import (
+    AsyncRequestHandler,
     Middleware,
+    MiddlewareTimeoutError,
     RequestContext,
     ResponseContext,
-    MiddlewareError,
-    MiddlewareTimeoutError,
-    AsyncRequestHandler,
 )
-from ..common.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -53,7 +52,7 @@ class MiddlewareMetadata:
     middleware: Middleware
     priority: int = 0
     enabled: bool = True
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
 
     # Statistics
     total_requests: int = 0
@@ -97,7 +96,7 @@ class MiddlewarePipeline:
                 - "stop": Stop pipeline, return error response
                 - "raise": Re-raise exception
         """
-        self._middleware: List[MiddlewareMetadata] = []
+        self._middleware: list[MiddlewareMetadata] = []
         self._timeout_seconds = timeout_seconds
         self._error_handling = error_handling
 
@@ -112,7 +111,7 @@ class MiddlewarePipeline:
         self,
         middleware: Middleware,
         priority: int = 0,
-        tags: Optional[List[str]] = None,
+        tags: list[str] | None = None,
     ) -> str:
         """
         Add middleware to the pipeline.
@@ -203,10 +202,10 @@ class MiddlewarePipeline:
 
     async def execute(
         self,
-        request: Dict[str, Any],
+        request: dict[str, Any],
         handler: AsyncRequestHandler,
         **handler_kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Execute request through middleware pipeline.
 
@@ -248,14 +247,14 @@ class MiddlewarePipeline:
 
             return response
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._stats["total_timeouts"] += 1
             logger.error(
                 f"Middleware pipeline timeout after {self._timeout_seconds}s"
             )
             raise MiddlewareTimeoutError(
                 f"Pipeline execution exceeded {self._timeout_seconds}s timeout"
-            )
+            ) from None
 
         except Exception as e:
             self._stats["total_errors"] += 1
@@ -279,8 +278,8 @@ class MiddlewarePipeline:
         self,
         context: RequestContext,
         handler: AsyncRequestHandler,
-        handler_kwargs: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        handler_kwargs: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         Execute the full middleware pipeline.
 
@@ -385,8 +384,8 @@ class MiddlewarePipeline:
         self,
         context: RequestContext,
         error: Exception,
-        middleware_list: List[MiddlewareMetadata],
-    ) -> Optional[Dict[str, Any]]:
+        middleware_list: list[MiddlewareMetadata],
+    ) -> dict[str, Any] | None:
         """
         Handle error using middleware error handlers.
 
@@ -415,7 +414,7 @@ class MiddlewarePipeline:
         self,
         error: Exception,
         source: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create standardized error response."""
         return {
             "error": str(error),
@@ -424,7 +423,7 @@ class MiddlewarePipeline:
             "middleware_error": True,
         }
 
-    def get_middleware_list(self) -> List[Dict[str, Any]]:
+    def get_middleware_list(self) -> list[dict[str, Any]]:
         """
         Get list of registered middleware.
 
@@ -450,7 +449,7 @@ class MiddlewarePipeline:
             for m in self._middleware
         ]
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """
         Get pipeline statistics.
 

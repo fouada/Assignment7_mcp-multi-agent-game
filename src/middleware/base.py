@@ -31,11 +31,10 @@ Usage:
             return context
 """
 
-from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Callable
 from datetime import datetime
-
+from typing import Any
 
 # ============================================================================
 # Context Classes
@@ -52,25 +51,25 @@ class RequestContext:
     """
 
     # Original request data
-    request: Dict[str, Any]
+    request: dict[str, Any]
 
     # Request metadata (headers, auth, etc.)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     # Shared state between middleware
-    state: Dict[str, Any] = field(default_factory=dict)
+    state: dict[str, Any] = field(default_factory=dict)
 
     # Client information
-    client_id: Optional[str] = None
-    client_ip: Optional[str] = None
+    client_id: str | None = None
+    client_ip: str | None = None
 
     # Request timing
     received_at: datetime = field(default_factory=datetime.utcnow)
 
     # Short-circuit response (set by middleware to bypass handler)
-    response: Optional[Dict[str, Any]] = None
+    response: dict[str, Any] | None = None
 
-    def set_response(self, response: Dict[str, Any]) -> None:
+    def set_response(self, response: dict[str, Any]) -> None:
         """
         Set a response to short-circuit the pipeline.
 
@@ -94,13 +93,13 @@ class ResponseContext:
     """
 
     # Response data
-    response: Dict[str, Any]
+    response: dict[str, Any]
 
     # Response metadata
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     # Shared state from request (read-only access)
-    state: Dict[str, Any] = field(default_factory=dict)
+    state: dict[str, Any] = field(default_factory=dict)
 
     # Original request for reference
     request: RequestContext = None
@@ -109,7 +108,7 @@ class ResponseContext:
     completed_at: datetime = field(default_factory=datetime.utcnow)
 
     # Error information (if any)
-    error: Optional[Exception] = None
+    error: Exception | None = None
     error_handled: bool = False
 
 
@@ -118,7 +117,7 @@ class ResponseContext:
 # ============================================================================
 
 
-class Middleware(ABC):
+class Middleware:
     """
     Base class for all middleware.
 
@@ -142,9 +141,9 @@ class Middleware(ABC):
 
     def __init__(
         self,
-        name: Optional[str] = None,
+        name: str | None = None,
         enabled: bool = True,
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
     ):
         """
         Initialize middleware.
@@ -206,7 +205,7 @@ class Middleware(ABC):
         self,
         context: RequestContext,
         error: Exception,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Handle errors that occur during request processing.
 
@@ -248,8 +247,8 @@ class MiddlewareError(Exception):
     def __init__(
         self,
         message: str,
-        middleware_name: Optional[str] = None,
-        original_error: Optional[Exception] = None,
+        middleware_name: str | None = None,
+        original_error: Exception | None = None,
     ):
         super().__init__(message)
         self.middleware_name = middleware_name
@@ -277,5 +276,5 @@ class MiddlewareValidationError(MiddlewareError):
 
 
 # Type alias for request handlers
-RequestHandler = Callable[[Dict[str, Any]], Dict[str, Any]]
-AsyncRequestHandler = Callable[[Dict[str, Any]], Any]  # Returns awaitable
+RequestHandler = Callable[[dict[str, Any]], dict[str, Any]]
+AsyncRequestHandler = Callable[[dict[str, Any]], Any]  # Returns awaitable

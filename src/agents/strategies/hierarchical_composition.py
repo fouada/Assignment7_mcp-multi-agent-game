@@ -25,14 +25,16 @@ built from primitive components, creating emergent intelligent behavior.
 """
 
 import random
-import numpy as np
-from typing import Dict, List, Optional, Callable, Union, Tuple
+from abc import abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
-from abc import ABC, abstractmethod
 from enum import Enum
+from typing import Union
 
-from .base import Strategy, StrategyConfig
+import numpy as np
+
 from ...common.protocol import GameState
+from .base import Strategy, StrategyConfig
 
 # Type alias for moves (integers 1-10 in odd/even game)
 Move = int
@@ -61,7 +63,7 @@ class StrategyNode:
     name: str
     strategy: Union[Strategy, 'CompositeStrategy']
     weight: float = 1.0
-    condition: Optional[Callable[[GameState], bool]] = None
+    condition: Callable[[GameState], bool] | None = None
 
 
 # ============================================================================
@@ -170,7 +172,7 @@ class CompositeStrategy(Strategy):
 
     def __init__(
         self,
-        components: List[StrategyNode],
+        components: list[StrategyNode],
         operator: CompositionOperator,
         config: StrategyConfig = None
     ):
@@ -226,7 +228,7 @@ class CompositeStrategy(Strategy):
 
         # Weighted voting
         move_votes = {}
-        for move, weight in zip(moves, weights):
+        for move, weight in zip(moves, weights, strict=False):
             move_votes[move] = move_votes.get(move, 0) + weight
 
         # Return move with highest vote
@@ -343,13 +345,13 @@ class StrategyComposer:
             self.add(strat, name=f"seq_{i}")
         return self
 
-    def parallel(self, *strategies: Strategy, weights: List[float] = None) -> 'StrategyComposer':
+    def parallel(self, *strategies: Strategy, weights: list[float] = None) -> 'StrategyComposer':
         """Execute strategies in parallel with voting."""
         self.current_operator = CompositionOperator.PARALLEL
         if weights is None:
             weights = [1.0] * len(strategies)
 
-        for i, (strat, weight) in enumerate(zip(strategies, weights)):
+        for i, (strat, weight) in enumerate(zip(strategies, weights, strict=False)):
             self.add(strat, name=f"parallel_{i}", weight=weight)
         return self
 
@@ -375,7 +377,7 @@ class StrategyComposer:
         self.add(strategy, name="otherwise")
         return self
 
-    def weighted(self, strategy_weight_pairs: List[Tuple[Strategy, float]]) -> 'StrategyComposer':
+    def weighted(self, strategy_weight_pairs: list[tuple[Strategy, float]]) -> 'StrategyComposer':
         """Weighted probabilistic composition."""
         self.current_operator = CompositionOperator.WEIGHTED
         for i, (strat, weight) in enumerate(strategy_weight_pairs):
@@ -497,7 +499,7 @@ class StrategyGenome:
     Can be evolved via genetic algorithms to discover novel compositions.
     """
 
-    def __init__(self, genes: List[Tuple[str, float]] = None):
+    def __init__(self, genes: list[tuple[str, float]] = None):
         if genes is None:
             # Random initialization
             primitives = [

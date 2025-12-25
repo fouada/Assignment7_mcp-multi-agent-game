@@ -10,16 +10,17 @@ import functools
 import logging
 import tempfile
 import time
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, List
+from typing import Any
 from unittest.mock import patch
 
 
 def async_test(func: Callable) -> Callable:
     """
     Decorator to run async tests with asyncio.
-    
+
     Usage:
         @async_test
         async def test_something():
@@ -36,7 +37,7 @@ def async_test(func: Callable) -> Callable:
 def temp_directory() -> Generator[Path, None, None]:
     """
     Context manager providing a temporary directory.
-    
+
     Usage:
         with temp_directory() as temp_dir:
             # Use temp_dir for testing
@@ -50,10 +51,10 @@ def temp_directory() -> Generator[Path, None, None]:
 def capture_logs(
     logger_name: str = None,
     level: int = logging.DEBUG
-) -> Generator[List[logging.LogRecord], None, None]:
+) -> Generator[list[logging.LogRecord], None, None]:
     """
     Context manager to capture log messages.
-    
+
     Usage:
         with capture_logs("my_logger") as log_records:
             # Perform actions
@@ -61,23 +62,23 @@ def capture_logs(
         # Check log_records
     """
     records = []
-    
+
     class ListHandler(logging.Handler):
         def emit(self, record):
             records.append(record)
-    
+
     handler = ListHandler()
     handler.setLevel(level)
-    
+
     if logger_name:
         logger = logging.getLogger(logger_name)
     else:
         logger = logging.getLogger()
-    
+
     logger.addHandler(handler)
     original_level = logger.level
     logger.setLevel(level)
-    
+
     try:
         yield records
     finally:
@@ -86,29 +87,29 @@ def capture_logs(
 
 
 @contextmanager
-def mock_time(frozen_time: float = None) -> Generator[Dict[str, Any], None, None]:
+def mock_time(frozen_time: float = None) -> Generator[dict[str, Any], None, None]:
     """
     Context manager to mock time.time() for testing.
-    
+
     Usage:
         with mock_time(1234567890.0) as time_control:
             # time.time() returns 1234567890.0
             time_control["advance"](10.0)  # Advance by 10 seconds
     """
     current_time = {"value": frozen_time or time.time()}
-    
+
     def mock_time_func():
         return current_time["value"]
-    
+
     def advance(seconds: float):
         current_time["value"] += seconds
-    
+
     control = {
         "advance": advance,
         "set": lambda t: current_time.update({"value": t}),
         "get": lambda: current_time["value"]
     }
-    
+
     with patch("time.time", side_effect=mock_time_func):
         yield control
 
@@ -117,7 +118,7 @@ def mock_time(frozen_time: float = None) -> Generator[Dict[str, Any], None, None
 def mock_environment(**env_vars) -> Generator[None, None, None]:
     """
     Context manager to temporarily set environment variables.
-    
+
     Usage:
         with mock_environment(API_KEY="test123"):
             # os.environ["API_KEY"] == "test123"
@@ -125,14 +126,14 @@ def mock_environment(**env_vars) -> Generator[None, None, None]:
     """
     import os
     original = {}
-    
+
     for key, value in env_vars.items():
         original[key] = os.environ.get(key)
         if value is None:
             os.environ.pop(key, None)
         else:
             os.environ[key] = str(value)
-    
+
     try:
         yield
     finally:
@@ -145,15 +146,15 @@ def mock_environment(**env_vars) -> Generator[None, None, None]:
 
 class TimeoutContext:
     """Context manager for testing timeouts."""
-    
+
     def __init__(self, timeout: float):
         self.timeout = timeout
         self.start_time = None
-        
+
     def __enter__(self):
         self.start_time = time.time()
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         elapsed = time.time() - self.start_time
         if elapsed > self.timeout:
@@ -164,7 +165,7 @@ class TimeoutContext:
 def timeout(seconds: float) -> Callable:
     """
     Decorator to add timeout to async functions.
-    
+
     Usage:
         @timeout(5.0)
         async def test_something():
@@ -180,17 +181,17 @@ def timeout(seconds: float) -> Callable:
 
 class PerformanceTimer:
     """Context manager for measuring performance."""
-    
+
     def __init__(self, name: str = "operation"):
         self.name = name
         self.start_time = None
         self.end_time = None
         self.duration = None
-        
+
     def __enter__(self):
         self.start_time = time.perf_counter()
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.end_time = time.perf_counter()
         self.duration = self.end_time - self.start_time
@@ -199,10 +200,10 @@ class PerformanceTimer:
 
 
 @contextmanager
-def capture_output() -> Generator[Dict[str, List[str]], None, None]:
+def capture_output() -> Generator[dict[str, list[str]], None, None]:
     """
     Context manager to capture stdout and stderr.
-    
+
     Usage:
         with capture_output() as output:
             print("test")
@@ -210,38 +211,38 @@ def capture_output() -> Generator[Dict[str, List[str]], None, None]:
     """
     import sys
     from io import StringIO
-    
+
     old_stdout = sys.stdout
     old_stderr = sys.stderr
-    
+
     stdout_capture = StringIO()
     stderr_capture = StringIO()
-    
+
     sys.stdout = stdout_capture
     sys.stderr = stderr_capture
-    
+
     output = {
         "stdout": [],
         "stderr": []
     }
-    
+
     try:
         yield output
     finally:
         sys.stdout = old_stdout
         sys.stderr = old_stderr
-        
+
         output["stdout"] = stdout_capture.getvalue().splitlines()
         output["stderr"] = stderr_capture.getvalue().splitlines()
 
 
 class EventRecorder:
     """Record events for testing event-driven systems."""
-    
+
     def __init__(self):
-        self.events: List[Dict[str, Any]] = []
-        self.event_counts: Dict[str, int] = {}
-        
+        self.events: list[dict[str, Any]] = []
+        self.event_counts: dict[str, int] = {}
+
     def record(self, event_type: str, **data):
         """Record an event."""
         event = {
@@ -251,19 +252,19 @@ class EventRecorder:
         }
         self.events.append(event)
         self.event_counts[event_type] = self.event_counts.get(event_type, 0) + 1
-    
-    def get_events(self, event_type: str = None) -> List[Dict[str, Any]]:
+
+    def get_events(self, event_type: str = None) -> list[dict[str, Any]]:
         """Get recorded events, optionally filtered by type."""
         if event_type:
             return [e for e in self.events if e["type"] == event_type]
         return self.events
-    
+
     def count(self, event_type: str = None) -> int:
         """Get count of events."""
         if event_type:
             return self.event_counts.get(event_type, 0)
         return len(self.events)
-    
+
     def clear(self):
         """Clear recorded events."""
         self.events.clear()
@@ -272,24 +273,24 @@ class EventRecorder:
 
 class AsyncContextManager:
     """Base class for async context managers in tests."""
-    
+
     async def __aenter__(self):
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         return False
 
 
 class MockAsyncIterator:
     """Mock async iterator for testing."""
-    
-    def __init__(self, items: List[Any]):
+
+    def __init__(self, items: list[Any]):
         self.items = items
         self.index = 0
-    
+
     def __aiter__(self):
         return self
-    
+
     async def __anext__(self):
         if self.index >= len(self.items):
             raise StopAsyncIteration
@@ -305,7 +306,7 @@ def retry_on_exception(
 ) -> Callable:
     """
     Decorator to retry function on exception.
-    
+
     Usage:
         @retry_on_exception(max_attempts=3, delay=0.5)
         def flaky_function():
@@ -318,7 +319,7 @@ def retry_on_exception(
             for attempt in range(max_attempts):
                 try:
                     return func(*args, **kwargs)
-                except exceptions as e:
+                except exceptions:
                     if attempt == max_attempts - 1:
                         raise
                     time.sleep(delay)
@@ -327,10 +328,10 @@ def retry_on_exception(
     return decorator
 
 
-def parametrize_async(argnames: str, argvalues: List[Any]) -> Callable:
+def parametrize_async(argnames: str, argvalues: list[Any]) -> Callable:
     """
     Decorator to parametrize async test functions.
-    
+
     Usage:
         @parametrize_async("input,expected", [(1, 2), (3, 4)])
         async def test_something(input, expected):
@@ -343,10 +344,10 @@ def parametrize_async(argnames: str, argvalues: List[Any]) -> Callable:
             results = []
             for values in argvalues:
                 if isinstance(values, tuple):
-                    test_kwargs = dict(zip(argnames.split(","), values))
+                    test_kwargs = dict(zip(argnames.split(","), values, strict=False))
                 else:
                     test_kwargs = {argnames: values}
-                
+
                 result = asyncio.run(func(*args, **test_kwargs, **kwargs))
                 results.append(result)
             return results

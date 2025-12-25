@@ -1,11 +1,11 @@
 """MCP Client implementation."""
 
+from .connection_manager import CircuitBreaker, ConnectionManager
 from .mcp_client import MCPClient
-from .session_manager import SessionManager, Session
-from .tool_registry import ToolRegistry, ToolInfo
-from .connection_manager import ConnectionManager, CircuitBreaker
-from .message_queue import MessageQueue, Message, MessagePriority
+from .message_queue import Message, MessagePriority, MessageQueue
 from .resource_manager import ResourceManager
+from .session_manager import Session, SessionManager
+from .tool_registry import ToolInfo, ToolRegistry
 
 __all__ = [
     "MCPClient",

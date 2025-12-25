@@ -8,18 +8,17 @@ Manages active sessions with MCP servers.
 import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, Optional, List, Any
 from enum import Enum
+from typing import Any
 
 from ..common.logger import get_logger
-from ..common.exceptions import ConnectionError
 
 logger = get_logger(__name__)
 
 
 class SessionState(Enum):
     """Session state."""
-    
+
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
     CONNECTED = "connected"
@@ -33,58 +32,58 @@ class SessionState(Enum):
 class Session:
     """
     Represents a session with an MCP server.
-    
+
     A session tracks:
     - Connection state
     - Server capabilities
     - Available tools and resources
     - Health metrics
     """
-    
+
     id: str
     server_name: str
     server_url: str
     state: SessionState = SessionState.DISCONNECTED
-    
+
     # Server info (populated after initialize)
-    server_version: Optional[str] = None
-    protocol_version: Optional[str] = None
-    capabilities: Dict[str, Any] = field(default_factory=dict)
-    
+    server_version: str | None = None
+    protocol_version: str | None = None
+    capabilities: dict[str, Any] = field(default_factory=dict)
+
     # Available primitives
-    tools: List[Dict[str, Any]] = field(default_factory=list)
-    resources: List[Dict[str, Any]] = field(default_factory=list)
-    prompts: List[Dict[str, Any]] = field(default_factory=list)
-    
+    tools: list[dict[str, Any]] = field(default_factory=list)
+    resources: list[dict[str, Any]] = field(default_factory=list)
+    prompts: list[dict[str, Any]] = field(default_factory=list)
+
     # Metrics
     created_at: datetime = field(default_factory=datetime.utcnow)
-    last_activity: Optional[datetime] = None
+    last_activity: datetime | None = None
     request_count: int = 0
     error_count: int = 0
-    
+
     # Internal
     _transport: Any = None
-    
+
     @property
     def is_ready(self) -> bool:
         """Check if session is ready for requests."""
         return self.state == SessionState.READY
-    
+
     @property
     def is_connected(self) -> bool:
         """Check if session is connected."""
         return self.state in (SessionState.CONNECTED, SessionState.INITIALIZING, SessionState.READY)
-    
+
     def record_activity(self) -> None:
         """Record session activity."""
         self.last_activity = datetime.utcnow()
         self.request_count += 1
-    
+
     def record_error(self) -> None:
         """Record session error."""
         self.error_count += 1
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "id": self.id,
@@ -106,24 +105,24 @@ class Session:
 class SessionManager:
     """
     Manages multiple sessions with MCP servers.
-    
+
     Features:
     - Track active sessions
     - Add/remove sessions
     - Handle multiple concurrent connections
     - Session lifecycle management
     """
-    
+
     def __init__(self):
-        self._sessions: Dict[str, Session] = {}
+        self._sessions: dict[str, Session] = {}
         self._lock = asyncio.Lock()
         self._session_id_counter = 0
-    
+
     def _generate_session_id(self, server_name: str) -> str:
         """Generate unique session ID."""
         self._session_id_counter += 1
         return f"{server_name}_{self._session_id_counter}"
-    
+
     async def create_session(
         self,
         server_name: str,
@@ -131,58 +130,58 @@ class SessionManager:
     ) -> Session:
         """
         Create a new session.
-        
+
         Args:
             server_name: Name of the server
             server_url: URL of the server
-            
+
         Returns:
             Created session
         """
         async with self._lock:
             session_id = self._generate_session_id(server_name)
-            
+
             session = Session(
                 id=session_id,
                 server_name=server_name,
                 server_url=server_url,
             )
-            
+
             self._sessions[session_id] = session
             logger.info(f"Created session: {session_id} for {server_url}")
-            
+
             return session
-    
-    async def get_session(self, session_id: str) -> Optional[Session]:
+
+    async def get_session(self, session_id: str) -> Session | None:
         """Get session by ID."""
         async with self._lock:
             return self._sessions.get(session_id)
-    
-    async def get_session_by_server(self, server_name: str) -> Optional[Session]:
+
+    async def get_session_by_server(self, server_name: str) -> Session | None:
         """Get session by server name."""
         async with self._lock:
             for session in self._sessions.values():
                 if session.server_name == server_name:
                     return session
             return None
-    
-    async def get_ready_session(self, server_name: str) -> Optional[Session]:
+
+    async def get_ready_session(self, server_name: str) -> Session | None:
         """Get a ready session for a server."""
         session = await self.get_session_by_server(server_name)
         if session and session.is_ready:
             return session
         return None
-    
-    async def list_sessions(self) -> List[Session]:
+
+    async def list_sessions(self) -> list[Session]:
         """List all sessions."""
         async with self._lock:
             return list(self._sessions.values())
-    
-    async def list_ready_sessions(self) -> List[Session]:
+
+    async def list_ready_sessions(self) -> list[Session]:
         """List all ready sessions."""
         async with self._lock:
             return [s for s in self._sessions.values() if s.is_ready]
-    
+
     async def update_session_state(
         self,
         session_id: str,
@@ -193,14 +192,14 @@ class SessionManager:
             if session_id in self._sessions:
                 self._sessions[session_id].state = state
                 logger.debug(f"Session {session_id} state: {state.value}")
-    
-    async def remove_session(self, session_id: str) -> Optional[Session]:
+
+    async def remove_session(self, session_id: str) -> Session | None:
         """
         Remove a session.
-        
+
         Args:
             session_id: Session ID to remove
-            
+
         Returns:
             Removed session or None
         """
@@ -209,26 +208,26 @@ class SessionManager:
             if session:
                 logger.info(f"Removed session: {session_id}")
             return session
-    
+
     async def close_all(self) -> None:
         """Close all sessions."""
         async with self._lock:
             session_ids = list(self._sessions.keys())
-        
+
         for session_id in session_ids:
             await self.remove_session(session_id)
-        
+
         logger.info("Closed all sessions")
-    
+
     def __len__(self) -> int:
         """Get number of sessions."""
         return len(self._sessions)
-    
+
     @property
     def session_count(self) -> int:
         """Get session count."""
         return len(self._sessions)
-    
+
     @property
     def ready_session_count(self) -> int:
         """Get ready session count."""
@@ -238,44 +237,44 @@ class SessionManager:
 class SessionPool:
     """
     Pool of sessions for load balancing across multiple servers.
-    
+
     Useful for connecting to multiple instances of the same service.
     """
-    
+
     def __init__(self, max_sessions_per_server: int = 3):
         self.max_sessions_per_server = max_sessions_per_server
-        self._pools: Dict[str, List[Session]] = {}
+        self._pools: dict[str, list[Session]] = {}
         self._lock = asyncio.Lock()
-        self._round_robin: Dict[str, int] = {}
-    
+        self._round_robin: dict[str, int] = {}
+
     async def add_session(self, server_name: str, session: Session) -> None:
         """Add session to pool."""
         async with self._lock:
             if server_name not in self._pools:
                 self._pools[server_name] = []
                 self._round_robin[server_name] = 0
-            
+
             if len(self._pools[server_name]) < self.max_sessions_per_server:
                 self._pools[server_name].append(session)
-    
-    async def get_session(self, server_name: str) -> Optional[Session]:
+
+    async def get_session(self, server_name: str) -> Session | None:
         """Get next available session (round-robin)."""
         async with self._lock:
             if server_name not in self._pools:
                 return None
-            
+
             pool = self._pools[server_name]
             ready = [s for s in pool if s.is_ready]
-            
+
             if not ready:
                 return None
-            
+
             # Round-robin selection
             idx = self._round_robin[server_name] % len(ready)
             self._round_robin[server_name] = idx + 1
-            
+
             return ready[idx]
-    
+
     async def remove_session(self, server_name: str, session: Session) -> None:
         """Remove session from pool."""
         async with self._lock:

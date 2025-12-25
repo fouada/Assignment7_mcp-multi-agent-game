@@ -5,19 +5,20 @@ Tests the HealthMonitor, health checks (Liveness, Readiness, Resource),
 health status reporting, and Kubernetes probe compatibility.
 """
 
-import pytest
-import time
 import asyncio
-from typing import Dict, Optional
+import time
+
+import pytest
+
 from src.observability.health import (
-    HealthMonitor,
-    get_health_monitor,
     HealthCheck,
     HealthCheckResult,
+    HealthMonitor,
     HealthStatus,
     LivenessCheck,
     ReadinessCheck,
     ResourceCheck,
+    get_health_monitor,
 )
 
 
@@ -614,7 +615,7 @@ async def test_parallel_health_checks(health_monitor):
     health_monitor.add_check("slow3", SlowCheck(0.1))
 
     start = time.time()
-    report = await health_monitor.get_health()
+    await health_monitor.get_health()
     duration = time.time() - start
 
     # If checks run in parallel, should take ~0.1s (not 0.3s)

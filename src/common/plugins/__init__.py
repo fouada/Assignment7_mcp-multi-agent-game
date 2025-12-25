@@ -27,24 +27,24 @@ Usage:
 """
 
 from .base import (
-    PluginInterface,
-    PluginMetadata,
-    PluginContext,
-    PluginConfig,
-    PluginError,
-    PluginLoadError,
-    PluginDependencyError,
     PluginAlreadyRegisteredError,
+    PluginConfig,
+    PluginContext,
+    PluginDependencyError,
+    PluginError,
+    PluginInterface,
+    PluginLoadError,
+    PluginMetadata,
     PluginNotFoundError,
+)
+from .discovery import (
+    PluginDiscovery,
+    auto_discover_and_register,
+    discover_plugins,
 )
 from .registry import (
     PluginRegistry,
     get_plugin_registry,
-)
-from .discovery import (
-    PluginDiscovery,
-    discover_plugins,
-    auto_discover_and_register,
 )
 
 __all__ = [

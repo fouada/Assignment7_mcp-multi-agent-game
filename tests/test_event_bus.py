@@ -14,14 +14,16 @@ Tests the core event bus functionality including:
 Run with: pytest tests/test_event_bus.py -v
 """
 
-import pytest
 import asyncio
+
+import pytest
+
 from src.common.events import (
-    EventBus,
-    get_event_bus,
     BaseEvent,
+    EventBus,
     GameStartedEvent,
     PlayerMoveAfterEvent,
+    get_event_bus,
 )
 from src.common.logger import get_logger
 
@@ -191,7 +193,7 @@ class TestEventEmission:
         clean_event_bus.on("test.event", handler.async_handler)
 
         event = BaseEvent(event_type="test.event")
-        results = await clean_event_bus.emit("test.event", event)
+        await clean_event_bus.emit("test.event", event)
 
         assert len(handler.async_calls) == 1
         assert handler.async_calls[0] == event
@@ -213,7 +215,7 @@ class TestEventEmission:
         clean_event_bus.on("test.event", handler.sync_handler)
 
         event = BaseEvent(event_type="test.event")
-        results = clean_event_bus.emit_sync("test.event", event)
+        clean_event_bus.emit_sync("test.event", event)
 
         assert len(handler.calls) == 1
 

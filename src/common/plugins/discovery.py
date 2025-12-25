@@ -27,16 +27,16 @@ Usage:
         await registry.register_plugin(plugin)
 """
 
-from pathlib import Path
-from typing import List, Dict, Any
 import importlib
 import importlib.metadata
 import importlib.util
 import sys
+from pathlib import Path
+from typing import Any
 
+from ..logger import get_logger
 from .base import PluginInterface, PluginLoadError
 from .registry import get_plugin_registry
-from ..logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -49,7 +49,7 @@ class PluginDiscovery:
     """
 
     @staticmethod
-    async def discover_all(config: Dict[str, Any]) -> List[PluginInterface]:
+    async def discover_all(config: dict[str, Any]) -> list[PluginInterface]:
         """
         Discover all plugins based on configuration.
 
@@ -112,7 +112,7 @@ class PluginDiscovery:
     @staticmethod
     async def discover_from_entry_points(
         group: str = "mcp_game.plugins",
-    ) -> List[PluginInterface]:
+    ) -> list[PluginInterface]:
         """
         Discover plugins from entry points.
 
@@ -174,7 +174,7 @@ class PluginDiscovery:
     @staticmethod
     async def discover_from_directory(
         path: Path, pattern: str = "*_plugin.py"
-    ) -> List[PluginInterface]:
+    ) -> list[PluginInterface]:
         """
         Discover plugins from a directory.
 
@@ -264,11 +264,11 @@ class PluginDiscovery:
             return module
 
         except Exception as e:
-            raise PluginLoadError(f"Failed to load module from {file_path}: {e}")
+            raise PluginLoadError(f"Failed to load module from {file_path}: {e}") from e
 
     @staticmethod
     async def load_and_register_plugins(
-        config: Dict[str, Any], auto_enable: bool = True
+        config: dict[str, Any], auto_enable: bool = True
     ) -> int:
         """
         Discover, load, and register all plugins.
@@ -324,7 +324,7 @@ class PluginDiscovery:
 
         # Check for basic Python syntax
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
 
             # Try to compile the code (syntax check)
@@ -343,7 +343,7 @@ class PluginDiscovery:
 # Convenience functions
 
 
-async def discover_plugins(config: Dict[str, Any]) -> List[PluginInterface]:
+async def discover_plugins(config: dict[str, Any]) -> list[PluginInterface]:
     """
     Discover plugins from config.
 
@@ -359,7 +359,7 @@ async def discover_plugins(config: Dict[str, Any]) -> List[PluginInterface]:
 
 
 async def auto_discover_and_register(
-    config: Dict[str, Any], auto_enable: bool = True
+    config: dict[str, Any], auto_enable: bool = True
 ) -> int:
     """
     Auto-discover and register plugins.

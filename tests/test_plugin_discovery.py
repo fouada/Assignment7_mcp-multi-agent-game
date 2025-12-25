@@ -9,21 +9,21 @@ Tests the plugin discovery mechanisms:
 - Auto-discovery and registration
 """
 
-import pytest
-from pathlib import Path
-import tempfile
 import shutil
+import tempfile
+from pathlib import Path
 
+import pytest
+
+from src.common.logger import get_logger
 from src.common.plugins import (
-    PluginInterface,
-    PluginMetadata,
     PluginContext,
     PluginDiscovery,
-    get_plugin_registry,
-    discover_plugins,
+    PluginInterface,
     auto_discover_and_register,
+    discover_plugins,
+    get_plugin_registry,
 )
-from src.common.logger import get_logger
 
 logger = get_logger(__name__)
 

@@ -11,20 +11,21 @@ Tests the strategy plugin system and backward compatibility:
 """
 
 import pytest
+
+from src.agents.player import GameRole
 from src.agents.strategies import (
     Strategy,
     StrategyConfig,
     StrategyFactory,
     StrategyType,
     create_strategy,
-    strategy_plugin,
-    get_strategy_plugin_registry,
-    register_strategy_plugin,
-    list_strategy_plugins,
-    get_strategy_plugin,
     create_strategy_plugin,
+    get_strategy_plugin,
+    get_strategy_plugin_registry,
+    list_strategy_plugins,
+    register_strategy_plugin,
+    strategy_plugin,
 )
-from src.agents.player import GameRole
 from src.common.logger import get_logger
 
 logger = get_logger(__name__)

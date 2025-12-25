@@ -5,13 +5,14 @@ Tests the MetricsCollector, metric types (Counter, Gauge, Histogram, Summary),
 Prometheus export format, and Timer context manager.
 """
 
-import pytest
 import time
-from typing import Dict
+
+import pytest
+
 from src.observability.metrics import (
     MetricsCollector,
-    get_metrics_collector,
     Timer,
+    get_metrics_collector,
 )
 
 

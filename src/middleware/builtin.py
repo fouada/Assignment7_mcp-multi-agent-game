@@ -21,21 +21,18 @@ Usage:
     pipeline.add_middleware(AuthMiddleware(required=True), priority=90)
 """
 
-import time
 import hashlib
 import json
-from collections import defaultdict, OrderedDict
-from typing import Any, Dict, List, Optional, Set
-from datetime import datetime, timedelta
+import time
+from collections import OrderedDict, defaultdict
+from typing import Any
 
+from ..common.logger import get_logger
 from .base import (
     Middleware,
     RequestContext,
     ResponseContext,
-    MiddlewareError,
-    MiddlewareValidationError,
 )
-from ..common.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -108,7 +105,7 @@ class LoggingMiddleware(Middleware):
         self,
         context: RequestContext,
         error: Exception,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Log errors."""
         if self.log_errors:
             logger.error(
@@ -147,7 +144,7 @@ class AuthenticationMiddleware(Middleware):
         self.required = required
         self.token_field = token_field
         self.cache_tokens = cache_tokens
-        self._token_cache: Set[str] = set()  # Simple cache
+        self._token_cache: set[str] = set()  # Simple cache
 
     async def before(self, context: RequestContext) -> RequestContext:
         """Validate authentication token."""
@@ -228,7 +225,7 @@ class RateLimitMiddleware(Middleware):
         self.burst_size = burst_size
 
         # Token buckets: client_id -> (tokens, last_update)
-        self._buckets: Dict[str, tuple] = {}
+        self._buckets: dict[str, tuple] = {}
 
     async def before(self, context: RequestContext) -> RequestContext:
         """Check rate limit."""
@@ -351,12 +348,12 @@ class MetricsMiddleware(Middleware):
         self,
         context: RequestContext,
         error: Exception,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Record error metrics."""
         self.metrics["total_errors"] += 1
         return None
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get collected metrics."""
         times = self.metrics["request_times"]
 
@@ -395,7 +392,7 @@ class ValidationMiddleware(Middleware):
 
     def __init__(
         self,
-        schemas: Optional[Dict[str, Dict]] = None,
+        schemas: dict[str, dict] | None = None,
         strict: bool = False,
         **kwargs,
     ):
@@ -425,9 +422,9 @@ class ValidationMiddleware(Middleware):
 
     def _validate_request(
         self,
-        request: Dict[str, Any],
-        schema: Dict[str, Any],
-    ) -> List[str]:
+        request: dict[str, Any],
+        schema: dict[str, Any],
+    ) -> list[str]:
         """
         Validate request against schema.
 
@@ -537,7 +534,7 @@ class CachingMiddleware(Middleware):
 
         return context
 
-    def _get_cache_key(self, request: Dict[str, Any]) -> str:
+    def _get_cache_key(self, request: dict[str, Any]) -> str:
         """Generate cache key from request."""
         # Create deterministic key from request
         key_data = {
@@ -547,7 +544,7 @@ class CachingMiddleware(Middleware):
         key_str = json.dumps(key_data, sort_keys=True)
         return hashlib.md5(key_str.encode()).hexdigest()
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         total = self._hits + self._misses
         return {
@@ -589,7 +586,7 @@ class ErrorHandlerMiddleware(Middleware):
         self,
         context: RequestContext,
         error: Exception,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Convert exception to error response."""
         error_response = {
             "success": False,

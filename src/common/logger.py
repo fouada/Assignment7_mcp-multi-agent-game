@@ -6,27 +6,23 @@ Production-grade logging with structured output, context tracking,
 and performance metrics.
 """
 
+import json
 import logging
 import sys
-import json
-from datetime import datetime
-from typing import Optional, Dict, Any
-from pathlib import Path
-import asyncio
-from functools import wraps
 import time
 import traceback
+from datetime import datetime
+from functools import wraps
+from importlib.util import find_spec
+from pathlib import Path
+from typing import Any
 
-try:
-    import structlog
-    HAS_STRUCTLOG = True
-except ImportError:
-    HAS_STRUCTLOG = False
+HAS_STRUCTLOG = find_spec("structlog") is not None
 
 
 class JSONFormatter(logging.Formatter):
     """JSON formatter for structured logging."""
-    
+
     def format(self, record: logging.LogRecord) -> str:
         log_data = {
             "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -37,11 +33,11 @@ class JSONFormatter(logging.Formatter):
             "function": record.funcName,
             "line": record.lineno,
         }
-        
+
         # Add extra fields
         if hasattr(record, "extra_data"):
             log_data.update(record.extra_data)
-        
+
         # Add exception info if present
         if record.exc_info:
             log_data["exception"] = {
@@ -49,13 +45,13 @@ class JSONFormatter(logging.Formatter):
                 "message": str(record.exc_info[1]) if record.exc_info[1] else None,
                 "traceback": traceback.format_exception(*record.exc_info) if record.exc_info[0] else None,
             }
-        
+
         return json.dumps(log_data)
 
 
 class ColorFormatter(logging.Formatter):
     """Colored console formatter."""
-    
+
     COLORS = {
         "DEBUG": "\033[36m",    # Cyan
         "INFO": "\033[32m",     # Green
@@ -65,13 +61,13 @@ class ColorFormatter(logging.Formatter):
     }
     RESET = "\033[0m"
     BOLD = "\033[1m"
-    
+
     def format(self, record: logging.LogRecord) -> str:
         color = self.COLORS.get(record.levelname, self.RESET)
-        
+
         # Format timestamp
         timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-        
+
         # Build message
         parts = [
             f"{color}{self.BOLD}[{timestamp}]{self.RESET}",
@@ -79,73 +75,73 @@ class ColorFormatter(logging.Formatter):
             f"[{record.name}]",
             record.getMessage(),
         ]
-        
+
         # Add extra context if present
         if hasattr(record, "extra_data") and record.extra_data:
             extra_str = " | ".join(f"{k}={v}" for k, v in record.extra_data.items())
             parts.append(f"\033[90m({extra_str})\033[0m")
-        
+
         message = " ".join(parts)
-        
+
         # Add exception if present
         if record.exc_info:
             message += f"\n{color}{self.format_exception(record.exc_info)}{self.RESET}"
-        
+
         return message
 
 
 class GameLogger(logging.Logger):
     """Enhanced logger with context tracking."""
-    
+
     def __init__(self, name: str, level: int = logging.NOTSET):
         super().__init__(name, level)
-        self._context: Dict[str, Any] = {}
-    
+        self._context: dict[str, Any] = {}
+
     def bind(self, **kwargs) -> "GameLogger":
         """Bind context data to logger."""
         self._context.update(kwargs)
         return self
-    
+
     def unbind(self, *keys) -> "GameLogger":
         """Remove context keys."""
         for key in keys:
             self._context.pop(key, None)
         return self
-    
+
     def _log_with_context(
-        self, 
-        level: int, 
-        msg: str, 
-        args, 
-        exc_info=None, 
-        extra=None, 
+        self,
+        level: int,
+        msg: str,
+        args,
+        exc_info=None,
+        extra=None,
         **kwargs
     ):
         """Log with context data."""
         if extra is None:
             extra = {}
-        
+
         # Merge context with extra data
         extra_data = {**self._context, **kwargs}
         extra["extra_data"] = extra_data
-        
+
         super()._log(level, msg, args, exc_info=exc_info, extra=extra)
-    
+
     def debug(self, msg: str, *args, **kwargs):
         self._log_with_context(logging.DEBUG, msg, args, **kwargs)
-    
+
     def info(self, msg: str, *args, **kwargs):
         self._log_with_context(logging.INFO, msg, args, **kwargs)
-    
+
     def warning(self, msg: str, *args, **kwargs):
         self._log_with_context(logging.WARNING, msg, args, **kwargs)
-    
+
     def error(self, msg: str, *args, exc_info=False, **kwargs):
         self._log_with_context(logging.ERROR, msg, args, exc_info=exc_info, **kwargs)
-    
+
     def critical(self, msg: str, *args, exc_info=True, **kwargs):
         self._log_with_context(logging.CRITICAL, msg, args, exc_info=exc_info, **kwargs)
-    
+
     def exception(self, msg: str, *args, **kwargs):
         kwargs["exc_info"] = True
         self.error(msg, *args, **kwargs)
@@ -155,41 +151,41 @@ class GameLogger(logging.Logger):
 logging.setLoggerClass(GameLogger)
 
 # Logger cache
-_loggers: Dict[str, GameLogger] = {}
+_loggers: dict[str, GameLogger] = {}
 
 
 def setup_logging(
     level: str = "INFO",
     json_output: bool = False,
-    log_file: Optional[str] = None,
+    log_file: str | None = None,
 ) -> None:
     """Setup logging configuration."""
-    
+
     log_level = getattr(logging, level.upper(), logging.INFO)
-    
+
     # Root logger
     root = logging.getLogger()
     root.setLevel(log_level)
-    
+
     # Remove existing handlers
     root.handlers.clear()
-    
+
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(log_level)
-    
+
     if json_output:
         console_handler.setFormatter(JSONFormatter())
     else:
         console_handler.setFormatter(ColorFormatter())
-    
+
     root.addHandler(console_handler)
-    
+
     # File handler (always JSON)
     if log_file:
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         file_handler = logging.FileHandler(log_file)
         file_handler.setLevel(log_level)
         file_handler.setFormatter(JSONFormatter())
@@ -205,13 +201,13 @@ def get_logger(name: str = "mcp_game") -> GameLogger:
 
 # Decorators for logging
 
-def log_call(logger: Optional[GameLogger] = None):
+def log_call(logger: GameLogger | None = None):
     """Decorator to log function calls."""
     def decorator(func):
         nonlocal logger
         if logger is None:
             logger = get_logger(func.__module__)
-        
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             logger.debug(f"Calling {func.__name__}", args_count=len(args), kwargs_keys=list(kwargs.keys()))
@@ -225,18 +221,18 @@ def log_call(logger: Optional[GameLogger] = None):
                 duration = time.time() - start
                 logger.error(f"Error in {func.__name__}: {e}", duration_ms=round(duration * 1000, 2), exc_info=True)
                 raise
-        
+
         return wrapper
     return decorator
 
 
-def log_async_call(logger: Optional[GameLogger] = None):
+def log_async_call(logger: GameLogger | None = None):
     """Decorator to log async function calls."""
     def decorator(func):
         nonlocal logger
         if logger is None:
             logger = get_logger(func.__module__)
-        
+
         @wraps(func)
         async def wrapper(*args, **kwargs):
             logger.debug(f"Calling async {func.__name__}", args_count=len(args))
@@ -250,29 +246,29 @@ def log_async_call(logger: Optional[GameLogger] = None):
                 duration = time.time() - start
                 logger.error(f"Error in {func.__name__}: {e}", duration_ms=round(duration * 1000, 2), exc_info=True)
                 raise
-        
+
         return wrapper
     return decorator
 
 
 class PerformanceTracker:
     """Context manager for tracking operation performance."""
-    
-    def __init__(self, operation: str, logger: Optional[GameLogger] = None):
+
+    def __init__(self, operation: str, logger: GameLogger | None = None):
         self.operation = operation
         self.logger = logger or get_logger()
-        self.start_time: Optional[float] = None
-        self.end_time: Optional[float] = None
-    
+        self.start_time: float | None = None
+        self.end_time: float | None = None
+
     def __enter__(self):
         self.start_time = time.time()
         self.logger.debug(f"Starting {self.operation}")
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.end_time = time.time()
         duration = (self.end_time - self.start_time) * 1000
-        
+
         if exc_type:
             self.logger.error(
                 f"Failed {self.operation}",
@@ -284,17 +280,17 @@ class PerformanceTracker:
                 f"Completed {self.operation}",
                 duration_ms=round(duration, 2)
             )
-        
+
         return False  # Don't suppress exceptions
-    
+
     async def __aenter__(self):
         return self.__enter__()
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         return self.__exit__(exc_type, exc_val, exc_tb)
-    
+
     @property
-    def duration_ms(self) -> Optional[float]:
+    def duration_ms(self) -> float | None:
         if self.start_time and self.end_time:
             return (self.end_time - self.start_time) * 1000
         return None
@@ -307,42 +303,42 @@ class PerformanceTracker:
 class JSONLWriter:
     """
     JSONL file writer for structured event logging.
-    
+
     Writes one JSON object per line to .log.jsonl files.
     Used for audit logs, event history, and debugging.
-    
+
     File structure per document:
     - logs/league/<league_id>/*.log.jsonl - League events
     - logs/agents/*.log.jsonl - Agent events
     - logs/system/*.log.jsonl - System events
     """
-    
+
     def __init__(self, base_path: str = "logs"):
         self.base_path = Path(base_path)
         self._ensure_directories()
-    
+
     def _ensure_directories(self) -> None:
         """Create log directory structure."""
         (self.base_path / "league").mkdir(parents=True, exist_ok=True)
         (self.base_path / "agents").mkdir(parents=True, exist_ok=True)
         (self.base_path / "system").mkdir(parents=True, exist_ok=True)
-    
-    def _write_entry(self, path: Path, entry: Dict[str, Any]) -> None:
+
+    def _write_entry(self, path: Path, entry: dict[str, Any]) -> None:
         """Write a single JSONL entry."""
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, 'a', encoding='utf-8') as f:
             f.write(json.dumps(entry, default=str, ensure_ascii=False) + '\n')
-    
+
     def log_league_event(
         self,
         league_id: str,
         event_type: str,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         log_file: str = "events",
     ) -> None:
         """
         Log a league event.
-        
+
         File: logs/league/<league_id>/<log_file>.log.jsonl
         """
         entry = {
@@ -353,17 +349,17 @@ class JSONLWriter:
         }
         path = self.base_path / "league" / league_id / f"{log_file}.log.jsonl"
         self._write_entry(path, entry)
-    
+
     def log_agent_event(
         self,
         agent_id: str,
         agent_type: str,
         event_type: str,
-        data: Dict[str, Any],
+        data: dict[str, Any],
     ) -> None:
         """
         Log an agent event.
-        
+
         File: logs/agents/<agent_id>.log.jsonl
         """
         entry = {
@@ -375,16 +371,16 @@ class JSONLWriter:
         }
         path = self.base_path / "agents" / f"{agent_id}.log.jsonl"
         self._write_entry(path, entry)
-    
+
     def log_system_event(
         self,
         event_type: str,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         log_file: str = "system",
     ) -> None:
         """
         Log a system event.
-        
+
         File: logs/system/<log_file>.log.jsonl
         """
         entry = {
@@ -394,17 +390,17 @@ class JSONLWriter:
         }
         path = self.base_path / "system" / f"{log_file}.log.jsonl"
         self._write_entry(path, entry)
-    
+
     def log_match_event(
         self,
         league_id: str,
         match_id: str,
         event_type: str,
-        data: Dict[str, Any],
+        data: dict[str, Any],
     ) -> None:
         """
         Log a match event.
-        
+
         File: logs/league/<league_id>/matches/<match_id>.log.jsonl
         """
         entry = {
@@ -415,19 +411,19 @@ class JSONLWriter:
         }
         path = self.base_path / "league" / league_id / "matches" / f"{match_id}.log.jsonl"
         self._write_entry(path, entry)
-    
+
     def read_events(
         self,
         path: Path,
-        limit: Optional[int] = None,
-        event_type: Optional[str] = None,
-    ) -> list[Dict[str, Any]]:
+        limit: int | None = None,
+        event_type: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Read events from a JSONL file."""
         if not path.exists():
             return []
-        
+
         events = []
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, encoding='utf-8') as f:
             for line in f:
                 if line.strip():
                     entry = json.loads(line)
@@ -441,14 +437,14 @@ class JSONLWriter:
 class LeagueEventLogger:
     """
     High-level logger for league events.
-    
+
     Provides structured methods for logging common league events.
     """
-    
+
     def __init__(self, league_id: str, base_path: str = "logs"):
         self.league_id = league_id
         self.writer = JSONLWriter(base_path)
-    
+
     def player_registered(
         self,
         player_id: str,
@@ -465,7 +461,7 @@ class LeagueEventLogger:
                 "endpoint": endpoint,
             },
         )
-    
+
     def referee_registered(
         self,
         referee_id: str,
@@ -480,7 +476,7 @@ class LeagueEventLogger:
                 "endpoint": endpoint,
             },
         )
-    
+
     def round_started(
         self,
         round_id: int,
@@ -495,11 +491,11 @@ class LeagueEventLogger:
                 "match_count": match_count,
             },
         )
-    
+
     def round_completed(
         self,
         round_id: int,
-        results: list[Dict[str, Any]],
+        results: list[dict[str, Any]],
     ) -> None:
         """Log round completion event."""
         self.writer.log_league_event(
@@ -510,7 +506,7 @@ class LeagueEventLogger:
                 "results": results,
             },
         )
-    
+
     def match_started(
         self,
         match_id: str,
@@ -529,11 +525,11 @@ class LeagueEventLogger:
                 "referee_id": referee_id,
             },
         )
-    
+
     def match_completed(
         self,
         match_id: str,
-        winner_id: Optional[str],
+        winner_id: str | None,
         player_A_score: int,
         player_B_score: int,
     ) -> None:
@@ -548,7 +544,7 @@ class LeagueEventLogger:
                 "player_B_score": player_B_score,
             },
         )
-    
+
     def move_submitted(
         self,
         match_id: str,
@@ -567,7 +563,7 @@ class LeagueEventLogger:
                 "move_value": move_value,
             },
         )
-    
+
     def round_result(
         self,
         match_id: str,
@@ -575,7 +571,7 @@ class LeagueEventLogger:
         player_A_move: int,
         player_B_move: int,
         sum_value: int,
-        winner_id: Optional[str],
+        winner_id: str | None,
     ) -> None:
         """Log round result event."""
         self.writer.log_match_event(
@@ -591,11 +587,11 @@ class LeagueEventLogger:
                 "winner_id": winner_id,
             },
         )
-    
+
     def standings_updated(
         self,
         round_id: int,
-        standings: list[Dict[str, Any]],
+        standings: list[dict[str, Any]],
     ) -> None:
         """Log standings update event."""
         self.writer.log_league_event(
@@ -606,12 +602,12 @@ class LeagueEventLogger:
                 "standings": standings,
             },
         )
-    
+
     def error_occurred(
         self,
         error_code: str,
         error_message: str,
-        context: Optional[Dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ) -> None:
         """Log error event."""
         self.writer.log_league_event(
@@ -629,15 +625,15 @@ class LeagueEventLogger:
 class AgentEventLogger:
     """
     High-level logger for agent events.
-    
+
     Each agent logs its own events to its own file.
     """
-    
+
     def __init__(self, agent_id: str, agent_type: str, base_path: str = "logs"):
         self.agent_id = agent_id
         self.agent_type = agent_type
         self.writer = JSONLWriter(base_path)
-    
+
     def started(self) -> None:
         """Log agent start event."""
         self.writer.log_agent_event(
@@ -646,7 +642,7 @@ class AgentEventLogger:
             "AGENT_STARTED",
             {},
         )
-    
+
     def stopped(self) -> None:
         """Log agent stop event."""
         self.writer.log_agent_event(
@@ -655,7 +651,7 @@ class AgentEventLogger:
             "AGENT_STOPPED",
             {},
         )
-    
+
     def registered(self, league_id: str) -> None:
         """Log registration event."""
         self.writer.log_agent_event(
@@ -664,7 +660,7 @@ class AgentEventLogger:
             "REGISTERED",
             {"league_id": league_id},
         )
-    
+
     def message_sent(self, message_type: str, recipient: str) -> None:
         """Log outgoing message."""
         self.writer.log_agent_event(
@@ -673,7 +669,7 @@ class AgentEventLogger:
             "MESSAGE_SENT",
             {"message_type": message_type, "recipient": recipient},
         )
-    
+
     def message_received(self, message_type: str, sender: str) -> None:
         """Log incoming message."""
         self.writer.log_agent_event(
@@ -682,7 +678,7 @@ class AgentEventLogger:
             "MESSAGE_RECEIVED",
             {"message_type": message_type, "sender": sender},
         )
-    
+
     def error(self, error_code: str, error_message: str) -> None:
         """Log error event."""
         self.writer.log_agent_event(
@@ -694,7 +690,7 @@ class AgentEventLogger:
 
 
 # Global JSONL writer instance
-_jsonl_writer: Optional[JSONLWriter] = None
+_jsonl_writer: JSONLWriter | None = None
 
 
 def get_jsonl_writer(base_path: str = "logs") -> JSONLWriter:

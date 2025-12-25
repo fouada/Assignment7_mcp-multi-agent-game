@@ -28,11 +28,10 @@ Usage:
     metrics_text = metrics.export_prometheus()
 """
 
-import time
-from typing import Any, Dict, List, Optional
-from collections import defaultdict
-from dataclasses import dataclass, field
 import threading
+import time
+from dataclasses import dataclass, field
+from typing import Any
 
 from ..common.logger import get_logger
 
@@ -58,7 +57,7 @@ class Counter:
     name: str
     description: str = ""
     value: float = 0.0
-    labels: Dict[str, str] = field(default_factory=dict)
+    labels: dict[str, str] = field(default_factory=dict)
 
     def increment(self, amount: float = 1.0) -> None:
         """Increment counter by amount."""
@@ -83,7 +82,7 @@ class Gauge:
     name: str
     description: str = ""
     value: float = 0.0
-    labels: Dict[str, str] = field(default_factory=dict)
+    labels: dict[str, str] = field(default_factory=dict)
 
     def set(self, value: float) -> None:
         """Set gauge to value."""
@@ -111,13 +110,13 @@ class Histogram:
 
     name: str
     description: str = ""
-    buckets: List[float] = field(
+    buckets: list[float] = field(
         default_factory=lambda: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
     )
-    bucket_counts: Dict[float, int] = field(default_factory=dict)
+    bucket_counts: dict[float, int] = field(default_factory=dict)
     sum: float = 0.0
     count: int = 0
-    labels: Dict[str, str] = field(default_factory=dict)
+    labels: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
         """Initialize bucket counts."""
@@ -150,11 +149,11 @@ class Summary:
 
     name: str
     description: str = ""
-    values: List[float] = field(default_factory=list)
+    values: list[float] = field(default_factory=list)
     max_size: int = 1000  # Keep last 1000 observations
     sum: float = 0.0
     count: int = 0
-    labels: Dict[str, str] = field(default_factory=dict)
+    labels: dict[str, str] = field(default_factory=dict)
 
     def observe(self, value: float) -> None:
         """Observe a value."""
@@ -164,7 +163,7 @@ class Summary:
 
         # Limit size
         if len(self.values) > self.max_size:
-            old_value = self.values.pop(0)
+            self.values.pop(0)
             # Don't update sum/count for summary (keep cumulative)
 
     def get_quantile(self, quantile: float) -> float:
@@ -205,10 +204,10 @@ class MetricsCollector:
         if self._initialized:
             return
 
-        self._counters: Dict[str, Counter] = {}
-        self._gauges: Dict[str, Gauge] = {}
-        self._histograms: Dict[str, Histogram] = {}
-        self._summaries: Dict[str, Summary] = {}
+        self._counters: dict[str, Counter] = {}
+        self._gauges: dict[str, Gauge] = {}
+        self._histograms: dict[str, Histogram] = {}
+        self._summaries: dict[str, Summary] = {}
 
         # Thread safety
         self._metric_lock = threading.Lock()
@@ -296,7 +295,7 @@ class MetricsCollector:
         self,
         name: str,
         description: str = "",
-        labels: Optional[Dict[str, str]] = None,
+        labels: dict[str, str] | None = None,
     ) -> Counter:
         """Register a new counter metric."""
         with self._metric_lock:
@@ -313,7 +312,7 @@ class MetricsCollector:
         self,
         name: str,
         amount: float = 1.0,
-        labels: Optional[Dict[str, str]] = None,
+        labels: dict[str, str] | None = None,
     ) -> None:
         """Increment a counter."""
         counter = self.register_counter(name, labels=labels)
@@ -322,8 +321,8 @@ class MetricsCollector:
     def get_counter(
         self,
         name: str,
-        labels: Optional[Dict[str, str]] = None,
-    ) -> Optional[Counter]:
+        labels: dict[str, str] | None = None,
+    ) -> Counter | None:
         """Get a counter by name and labels."""
         key = self._make_key(name, labels)
         return self._counters.get(key)
@@ -336,7 +335,7 @@ class MetricsCollector:
         self,
         name: str,
         description: str = "",
-        labels: Optional[Dict[str, str]] = None,
+        labels: dict[str, str] | None = None,
     ) -> Gauge:
         """Register a new gauge metric."""
         with self._metric_lock:
@@ -353,7 +352,7 @@ class MetricsCollector:
         self,
         name: str,
         value: float,
-        labels: Optional[Dict[str, str]] = None,
+        labels: dict[str, str] | None = None,
     ) -> None:
         """Set a gauge value."""
         gauge = self.register_gauge(name, labels=labels)
@@ -363,7 +362,7 @@ class MetricsCollector:
         self,
         name: str,
         amount: float = 1.0,
-        labels: Optional[Dict[str, str]] = None,
+        labels: dict[str, str] | None = None,
     ) -> None:
         """Increment a gauge."""
         gauge = self.register_gauge(name, labels=labels)
@@ -373,7 +372,7 @@ class MetricsCollector:
         self,
         name: str,
         amount: float = 1.0,
-        labels: Optional[Dict[str, str]] = None,
+        labels: dict[str, str] | None = None,
     ) -> None:
         """Decrement a gauge."""
         gauge = self.register_gauge(name, labels=labels)
@@ -387,8 +386,8 @@ class MetricsCollector:
         self,
         name: str,
         description: str = "",
-        buckets: Optional[List[float]] = None,
-        labels: Optional[Dict[str, str]] = None,
+        buckets: list[float] | None = None,
+        labels: dict[str, str] | None = None,
     ) -> Histogram:
         """Register a new histogram metric."""
         with self._metric_lock:
@@ -406,7 +405,7 @@ class MetricsCollector:
         self,
         name: str,
         value: float,
-        labels: Optional[Dict[str, str]] = None,
+        labels: dict[str, str] | None = None,
     ) -> None:
         """Observe a value in histogram."""
         histogram = self.register_histogram(name, labels=labels)
@@ -421,7 +420,7 @@ class MetricsCollector:
         name: str,
         description: str = "",
         max_size: int = 1000,
-        labels: Optional[Dict[str, str]] = None,
+        labels: dict[str, str] | None = None,
     ) -> Summary:
         """Register a new summary metric."""
         with self._metric_lock:
@@ -439,7 +438,7 @@ class MetricsCollector:
         self,
         name: str,
         value: float,
-        labels: Optional[Dict[str, str]] = None,
+        labels: dict[str, str] | None = None,
     ) -> None:
         """Observe a value in summary."""
         summary = self.register_summary(name, labels=labels)
@@ -449,7 +448,7 @@ class MetricsCollector:
     # Utility Methods
     # ========================================================================
 
-    def _make_key(self, name: str, labels: Optional[Dict[str, str]]) -> str:
+    def _make_key(self, name: str, labels: dict[str, str] | None) -> str:
         """Make a unique key from name and labels."""
         if not labels:
             return name
@@ -467,7 +466,7 @@ class MetricsCollector:
             self._summaries.clear()
             self._register_builtin_metrics()
 
-    def get_all_metrics(self) -> Dict[str, Any]:
+    def get_all_metrics(self) -> dict[str, Any]:
         """Get all metrics as dictionary."""
         return {
             "counters": {k: v.value for k, v in self._counters.items()},
@@ -510,7 +509,7 @@ class MetricsCollector:
         lines = []
 
         # Export counters
-        for key, counter in self._counters.items():
+        for _key, counter in self._counters.items():
             if counter.description:
                 lines.append(f"# HELP {counter.name} {counter.description}")
             lines.append(f"# TYPE {counter.name} counter")
@@ -519,7 +518,7 @@ class MetricsCollector:
             lines.append(f"{counter.name}{label_str} {counter.value}")
 
         # Export gauges
-        for key, gauge in self._gauges.items():
+        for _key, gauge in self._gauges.items():
             if gauge.description:
                 lines.append(f"# HELP {gauge.name} {gauge.description}")
             lines.append(f"# TYPE {gauge.name} gauge")
@@ -528,7 +527,7 @@ class MetricsCollector:
             lines.append(f"{gauge.name}{label_str} {gauge.value}")
 
         # Export histograms
-        for key, histogram in self._histograms.items():
+        for _key, histogram in self._histograms.items():
             if histogram.description:
                 lines.append(f"# HELP {histogram.name} {histogram.description}")
             lines.append(f"# TYPE {histogram.name} histogram")
@@ -550,7 +549,7 @@ class MetricsCollector:
             lines.append(f"{histogram.name}_count{label_str} {histogram.count}")
 
         # Export summaries
-        for key, summary in self._summaries.items():
+        for _key, summary in self._summaries.items():
             if summary.description:
                 lines.append(f"# HELP {summary.name} {summary.description}")
             lines.append(f"# TYPE {summary.name} summary")
@@ -573,7 +572,7 @@ class MetricsCollector:
 
         return "\n".join(lines) + "\n"
 
-    def _format_labels(self, labels: Dict[str, str], include_braces: bool = True) -> str:
+    def _format_labels(self, labels: dict[str, str], include_braces: bool = True) -> str:
         """Format labels for Prometheus."""
         if not labels:
             return ""
@@ -610,7 +609,7 @@ class Timer:
             pass
     """
 
-    def __init__(self, metric_name: str, labels: Optional[Dict[str, str]] = None):
+    def __init__(self, metric_name: str, labels: dict[str, str] | None = None):
         self.metric_name = metric_name
         self.labels = labels
         self.start_time = None

@@ -36,11 +36,11 @@ Usage:
 import functools
 import inspect
 import time
-from typing import Any, Callable, Optional, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from ..logger import get_logger
 from .bus import get_event_bus
-from .types import BaseEvent
 
 logger = get_logger(__name__)
 
@@ -51,7 +51,7 @@ def on_event(
     pattern: str,
     priority: int = 0,
     description: str = "",
-    tags: Optional[list] = None,
+    tags: list | None = None,
 ) -> Callable[[F], F]:
     """
     Decorator to register a function as an event handler.
@@ -103,7 +103,7 @@ def on_event(
 def before(
     event_type: str,
     include_self: bool = True,
-    extract_args: Optional[list] = None,
+    extract_args: list | None = None,
 ) -> Callable[[F], F]:
     """
     Decorator to emit an event before function execution.
@@ -206,7 +206,7 @@ def after(
     event_type: str,
     include_result: bool = True,
     include_args: bool = False,
-    extract_args: Optional[list] = None,
+    extract_args: list | None = None,
     include_timing: bool = False,
 ) -> Callable[[F], F]:
     """

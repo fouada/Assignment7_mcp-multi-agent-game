@@ -24,15 +24,12 @@ Traditional game systems lack observability into agent decision-making.
 Like mission control for NASA, but for multi-agent AI research.
 """
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
-from typing import Dict, List, Optional, Set
-import json
 import asyncio
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from dataclasses import dataclass, asdict
-import numpy as np
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse
 
 from ..common.logger import get_logger
 
@@ -51,10 +48,10 @@ class GameEvent:
     timestamp: str
     event_type: str  # "round_start", "move", "round_end", "game_end"
     round: int
-    players: List[str]
-    moves: Dict[str, str]
-    scores: Dict[str, float]
-    metadata: Dict
+    players: list[str]
+    moves: dict[str, str]
+    scores: dict[str, float]
+    metadata: dict
 
 
 @dataclass
@@ -62,10 +59,10 @@ class StrategyPerformance:
     """Strategy performance metrics over time."""
 
     strategy_name: str
-    rounds: List[int]
-    win_rates: List[float]
-    avg_scores: List[float]
-    opponent_types: Dict[str, int]  # Opponent strategy -> count
+    rounds: list[int]
+    win_rates: list[float]
+    avg_scores: list[float]
+    opponent_types: dict[str, int]  # Opponent strategy -> count
 
 
 @dataclass
@@ -76,7 +73,7 @@ class OpponentModelVisualization:
     round: int
     predicted_strategy: str
     confidence: float
-    move_distribution: Dict[str, float]
+    move_distribution: dict[str, float]
     determinism: float
     reactivity: float
     adaptability: float
@@ -89,8 +86,8 @@ class CounterfactualVisualization:
     round: int
     actual_move: str
     actual_reward: float
-    counterfactuals: List[Dict]  # {move, reward, regret}
-    cumulative_regret: Dict[str, float]
+    counterfactuals: list[dict]  # {move, reward, regret}
+    cumulative_regret: dict[str, float]
 
 
 @dataclass
@@ -99,12 +96,12 @@ class TournamentState:
 
     tournament_id: str
     game_type: str
-    players: List[str]
+    players: list[str]
     current_round: int
     total_rounds: int
-    standings: List[Dict]  # {player, score, wins, losses}
-    recent_matches: List[Dict]
-    active_matches: List[Dict]
+    standings: list[dict]  # {player, score, wins, losses}
+    recent_matches: list[dict]
+    active_matches: list[dict]
 
 
 # ============================================================================
@@ -124,10 +121,10 @@ class ConnectionManager:
     """
 
     def __init__(self):
-        self.active_connections: Set[WebSocket] = set()
-        self.connection_metadata: Dict[WebSocket, Dict] = {}
+        self.active_connections: set[WebSocket] = set()
+        self.connection_metadata: dict[WebSocket, dict] = {}
 
-    async def connect(self, websocket: WebSocket, client_info: Dict = None):
+    async def connect(self, websocket: WebSocket, client_info: dict = None):
         """Accept new WebSocket connection."""
         await websocket.accept()
         self.active_connections.add(websocket)
@@ -188,14 +185,14 @@ class DashboardAPI:
         self.connection_manager = ConnectionManager()
 
         # Data storage
-        self.tournament_states: Dict[str, TournamentState] = {}
-        self.game_events: Dict[str, List[GameEvent]] = {}
-        self.strategy_performance: Dict[str, StrategyPerformance] = {}
-        self.opponent_models: Dict[str, Dict[str, OpponentModelVisualization]] = {}
-        self.counterfactuals: Dict[str, Dict[int, CounterfactualVisualization]] = {}
+        self.tournament_states: dict[str, TournamentState] = {}
+        self.game_events: dict[str, list[GameEvent]] = {}
+        self.strategy_performance: dict[str, StrategyPerformance] = {}
+        self.opponent_models: dict[str, dict[str, OpponentModelVisualization]] = {}
+        self.counterfactuals: dict[str, dict[int, CounterfactualVisualization]] = {}
 
         # Server state
-        self._server_task: Optional[asyncio.Task] = None
+        self._server_task: asyncio.Task | None = None
         self._server = None
 
         # Setup routes
@@ -216,7 +213,7 @@ class DashboardAPI:
             try:
                 while True:
                     # Keep connection alive
-                    data = await websocket.receive_text()
+                    await websocket.receive_text()
                     # Echo back for ping/pong
                     await self.connection_manager.send_personal_message(
                         {"type": "pong", "timestamp": datetime.now().isoformat()},
@@ -350,7 +347,7 @@ class DashboardAPI:
         }
         await self.connection_manager.broadcast(message)
 
-    async def broadcast_match_update(self, match_data: Dict):
+    async def broadcast_match_update(self, match_data: dict):
         """Broadcast live match state to all connected clients."""
         message = {
             "type": "match_update",
@@ -359,7 +356,7 @@ class DashboardAPI:
         await self.connection_manager.broadcast(message)
         logger.debug(f"Broadcasted match update: {match_data.get('match_id', 'unknown')}")
 
-    async def broadcast_tournament_complete(self, winner_data: Dict):
+    async def broadcast_tournament_complete(self, winner_data: dict):
         """Broadcast tournament completion with winner data."""
         message = {
             "type": "tournament_complete",
@@ -431,7 +428,7 @@ class DashboardAPI:
             if self._server_task:
                 try:
                     await asyncio.wait_for(self._server_task, timeout=5.0)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.warning("Dashboard server shutdown timed out")
                     self._server_task.cancel()
             logger.info("✓ Dashboard server stopped")
@@ -2531,9 +2528,9 @@ def reset_dashboard():
 async def stream_game_event(
     event_type: str,
     round: int,
-    players: List[str],
-    moves: Dict[str, str],
-    scores: Dict[str, float],
+    players: list[str],
+    moves: dict[str, str],
+    scores: dict[str, float],
     **metadata
 ):
     """Convenience function to stream game event to dashboard."""
