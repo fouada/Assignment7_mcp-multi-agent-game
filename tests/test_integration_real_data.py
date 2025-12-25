@@ -42,9 +42,7 @@ class TestRealDataLeagueIntegration:
         # Act - Register all players with realistic data
         with PerformanceTimer("Player registration"):
             for player_info in player_data:
-                player = MockPlayer(
-                    player_info["player_id"], strategy=player_info["strategy"]
-                )
+                player = MockPlayer(player_info["player_id"], strategy=player_info["strategy"])
                 players[player.player_id] = player
 
                 result = await league.register_player(
@@ -103,9 +101,7 @@ class TestRealDataLeagueIntegration:
                 player2.update_score(match["match_id"], 0 if is_odd else 1)
 
             # Determine overall winner
-            winner_id = (
-                player1.player_id if player1.score > player2.score else player2.player_id
-            )
+            winner_id = player1.player_id if player1.score > player2.score else player2.player_id
             loser_id = player2.player_id if winner_id == player1.player_id else player1.player_id
 
             # Report result
@@ -226,13 +222,13 @@ class TestRealDataLeagueIntegration:
 
             # Simulate quick match
             winner = player1 if hash(match["match_id"]) % 2 == 0 else player2
-            return await referee.report_result(match["match_id"], winner.player_id, player2.player_id)
+            return await referee.report_result(
+                match["match_id"], winner.player_id, player2.player_id
+            )
 
         # Act - Execute all matches concurrently
         start_time = time.perf_counter()
-        tasks = [
-            execute_match(match, idx) for idx, match in enumerate(first_round["matches"])
-        ]
+        tasks = [execute_match(match, idx) for idx, match in enumerate(first_round["matches"])]
         results = await asyncio.gather(*tasks)
         duration = time.perf_counter() - start_time
 
@@ -444,7 +440,9 @@ class TestRealDataPerformance:
         assert len(league.players) == len(realistic_large_players)
         assert len(schedule) > 0
 
-        print(f"\n  Registration: {registration_time:.2f}s for {len(realistic_large_players)} players")
+        print(
+            f"\n  Registration: {registration_time:.2f}s for {len(realistic_large_players)} players"
+        )
         print(f"  Schedule generation: {schedule_time:.2f}s for {len(schedule)} rounds")
         print(f"  Total matches: {sum(len(r['matches']) for r in schedule)}")
 
@@ -533,4 +531,3 @@ COMPREHENSIVE EDGE CASES TESTED:
    - Actual communication patterns
    - Real-world timing scenarios
 """
-

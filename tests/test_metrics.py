@@ -77,8 +77,8 @@ def test_counter_with_labels(metrics_collector):
     metrics_collector.increment("requests", labels={"status": "error"})
 
     # Check two separate counters exist
-    success_counter = metrics_collector._counters.get('requests{status=success}')
-    error_counter = metrics_collector._counters.get('requests{status=error}')
+    success_counter = metrics_collector._counters.get("requests{status=success}")
+    error_counter = metrics_collector._counters.get("requests{status=error}")
 
     assert success_counter is not None
     assert success_counter.value == 2.0
@@ -151,8 +151,8 @@ def test_gauge_with_labels(metrics_collector):
     metrics_collector.set_gauge("cpu_usage", 45.0, labels={"core": "0"})
     metrics_collector.set_gauge("cpu_usage", 55.0, labels={"core": "1"})
 
-    gauge0 = metrics_collector._gauges.get('cpu_usage{core=0}')
-    gauge1 = metrics_collector._gauges.get('cpu_usage{core=1}')
+    gauge0 = metrics_collector._gauges.get("cpu_usage{core=0}")
+    gauge1 = metrics_collector._gauges.get("cpu_usage{core=1}")
 
     assert gauge0.value == 45.0
     assert gauge1.value == 55.0
@@ -202,8 +202,8 @@ def test_histogram_with_labels(metrics_collector):
     metrics_collector.observe_histogram("api_latency", 0.2, labels={"endpoint": "/users"})
     metrics_collector.observe_histogram("api_latency", 0.3, labels={"endpoint": "/posts"})
 
-    users_histogram = metrics_collector._histograms.get('api_latency{endpoint=/users}')
-    posts_histogram = metrics_collector._histograms.get('api_latency{endpoint=/posts}')
+    users_histogram = metrics_collector._histograms.get("api_latency{endpoint=/users}")
+    posts_histogram = metrics_collector._histograms.get("api_latency{endpoint=/posts}")
 
     assert users_histogram.count == 2
     assert users_histogram.sum == pytest.approx(0.3, rel=1e-6)
@@ -247,8 +247,8 @@ def test_summary_with_labels(metrics_collector):
     metrics_collector.observe_summary("message_size", 1024.0, labels={"type": "request"})
     metrics_collector.observe_summary("message_size", 512.0, labels={"type": "response"})
 
-    request_summary = metrics_collector._summaries.get('message_size{type=request}')
-    response_summary = metrics_collector._summaries.get('message_size{type=response}')
+    request_summary = metrics_collector._summaries.get("message_size{type=request}")
+    response_summary = metrics_collector._summaries.get("message_size{type=response}")
 
     assert request_summary.count == 1
     assert request_summary.sum == 1024.0
@@ -266,7 +266,7 @@ def test_timer_context_manager(metrics_collector):
     with Timer("operation_duration", labels={"op": "test"}):
         time.sleep(0.01)  # Sleep for 10ms
 
-    histogram = metrics_collector._histograms.get('operation_duration{op=test}')
+    histogram = metrics_collector._histograms.get("operation_duration{op=test}")
     assert histogram is not None
     assert histogram.count == 1
     # Duration should be at least 10ms (0.01s)
@@ -319,7 +319,7 @@ def test_prometheus_export_format(metrics_collector):
 
     # Check format
     assert "# TYPE http_requests_total counter" in prometheus_text
-    assert 'http_requests_total{method=GET,status=200} 1' in prometheus_text
+    assert "http_requests_total{method=GET,status=200} 1" in prometheus_text
 
     assert "# TYPE active_connections gauge" in prometheus_text
     assert "active_connections 42" in prometheus_text

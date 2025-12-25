@@ -154,7 +154,9 @@ class TestRealDataLoadTesting:
         assert total_time < 3.0, f"Medium league setup took {total_time}s, should be < 3s"
 
         print(f"\n  Registration throughput: {throughput:.2f} players/second")
-        print(f"  Generated {len(schedule)} rounds with {sum(len(r['matches']) for r in schedule)} matches")
+        print(
+            f"  Generated {len(schedule)} rounds with {sum(len(r['matches']) for r in schedule)} matches"
+        )
 
     @pytest.mark.asyncio
     async def test_large_league_load_real_data(self, realistic_large_players):
@@ -541,4 +543,3 @@ PERFORMANCE METRICS DOCUMENTED:
    - Real load characteristics
    - Practical timing scenarios
 """
-

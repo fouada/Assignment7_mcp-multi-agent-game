@@ -268,4 +268,3 @@ real_data_loader = RealDataLoader()
 def get_real_data_loader() -> RealDataLoader:
     """Get the global real data loader instance."""
     return real_data_loader
-

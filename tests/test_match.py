@@ -572,7 +572,7 @@ class TestMatchEdgeCases:
             player2_move=4,
             sum_value=9,
             sum_is_odd=True,
-            winner_id="P01"
+            winner_id="P01",
         )
         game_result = GameResult(
             game_id="game_001",

@@ -109,7 +109,9 @@ class TestCompleteLeagueFlow:
                 winner_id = (
                     player1.player_id if player1.score > player2.score else player2.player_id
                 )
-                loser_id = player2.player_id if winner_id == player1.player_id else player1.player_id
+                loser_id = (
+                    player2.player_id if winner_id == player1.player_id else player1.player_id
+                )
 
                 # Report result
                 await referee.report_result(match["match_id"], winner_id, loser_id)
@@ -187,8 +189,10 @@ class TestCompleteMatchFlow:
         referee = MockReferee("R01")
         match_id = "match_full_lifecycle"
 
-        print(f"\n  Match: {player1.player_id} ({player1_data['strategy']}) vs "
-              f"{player2.player_id} ({player2_data['strategy']})")
+        print(
+            f"\n  Match: {player1.player_id} ({player1_data['strategy']}) vs "
+            f"{player2.player_id} ({player2_data['strategy']})"
+        )
 
         # Phase 1: Match Initialization
         print("\n  Phase 1: Match Initialization")
@@ -342,7 +346,9 @@ class TestMultiAgentCoordination:
 
             # Quick simulation
             winner = player1 if hash(match["match_id"]) % 2 == 0 else player2
-            return await referee.report_result(match["match_id"], winner.player_id, player2.player_id)
+            return await referee.report_result(
+                match["match_id"], winner.player_id, player2.player_id
+            )
 
         # Execute matches in parallel with different referees
         tasks = []
@@ -511,4 +517,3 @@ FUNCTIONAL TEST COVERAGE:
    - Multi-component coordination
    - Event synchronization
 """
-
