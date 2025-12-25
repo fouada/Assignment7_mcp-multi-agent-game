@@ -96,6 +96,68 @@ This project includes **3 publication-ready research contributions** to multi-ag
 
 ---
 
+## 🔬 Research Framework
+
+**NEW**: Publication-ready research infrastructure with systematic analysis and mathematical rigor.
+
+### Research Capabilities
+
+#### 1. **Advanced Sensitivity Analysis**
+- ✅ Sobol variance-based indices (first-order & total-order)
+- ✅ Morris screening for parameter importance
+- ✅ Latin Hypercube Sampling
+- ✅ Interaction effects quantification
+- 📄 `experiments/advanced_sensitivity.py`
+
+#### 2. **Statistical Comparison**
+- ✅ Frequentist testing (t-test, Mann-Whitney U, ANOVA)
+- ✅ Bayesian hypothesis testing with Beta-Binomial models
+- ✅ Effect sizes (Cohen's d, Cliff's delta)
+- ✅ Multiple comparison correction (Holm-Bonferroni, FDR)
+- ✅ Power analysis and sample size determination
+- 📄 `experiments/statistical_comparison.py`
+
+#### 3. **Mathematical Proofs**
+- ✅ Nash Equilibrium optimality proofs
+- ✅ Regret Matching convergence: O(1/√T)
+- ✅ Bayesian posterior concentration
+- ✅ UCB & Thompson Sampling regret bounds
+- ✅ Complexity analysis for all algorithms
+- 📄 `docs/research/MATHEMATICAL_PROOFS.md`
+
+#### 4. **Publication-Quality Visualization**
+- ✅ Sensitivity tornado diagrams
+- ✅ Strategy comparison heatmaps
+- ✅ Convergence plots with confidence bands
+- ✅ Bayesian posterior distributions
+- ✅ Interactive HTML dashboards
+- 📄 `experiments/visualization.py`
+
+#### 5. **Research Paper Generation**
+- ✅ Automatic LaTeX paper generation
+- ✅ Figure and table integration
+- ✅ Abstract, methods, results auto-populated
+- ✅ Bibliography management
+- 📄 `experiments/research_paper_generator.py`
+
+### Quick Start Research
+
+```bash
+# Run complete research pipeline (quick mode ~10 min)
+python experiments/run_complete_research.py --mode quick
+
+# View results
+open research_output/figures/dashboard.html
+
+# Generate paper
+cd research_output/paper
+pdflatex paper.tex
+```
+
+**Full Documentation**: [Research Guide](docs/research/RESEARCH_GUIDE.md)
+
+---
+
 ## 🏆 System Overview
 
 The **MCP Multi-Agent Game League** is a reference implementation of a distributed, autonomous multi-agent system. It demonstrates how independent AI agents can form a society (a league), govern themselves (Referees), and compete (Players) using strictly defined protocols.
