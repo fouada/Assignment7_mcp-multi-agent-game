@@ -12,7 +12,7 @@ Manages the overall league:
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from ..client.mcp_client import MCPClient
 from ..common.events import (
@@ -155,22 +155,22 @@ class LeagueManager(BaseGameServer):
         self._schedule: list[list[tuple]] = []
         self._matches: dict[str, Match] = {}
         self._current_round_matches: list[Match] = []
-        
+
         # Referee
-        self._referee_endpoint: Optional[str] = None
-        
+        self._referee_endpoint: str | None = None
+
         # MCP client for communicating with referees
-        self._client: Optional[MCPClient] = None
-        
+        self._client: MCPClient | None = None
+
         # Register tools
         self._register_tools()
-        
+
         # Register resources
         self._register_resources()
-    
+
     def _register_tools(self) -> None:
         """Register league manager tools."""
-        
+
         @self.tool(
             "register_player",
             "Register a new player in the league",
@@ -532,7 +532,7 @@ class LeagueManager(BaseGameServer):
             "schedule": self._get_schedule(),
         }
     
-    def _assign_referee_to_match(self, match_index: int) -> Optional[str]:
+    def _assign_referee_to_match(self, match_index: int) -> str | None:
         """
         Assign an available referee to a match (Step 4: Round Announcement).
         
