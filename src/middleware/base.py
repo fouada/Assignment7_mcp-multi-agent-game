@@ -257,16 +257,19 @@ class MiddlewareError(Exception):
 
 class MiddlewareConfigError(MiddlewareError):
     """Middleware configuration error."""
+
     pass
 
 
 class MiddlewareTimeoutError(MiddlewareError):
     """Middleware execution timeout."""
+
     pass
 
 
 class MiddlewareValidationError(MiddlewareError):
     """Middleware validation error."""
+
     pass
 
 

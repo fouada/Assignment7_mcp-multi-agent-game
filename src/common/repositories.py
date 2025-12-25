@@ -25,7 +25,7 @@ from .logger import get_logger
 
 logger = get_logger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class Repository(ABC, Generic[T]):
@@ -54,7 +54,7 @@ class Repository(ABC, Generic[T]):
         if not path.exists():
             return None
 
-        with open(path, encoding='utf-8') as f:
+        with open(path, encoding="utf-8") as f:
             # Acquire shared lock for reading
             fcntl.flock(f.fileno(), fcntl.LOCK_SH)
             try:
@@ -65,8 +65,8 @@ class Repository(ABC, Generic[T]):
     def _write_json(self, path: Path, data: dict) -> None:
         """Write JSON file with file locking."""
         # Write to temp file first, then rename (atomic)
-        temp_path = path.with_suffix('.tmp')
-        with open(temp_path, 'w', encoding='utf-8') as f:
+        temp_path = path.with_suffix(".tmp")
+        with open(temp_path, "w", encoding="utf-8") as f:
             # Acquire exclusive lock for writing
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
             try:
@@ -112,9 +112,7 @@ class StandingsData:
 
     @classmethod
     def from_dict(cls, data: dict) -> "StandingsData":
-        standings = [
-            StandingsEntry(**s) for s in data.get("standings", [])
-        ]
+        standings = [StandingsEntry(**s) for s in data.get("standings", [])]
         return cls(
             league_id=data["league_id"],
             round_id=data["round_id"],
@@ -482,25 +480,19 @@ class DataManager:
     def standings(self, league_id: str) -> StandingsRepository:
         """Get standings repository for a league."""
         if league_id not in self._standings_repos:
-            self._standings_repos[league_id] = StandingsRepository(
-                self.base_path, league_id
-            )
+            self._standings_repos[league_id] = StandingsRepository(self.base_path, league_id)
         return self._standings_repos[league_id]
 
     def rounds(self, league_id: str) -> RoundsRepository:
         """Get rounds repository for a league."""
         if league_id not in self._rounds_repos:
-            self._rounds_repos[league_id] = RoundsRepository(
-                self.base_path, league_id
-            )
+            self._rounds_repos[league_id] = RoundsRepository(self.base_path, league_id)
         return self._rounds_repos[league_id]
 
     def matches(self, league_id: str) -> MatchRepository:
         """Get match repository for a league."""
         if league_id not in self._match_repos:
-            self._match_repos[league_id] = MatchRepository(
-                self.base_path, league_id
-            )
+            self._match_repos[league_id] = MatchRepository(self.base_path, league_id)
         return self._match_repos[league_id]
 
     def player_history(self, player_id: str) -> PlayerHistoryRepository:
@@ -522,4 +514,3 @@ def get_data_manager(base_path: str = "data") -> DataManager:
     if _data_manager is None:
         _data_manager = DataManager(base_path)
     return _data_manager
-

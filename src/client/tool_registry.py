@@ -268,9 +268,7 @@ class ToolRegistry:
         """
         async with self._lock:
             return {
-                name: servers
-                for name, servers in self._original_names.items()
-                if len(servers) > 1
+                name: servers for name, servers in self._original_names.items() if len(servers) > 1
             }
 
     async def resolve_tool_name(self, name: str) -> str | None:
@@ -372,4 +370,3 @@ class ToolExecutor:
             tool_name=tool_info.name,
             arguments=arguments or {},
         )
-

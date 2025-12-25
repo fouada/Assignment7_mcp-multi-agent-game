@@ -290,6 +290,7 @@ class TestPerformanceTracker:
 
         with PerformanceTracker("test_operation", logger) as tracker:
             import time
+
             time.sleep(0.01)  # 10ms
 
         assert tracker.duration_ms is not None
@@ -331,4 +332,3 @@ class TestGameLogger:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

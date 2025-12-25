@@ -53,7 +53,7 @@ class BaseGameServer(MCPServer):
         league_id: str = "league_2024_01",
         enable_middleware: bool = True,
         enable_observability: bool = True,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(name, **kwargs)
 
@@ -198,8 +198,8 @@ class BaseGameServer(MCPServer):
         # Different limits per agent type
         rate_limits = {
             "league_manager": 200,  # Higher limit for league manager
-            "referee": 150,         # Medium limit for referees
-            "player": 100,          # Standard limit for players
+            "referee": 150,  # Medium limit for referees
+            "player": 100,  # Standard limit for players
         }
         requests_per_minute = rate_limits.get(self.server_type, 100)
 
@@ -257,7 +257,6 @@ class BaseGameServer(MCPServer):
 
         # Observability tools (if enabled)
         if self.enable_observability:
-
             # Metrics endpoint - Prometheus format
             @self.tool("get_metrics", "Get Prometheus metrics")
             async def get_metrics(params: dict) -> dict:
@@ -596,10 +595,7 @@ class GameServerRegistry:
     async def get_by_type(self, server_type: str) -> list[dict[str, Any]]:
         """Get all servers of a type."""
         async with self._lock:
-            return [
-                s for s in self._servers.values()
-                if s["type"] == server_type
-            ]
+            return [s for s in self._servers.values() if s["type"] == server_type]
 
     async def get_all(self) -> list[dict[str, Any]]:
         """Get all registered servers."""
@@ -611,4 +607,3 @@ class GameServerRegistry:
         async with self._lock:
             if server_id in self._servers:
                 self._servers[server_id]["status"] = status
-

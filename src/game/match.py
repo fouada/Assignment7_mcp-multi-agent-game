@@ -146,10 +146,7 @@ class Match:
             raise ValueError(f"Unknown player: {player_id}")
 
         # Check if both ready
-        both_ready = (
-            self.player1 and self.player1.ready and
-            self.player2 and self.player2.ready
-        )
+        both_ready = self.player1 and self.player1.ready and self.player2 and self.player2.ready
 
         if both_ready:
             self.state = MatchState.PLAYERS_READY
@@ -341,4 +338,3 @@ class MatchScheduler:
             matches.append(match)
 
         return matches
-

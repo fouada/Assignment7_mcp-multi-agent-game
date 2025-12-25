@@ -113,7 +113,7 @@ class OpponentModelingEngine:
         game_state: GameState,
         opponent_move: Move,
         context: dict,
-        outcome: dict
+        outcome: dict,
     ) -> None:
         """Record an observation of opponent behavior."""
         observation = OpponentObservation(
@@ -121,7 +121,7 @@ class OpponentModelingEngine:
             game_state=game_state,
             opponent_move=opponent_move,
             context=context,
-            outcome=outcome
+            outcome=outcome,
         )
 
         self.observations[opponent_id].append(observation)
@@ -131,10 +131,7 @@ class OpponentModelingEngine:
             self._update_model(opponent_id)
 
     def predict_move(
-        self,
-        opponent_id: str,
-        game_state: GameState,
-        context: dict
+        self, opponent_id: str, game_state: GameState, context: dict
     ) -> tuple[Move, float]:
         """
         Predict opponent's next move with confidence.
@@ -149,9 +146,7 @@ class OpponentModelingEngine:
         model = self.models[opponent_id]
 
         # Get move probabilities based on context
-        move_probs = self._compute_conditional_probabilities(
-            model, game_state, context
-        )
+        move_probs = self._compute_conditional_probabilities(model, game_state, context)
 
         # Return most likely move
         best_move = max(move_probs.items(), key=lambda x: x[1])[0]
@@ -160,10 +155,7 @@ class OpponentModelingEngine:
         return best_move, confidence
 
     def get_move_distribution(
-        self,
-        opponent_id: str,
-        game_state: GameState,
-        context: dict
+        self, opponent_id: str, game_state: GameState, context: dict
     ) -> dict[Move, float]:
         """Get full probability distribution over opponent moves."""
         if opponent_id not in self.models:
@@ -222,7 +214,7 @@ class OpponentModelingEngine:
             concept_drift_detected=drift_detected,
             last_update=observations[-1].round,
             prediction_accuracy=accuracy,
-            observations=observations
+            observations=observations,
         )
 
         self.models[opponent_id] = model
@@ -236,10 +228,7 @@ class OpponentModelingEngine:
 
         return {move: count / total for move, count in counts.items()}
 
-    def _classify_strategy(
-        self,
-        observations: list[OpponentObservation]
-    ) -> tuple[str, float]:
+    def _classify_strategy(self, observations: list[OpponentObservation]) -> tuple[str, float]:
         """
         Classify opponent strategy using signature matching.
 
@@ -250,15 +239,17 @@ class OpponentModelingEngine:
 
         # Compute features for classification
         features = {
-            'cooperation_rate': sum(1 for m in moves if m == 'cooperate') / len(moves) if 'cooperate' in moves[0] else 0,
-            'consistency': 1.0 - entropy(list(self._compute_move_distribution(moves).values())),
-            'reactivity': self._compute_reactivity(observations),
-            'pattern_length': self._detect_pattern_length(moves),
+            "cooperation_rate": sum(1 for m in moves if m == "cooperate") / len(moves)
+            if "cooperate" in moves[0]
+            else 0,
+            "consistency": 1.0 - entropy(list(self._compute_move_distribution(moves).values())),
+            "reactivity": self._compute_reactivity(observations),
+            "pattern_length": self._detect_pattern_length(moves),
         }
 
         # Match against known signatures
         best_match = None
-        best_score = -float('inf')
+        best_score = -float("inf")
 
         for strategy_name, signature in self.strategy_signatures.items():
             score = self._signature_similarity(features, signature)
@@ -301,7 +292,7 @@ class OpponentModelingEngine:
         correlations = []
 
         for i in range(len(observations) - 1):
-            our_move = observations[i].context.get('our_last_move')
+            our_move = observations[i].context.get("our_last_move")
             their_next_move = observations[i + 1].opponent_move
 
             if our_move:
@@ -329,7 +320,7 @@ class OpponentModelingEngine:
         # Split observations into windows and measure strategy changes
         window_size = 5
         windows = [
-            observations[i:i+window_size]
+            observations[i : i + window_size]
             for i in range(0, len(observations) - window_size, window_size)
         ]
 
@@ -338,8 +329,7 @@ class OpponentModelingEngine:
 
         # Compare move distributions across windows
         dists = [
-            self._compute_move_distribution([o.opponent_move for o in window])
-            for window in windows
+            self._compute_move_distribution([o.opponent_move for o in window]) for window in windows
         ]
 
         # Compute KL divergence between consecutive windows
@@ -368,7 +358,7 @@ class OpponentModelingEngine:
             # Check if moves repeat with this pattern length
             repeats = 0
             for i in range(len(moves) - pattern_len):
-                if moves[i:i+pattern_len] == moves[i+pattern_len:i+2*pattern_len]:
+                if moves[i : i + pattern_len] == moves[i + pattern_len : i + 2 * pattern_len]:
                     repeats += 1
 
             if repeats >= 2:  # Pattern detected
@@ -377,8 +367,7 @@ class OpponentModelingEngine:
         return 0
 
     def _build_conditional_probabilities(
-        self,
-        observations: list[OpponentObservation]
+        self, observations: list[OpponentObservation]
     ) -> dict[tuple, float]:
         """
         Build P(opponent_move | context) table.
@@ -394,9 +383,9 @@ class OpponentModelingEngine:
 
             # Extract context features
             context = (
-                prev_obs.context.get('our_last_move', 'none'),
+                prev_obs.context.get("our_last_move", "none"),
                 prev_obs.opponent_move,
-                'ahead' if obs.context.get('score_diff', 0) > 0 else 'behind'
+                "ahead" if obs.context.get("score_diff", 0) > 0 else "behind",
             )
 
             move = obs.opponent_move
@@ -415,17 +404,14 @@ class OpponentModelingEngine:
         return conditional_probs
 
     def _compute_conditional_probabilities(
-        self,
-        model: OpponentModel,
-        game_state: GameState,
-        context: dict
+        self, model: OpponentModel, game_state: GameState, context: dict
     ) -> dict[Move, float]:
         """Compute P(move | context) for current context."""
         # Extract current context features
         current_context = (
-            context.get('our_last_move', 'none'),
-            context.get('opponent_last_move', 'none'),
-            'ahead' if context.get('score_diff', 0) > 0 else 'behind'
+            context.get("our_last_move", "none"),
+            context.get("opponent_last_move", "none"),
+            "ahead" if context.get("score_diff", 0) > 0 else "behind",
         )
 
         # Get conditional probabilities from model
@@ -448,9 +434,7 @@ class OpponentModelingEngine:
         return move_probs
 
     def _detect_concept_drift(
-        self,
-        opponent_id: str,
-        observations: list[OpponentObservation]
+        self, opponent_id: str, observations: list[OpponentObservation]
     ) -> bool:
         """
         Detect if opponent has changed strategy (concept drift).
@@ -492,12 +476,11 @@ class OpponentModelingEngine:
     def _predict_uniform(self, game_state: GameState) -> Move:
         """Fallback: uniform random prediction."""
         import random
+
         return random.choice(game_state.valid_moves)
 
     def _signature_similarity(
-        self,
-        features: dict[str, float],
-        signature: dict[str, float]
+        self, features: dict[str, float], signature: dict[str, float]
     ) -> float:
         """Compute similarity between feature vector and strategy signature."""
         # Euclidean distance in feature space
@@ -511,41 +494,41 @@ class OpponentModelingEngine:
         Each signature is a feature vector describing strategy characteristics.
         """
         return {
-            'tit_for_tat': {
-                'cooperation_rate': 0.7,
-                'consistency': 0.9,
-                'reactivity': 1.0,
-                'pattern_length': 1,
+            "tit_for_tat": {
+                "cooperation_rate": 0.7,
+                "consistency": 0.9,
+                "reactivity": 1.0,
+                "pattern_length": 1,
             },
-            'always_cooperate': {
-                'cooperation_rate': 1.0,
-                'consistency': 1.0,
-                'reactivity': 0.0,
-                'pattern_length': 0,
+            "always_cooperate": {
+                "cooperation_rate": 1.0,
+                "consistency": 1.0,
+                "reactivity": 0.0,
+                "pattern_length": 0,
             },
-            'always_defect': {
-                'cooperation_rate': 0.0,
-                'consistency': 1.0,
-                'reactivity': 0.0,
-                'pattern_length': 0,
+            "always_defect": {
+                "cooperation_rate": 0.0,
+                "consistency": 1.0,
+                "reactivity": 0.0,
+                "pattern_length": 0,
             },
-            'random': {
-                'cooperation_rate': 0.5,
-                'consistency': 0.0,
-                'reactivity': 0.5,
-                'pattern_length': 0,
+            "random": {
+                "cooperation_rate": 0.5,
+                "consistency": 0.0,
+                "reactivity": 0.5,
+                "pattern_length": 0,
             },
-            'grudger': {
-                'cooperation_rate': 0.6,
-                'consistency': 0.7,
-                'reactivity': 0.8,
-                'pattern_length': 0,
+            "grudger": {
+                "cooperation_rate": 0.6,
+                "consistency": 0.7,
+                "reactivity": 0.8,
+                "pattern_length": 0,
             },
-            'pavlov': {
-                'cooperation_rate': 0.65,
-                'consistency': 0.8,
-                'reactivity': 0.9,
-                'pattern_length': 1,
+            "pavlov": {
+                "cooperation_rate": 0.65,
+                "consistency": 0.8,
+                "reactivity": 0.9,
+                "pattern_length": 1,
             },
         }
 
@@ -582,7 +565,7 @@ class OpponentModelingStrategy(Strategy):
         self.our_moves = []
 
         # Exploitation strategy
-        self.exploitation_factor = config.parameters.get('exploitation', 0.8) if config else 0.8
+        self.exploitation_factor = config.parameters.get("exploitation", 0.8) if config else 0.8
 
     async def decide_move(self, game_state: GameState) -> Move:
         """
@@ -593,18 +576,17 @@ class OpponentModelingStrategy(Strategy):
         2. Choose best response
         3. Balance exploration vs exploitation
         """
-        opponent_id = game_state.metadata.get('opponent_id')
+        opponent_id = game_state.metadata.get("opponent_id")
 
         if not opponent_id:
             # No opponent info - play randomly
             import random
+
             return random.choice(game_state.valid_moves)
 
         # Predict opponent move
         predicted_move, confidence = self.opponent_model.predict_move(
-            opponent_id,
-            game_state,
-            self._build_context(game_state)
+            opponent_id, game_state, self._build_context(game_state)
         )
 
         # Choose best response
@@ -622,39 +604,35 @@ class OpponentModelingStrategy(Strategy):
 
     def _observe_outcome(self, move: Move, outcome: dict, game_state: GameState):
         """Update opponent model with observation."""
-        opponent_id = game_state.metadata.get('opponent_id')
-        opponent_move = outcome.get('opponent_move')
+        opponent_id = game_state.metadata.get("opponent_id")
+        opponent_move = outcome.get("opponent_move")
 
         if opponent_id and opponent_move:
             self.opponent_model.observe(
-                opponent_id,
-                game_state,
-                opponent_move,
-                self._build_context(game_state),
-                outcome
+                opponent_id, game_state, opponent_move, self._build_context(game_state), outcome
             )
 
     def _build_context(self, game_state: GameState) -> dict:
         """Build context for opponent modeling."""
         return {
-            'our_last_move': self.our_moves[-1] if self.our_moves else None,
-            'opponent_last_move': game_state.metadata.get('opponent_last_move'),
-            'score_diff': game_state.scores.get(self.player_id, 0) - max(
-                s for pid, s in game_state.scores.items() if pid != self.player_id
-            ),
-            'round': game_state.round,
+            "our_last_move": self.our_moves[-1] if self.our_moves else None,
+            "opponent_last_move": game_state.metadata.get("opponent_last_move"),
+            "score_diff": game_state.scores.get(self.player_id, 0)
+            - max(s for pid, s in game_state.scores.items() if pid != self.player_id),
+            "round": game_state.round,
         }
 
     def _best_response(self, predicted_opponent_move: Move, game_state: GameState) -> Move:
         """Choose best response to predicted opponent move."""
         # Game-specific logic
         # For Prisoner's Dilemma:
-        if predicted_opponent_move == 'cooperate':
-            return 'defect'  # Exploit cooperation
+        if predicted_opponent_move == "cooperate":
+            return "defect"  # Exploit cooperation
         else:
-            return 'cooperate'  # Be nice if they'll defect
+            return "cooperate"  # Be nice if they'll defect
 
     def _explore_move(self, game_state: GameState) -> Move:
         """Exploration move when uncertain."""
         import random
+
         return random.choice(game_state.valid_moves)

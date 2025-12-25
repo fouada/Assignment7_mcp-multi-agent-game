@@ -209,22 +209,14 @@ class RetryPolicy:
 
         Uses: delay = min(base * exp^attempt + jitter, max)
         """
-        delay = min(
-            self.base_delay * (self.exponential_base ** attempt),
-            self.max_delay
-        )
+        delay = min(self.base_delay * (self.exponential_base**attempt), self.max_delay)
 
         # Add jitter
         jitter = delay * self.jitter_factor * random.random()
 
         return delay + jitter
 
-    async def execute_with_retry(
-        self,
-        func: Callable,
-        *args,
-        **kwargs
-    ) -> Any:
+    async def execute_with_retry(self, func: Callable, *args, **kwargs) -> Any:
         """
         Execute function with retry.
 
@@ -251,9 +243,7 @@ class RetryPolicy:
                     break
 
                 delay = self.calculate_delay(attempt)
-                logger.warning(
-                    f"Retry {attempt + 1}/{self.max_retries} after {delay:.2f}s: {e}"
-                )
+                logger.warning(f"Retry {attempt + 1}/{self.max_retries} after {delay:.2f}s: {e}")
                 await asyncio.sleep(delay)
 
         raise last_error
@@ -409,13 +399,11 @@ class ConnectionManager:
             server_name: Server name
             heartbeat_func: Async function to call for heartbeat
         """
+
         async def heartbeat_loop():
             while self._running:
                 try:
-                    await asyncio.wait_for(
-                        heartbeat_func(),
-                        timeout=self.heartbeat_timeout
-                    )
+                    await asyncio.wait_for(heartbeat_func(), timeout=self.heartbeat_timeout)
 
                     async with self._lock:
                         if server_name in self._connections:
@@ -477,10 +465,13 @@ class ConnectionManager:
                         "consecutive_failures": conn.consecutive_failures,
                         "total_requests": conn.total_requests,
                         "total_errors": conn.total_errors,
-                        "last_heartbeat": conn.last_heartbeat.isoformat() if conn.last_heartbeat else None,
-                        "circuit_breaker": self._circuit_breakers[name].state.value if name in self._circuit_breakers else None,
+                        "last_heartbeat": conn.last_heartbeat.isoformat()
+                        if conn.last_heartbeat
+                        else None,
+                        "circuit_breaker": self._circuit_breakers[name].state.value
+                        if name in self._circuit_breakers
+                        else None,
                     }
                     for name, conn in self._connections.items()
                 }
             }
-

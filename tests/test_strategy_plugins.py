@@ -37,9 +37,7 @@ logger = get_logger(__name__)
 class SimpleTestStrategy(Strategy):
     """Simple test strategy."""
 
-    async def decide_move(
-        self, game_id, round_number, my_role, my_score, opponent_score, history
-    ):
+    async def decide_move(self, game_id, round_number, my_role, my_score, opponent_score, history):
         return 5  # Always return 5
 
 
@@ -51,9 +49,7 @@ class SimpleTestStrategy(Strategy):
 class DecoratedStrategy(Strategy):
     """Strategy registered via decorator."""
 
-    async def decide_move(
-        self, game_id, round_number, my_role, my_score, opponent_score, history
-    ):
+    async def decide_move(self, game_id, round_number, my_role, my_score, opponent_score, history):
         return 7  # Always return 7
 
 
@@ -64,9 +60,7 @@ class ParameterizedStrategy(Strategy):
         super().__init__(config)
         self.multiplier = 2
 
-    async def decide_move(
-        self, game_id, round_number, my_role, my_score, opponent_score, history
-    ):
+    async def decide_move(self, game_id, round_number, my_role, my_score, opponent_score, history):
         base = self.config.min_value if self.config else 1
         return base * self.multiplier
 
@@ -107,14 +101,10 @@ class TestStrategyPluginRegistry:
 
     def test_register_duplicate_strategy_warns(self, clean_strategy_registry):
         """Test registering duplicate strategy warns but succeeds."""
-        clean_strategy_registry.register_strategy(
-            "test_strategy", SimpleTestStrategy
-        )
+        clean_strategy_registry.register_strategy("test_strategy", SimpleTestStrategy)
 
         # Second registration should succeed but warn
-        clean_strategy_registry.register_strategy(
-            "test_strategy", SimpleTestStrategy
-        )
+        clean_strategy_registry.register_strategy("test_strategy", SimpleTestStrategy)
 
         assert clean_strategy_registry.is_registered("test_strategy")
 
@@ -156,14 +146,10 @@ class TestStrategyPluginRegistry:
 
     def test_create_strategy_with_config(self, clean_strategy_registry):
         """Test creating strategy with configuration."""
-        clean_strategy_registry.register_strategy(
-            "param_strategy", ParameterizedStrategy
-        )
+        clean_strategy_registry.register_strategy("param_strategy", ParameterizedStrategy)
 
         config = StrategyConfig(min_value=2, max_value=10)
-        strategy = clean_strategy_registry.create_strategy(
-            "param_strategy", config=config
-        )
+        strategy = clean_strategy_registry.create_strategy("param_strategy", config=config)
 
         assert isinstance(strategy, ParameterizedStrategy)
         assert strategy.config.min_value == 2
@@ -420,9 +406,7 @@ class TestStrategyWithCustomFactory:
         )
 
         # Create with custom factory
-        strategy = clean_strategy_registry.create_strategy(
-            "custom_factory_strategy", multiplier=10
-        )
+        strategy = clean_strategy_registry.create_strategy("custom_factory_strategy", multiplier=10)
 
         assert isinstance(strategy, ParameterizedStrategy)
         assert strategy.multiplier == 10

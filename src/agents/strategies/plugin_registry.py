@@ -92,9 +92,7 @@ class StrategyPluginRegistry:
         """
         # Validate
         if not issubclass(strategy_class, Strategy):
-            raise ValueError(
-                f"Strategy class {strategy_class.__name__} must subclass Strategy"
-            )
+            raise ValueError(f"Strategy class {strategy_class.__name__} must subclass Strategy")
 
         # Warn if overwriting
         if name in self._strategies:
@@ -174,7 +172,9 @@ class StrategyPluginRegistry:
 
         # Build config if not provided
         if config is None:
-            config_dict = {k: v for k, v in kwargs.items() if k in StrategyConfig.__dataclass_fields__}
+            config_dict = {
+                k: v for k, v in kwargs.items() if k in StrategyConfig.__dataclass_fields__
+            }
             if config_dict:
                 config = StrategyConfig(**config_dict)
 
@@ -373,9 +373,7 @@ def get_strategy_plugin(name: str) -> type[Strategy] | None:
     return registry.get_strategy_class(name)
 
 
-def create_strategy_plugin(
-    name: str, config: StrategyConfig | None = None, **kwargs
-) -> Strategy:
+def create_strategy_plugin(name: str, config: StrategyConfig | None = None, **kwargs) -> Strategy:
     """
     Create a strategy plugin instance.
 

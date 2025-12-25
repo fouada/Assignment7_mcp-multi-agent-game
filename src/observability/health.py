@@ -486,9 +486,7 @@ class HealthMonitor:
 
         return results
 
-    async def get_health(
-        self, check_names: list[str] | None = None
-    ) -> dict[str, Any]:
+    async def get_health(self, check_names: list[str] | None = None) -> dict[str, Any]:
         """
         Get health report.
 
@@ -544,9 +542,7 @@ class HealthMonitor:
             "details": result.details,
         }
 
-    def _determine_overall_status(
-        self, results: dict[str, HealthCheckResult]
-    ) -> HealthStatus:
+    def _determine_overall_status(self, results: dict[str, HealthCheckResult]) -> HealthStatus:
         """
         Determine overall status from individual check results.
 

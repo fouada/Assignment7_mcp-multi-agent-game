@@ -142,10 +142,7 @@ class TestBestResponseStrategy:
         strategy = BestResponseStrategy()
 
         # Opponent always plays 5
-        history = [
-            {"round": i+1, "opponent_move": 5, "my_move": 3}
-            for i in range(10)
-        ]
+        history = [{"round": i + 1, "opponent_move": 5, "my_move": 3} for i in range(10)]
 
         # Strategy should adapt
         moves = []
@@ -192,11 +189,13 @@ class TestAdaptiveBayesianStrategy:
         # Create biased history (opponent favors even moves)
         history = []
         for i in range(20):
-            history.append({
-                "round": i+1,
-                "opponent_move": 2 if i % 2 == 0 else 4,
-                "my_move": 3,
-            })
+            history.append(
+                {
+                    "round": i + 1,
+                    "opponent_move": 2 if i % 2 == 0 else 4,
+                    "my_move": 3,
+                }
+            )
 
         # Make multiple decisions
         moves = []
@@ -245,10 +244,7 @@ class TestFictitiousPlayStrategy:
         strategy = FictitiousPlayStrategy()
 
         # Opponent has pattern
-        history = [
-            {"round": i+1, "opponent_move": (i % 3) + 1, "my_move": 5}
-            for i in range(15)
-        ]
+        history = [{"round": i + 1, "opponent_move": (i % 3) + 1, "my_move": 5} for i in range(15)]
 
         move = await strategy.decide_move(
             game_id="game_001",
@@ -288,7 +284,7 @@ class TestRegretMatchingStrategy:
 
         # History with clear pattern
         history = [
-            {"round": i+1, "opponent_move": 5, "my_move": 3, "winner": "opponent"}
+            {"round": i + 1, "opponent_move": 5, "my_move": 3, "winner": "opponent"}
             for i in range(10)
         ]
 
@@ -329,10 +325,7 @@ class TestUCBStrategy:
         strategy = UCBStrategy(exploration_constant=1.414)
 
         # Some history
-        history = [
-            {"round": i+1, "opponent_move": 5, "my_move": 3}
-            for i in range(10)
-        ]
+        history = [{"round": i + 1, "opponent_move": 5, "my_move": 3} for i in range(10)]
 
         moves = []
         for _ in range(20):
@@ -377,8 +370,7 @@ class TestThompsonSamplingStrategy:
 
         # History with some wins
         history = [
-            {"round": i+1, "opponent_move": 5, "my_move": 4, "winner": "me"}
-            for i in range(10)
+            {"round": i + 1, "opponent_move": 5, "my_move": 4, "winner": "me"} for i in range(10)
         ]
 
         moves = []
@@ -426,10 +418,7 @@ class TestPatternStrategy:
         strategy = PatternStrategy()
 
         # Clear repeating pattern
-        history = [
-            {"round": i+1, "opponent_move": (i % 3) + 1, "my_move": 5}
-            for i in range(12)
-        ]
+        history = [{"round": i + 1, "opponent_move": (i % 3) + 1, "my_move": 5} for i in range(12)]
 
         move = await strategy.decide_move(
             game_id="game_001",
@@ -449,8 +438,9 @@ class TestPatternStrategy:
 
         # Random history
         import random
+
         history = [
-            {"round": i+1, "opponent_move": random.randint(1, 10), "my_move": 5}
+            {"round": i + 1, "opponent_move": random.randint(1, 10), "my_move": 5}
             for i in range(10)
         ]
 
@@ -481,7 +471,7 @@ class TestLLMStrategy:
         strategy = LLMStrategy(llm_config=llm_config)
 
         # Mock the LLM call
-        with patch.object(strategy, '_call_llm', new_callable=AsyncMock) as mock_llm:
+        with patch.object(strategy, "_call_llm", new_callable=AsyncMock) as mock_llm:
             mock_llm.return_value = 5
 
             move = await strategy.decide_move(
@@ -646,8 +636,7 @@ class TestStrategyEdgeCases:
         """Test strategies with very long history."""
         # Create long history
         history = [
-            {"round": i+1, "opponent_move": (i % 10) + 1, "my_move": 5}
-            for i in range(100)
+            {"round": i + 1, "opponent_move": (i % 10) + 1, "my_move": 5} for i in range(100)
         ]
 
         strategies = [
@@ -724,8 +713,7 @@ class TestStrategyEdgeCases:
         strategy = BestResponseStrategy()
 
         history = [
-            {"round": i+1, "opponent_move": 5, "my_move": 5, "winner": None}
-            for i in range(5)
+            {"round": i + 1, "opponent_move": 5, "my_move": 5, "winner": None} for i in range(5)
         ]
 
         move = await strategy.decide_move(
@@ -818,4 +806,3 @@ EDGE CASES TESTED:
     - First round decisions
     - Deterministic vs stochastic behavior
 """
-

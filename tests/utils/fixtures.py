@@ -26,10 +26,12 @@ def async_test(func: Callable) -> Callable:
         async def test_something():
             await some_async_function()
     """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(func(*args, **kwargs))
+
     return wrapper
 
 
@@ -49,8 +51,7 @@ def temp_directory() -> Generator[Path, None, None]:
 
 @contextmanager
 def capture_logs(
-    logger_name: str = None,
-    level: int = logging.DEBUG
+    logger_name: str = None, level: int = logging.DEBUG
 ) -> Generator[list[logging.LogRecord], None, None]:
     """
     Context manager to capture log messages.
@@ -107,7 +108,7 @@ def mock_time(frozen_time: float = None) -> Generator[dict[str, Any], None, None
     control = {
         "advance": advance,
         "set": lambda t: current_time.update({"value": t}),
-        "get": lambda: current_time["value"]
+        "get": lambda: current_time["value"],
     }
 
     with patch("time.time", side_effect=mock_time_func):
@@ -125,6 +126,7 @@ def mock_environment(**env_vars) -> Generator[None, None, None]:
             pass
     """
     import os
+
     original = {}
 
     for key, value in env_vars.items():
@@ -171,11 +173,14 @@ def timeout(seconds: float) -> Callable:
         async def test_something():
             await long_operation()
     """
+
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             return await asyncio.wait_for(func(*args, **kwargs), timeout=seconds)
+
         return wrapper
+
     return decorator
 
 
@@ -221,10 +226,7 @@ def capture_output() -> Generator[dict[str, list[str]], None, None]:
     sys.stdout = stdout_capture
     sys.stderr = stderr_capture
 
-    output = {
-        "stdout": [],
-        "stderr": []
-    }
+    output = {"stdout": [], "stderr": []}
 
     try:
         yield output
@@ -245,11 +247,7 @@ class EventRecorder:
 
     def record(self, event_type: str, **data):
         """Record an event."""
-        event = {
-            "type": event_type,
-            "timestamp": time.time(),
-            **data
-        }
+        event = {"type": event_type, "timestamp": time.time(), **data}
         self.events.append(event)
         self.event_counts[event_type] = self.event_counts.get(event_type, 0) + 1
 
@@ -300,9 +298,7 @@ class MockAsyncIterator:
 
 
 def retry_on_exception(
-    max_attempts: int = 3,
-    delay: float = 0.1,
-    exceptions: tuple = (Exception,)
+    max_attempts: int = 3, delay: float = 0.1, exceptions: tuple = (Exception,)
 ) -> Callable:
     """
     Decorator to retry function on exception.
@@ -313,6 +309,7 @@ def retry_on_exception(
             # Might fail
             pass
     """
+
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -324,7 +321,9 @@ def retry_on_exception(
                         raise
                     time.sleep(delay)
             return None
+
         return wrapper
+
     return decorator
 
 
@@ -338,6 +337,7 @@ def parametrize_async(argnames: str, argvalues: list[Any]) -> Callable:
             result = await async_function(input)
             assert result == expected
     """
+
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -351,6 +351,7 @@ def parametrize_async(argnames: str, argvalues: list[Any]) -> Callable:
                 result = asyncio.run(func(*args, **test_kwargs, **kwargs))
                 results.append(result)
             return results
-        return wrapper
-    return decorator
 
+        return wrapper
+
+    return decorator

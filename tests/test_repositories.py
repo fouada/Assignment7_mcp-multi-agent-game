@@ -175,7 +175,7 @@ class TestMatchRepository:
         """Test listing matches."""
         for i in range(3):
             match = MatchData(
-                match_id=f"R1M{i+1}",
+                match_id=f"R1M{i + 1}",
                 league_id="test_league",
                 round_id=1,
             )
@@ -281,15 +281,15 @@ class TestPlayerHistoryRepository:
         """Test getting recent games."""
         for i in range(5):
             entry = PlayerHistoryEntry(
-                match_id=f"R{i+1}M1",
+                match_id=f"R{i + 1}M1",
                 opponent_id="P02",
                 opponent_name="Player 2",
                 result="win" if i % 2 == 0 else "loss",
                 my_score=3,
                 opponent_score=2,
                 my_role="odd",
-                played_at=f"2024-01-0{i+1}T10:00:00Z",
-                round_id=i+1,
+                played_at=f"2024-01-0{i + 1}T10:00:00Z",
+                round_id=i + 1,
             )
             self.repo.add_game(entry)
 
@@ -301,21 +301,45 @@ class TestPlayerHistoryRepository:
     def test_get_opponent_history(self):
         """Test getting history against specific opponent."""
         # Add games against different opponents
-        self.repo.add_game(PlayerHistoryEntry(
-            match_id="R1M1", opponent_id="P02", opponent_name="Player 2",
-            result="win", my_score=3, opponent_score=2, my_role="odd",
-            played_at="2024-01-01T10:00:00Z", round_id=1,
-        ))
-        self.repo.add_game(PlayerHistoryEntry(
-            match_id="R2M1", opponent_id="P03", opponent_name="Player 3",
-            result="loss", my_score=2, opponent_score=3, my_role="even",
-            played_at="2024-01-02T10:00:00Z", round_id=2,
-        ))
-        self.repo.add_game(PlayerHistoryEntry(
-            match_id="R3M1", opponent_id="P02", opponent_name="Player 2",
-            result="win", my_score=3, opponent_score=1, my_role="odd",
-            played_at="2024-01-03T10:00:00Z", round_id=3,
-        ))
+        self.repo.add_game(
+            PlayerHistoryEntry(
+                match_id="R1M1",
+                opponent_id="P02",
+                opponent_name="Player 2",
+                result="win",
+                my_score=3,
+                opponent_score=2,
+                my_role="odd",
+                played_at="2024-01-01T10:00:00Z",
+                round_id=1,
+            )
+        )
+        self.repo.add_game(
+            PlayerHistoryEntry(
+                match_id="R2M1",
+                opponent_id="P03",
+                opponent_name="Player 3",
+                result="loss",
+                my_score=2,
+                opponent_score=3,
+                my_role="even",
+                played_at="2024-01-02T10:00:00Z",
+                round_id=2,
+            )
+        )
+        self.repo.add_game(
+            PlayerHistoryEntry(
+                match_id="R3M1",
+                opponent_id="P02",
+                opponent_name="Player 2",
+                result="win",
+                my_score=3,
+                opponent_score=1,
+                my_role="odd",
+                played_at="2024-01-03T10:00:00Z",
+                round_id=3,
+            )
+        )
 
         p02_games = self.repo.get_opponent_history("P02")
         assert len(p02_games) == 2
@@ -370,4 +394,3 @@ class TestDataManager:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

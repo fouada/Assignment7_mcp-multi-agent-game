@@ -64,9 +64,7 @@ def global_health():
 def test_health_check_result_creation():
     """Test creating HealthCheckResult."""
     result = HealthCheckResult(
-        status=HealthStatus.HEALTHY,
-        message="All systems operational",
-        details={"uptime": 3600}
+        status=HealthStatus.HEALTHY, message="All systems operational", details={"uptime": 3600}
     )
 
     assert result.status == HealthStatus.HEALTHY
@@ -172,11 +170,7 @@ async def test_readiness_check_with_dependencies():
 @pytest.mark.asyncio
 async def test_resource_check_healthy():
     """Test ResourceCheck when resources are within limits."""
-    check = ResourceCheck(
-        max_cpu_percent=90.0,
-        max_memory_percent=90.0,
-        max_disk_percent=90.0
-    )
+    check = ResourceCheck(max_cpu_percent=90.0, max_memory_percent=90.0, max_disk_percent=90.0)
 
     result = await check.check()
 
@@ -296,13 +290,11 @@ async def test_get_health_overall_status_healthy(health_monitor):
 @pytest.mark.asyncio
 async def test_get_health_overall_status_degraded(health_monitor):
     """Test overall status is degraded when any check is degraded."""
+
     # Create a check that returns degraded
     class DegradedCheck(HealthCheck):
         async def check(self) -> HealthCheckResult:
-            return HealthCheckResult(
-                status=HealthStatus.DEGRADED,
-                message="Service is degraded"
-            )
+            return HealthCheckResult(status=HealthStatus.DEGRADED, message="Service is degraded")
 
     health_monitor.add_check("liveness", LivenessCheck())
     health_monitor.add_check("degraded", DegradedCheck())
@@ -315,13 +307,11 @@ async def test_get_health_overall_status_degraded(health_monitor):
 @pytest.mark.asyncio
 async def test_get_health_overall_status_unhealthy(health_monitor):
     """Test overall status is unhealthy when any check is unhealthy."""
+
     # Create a check that returns unhealthy
     class UnhealthyCheck(HealthCheck):
         async def check(self) -> HealthCheckResult:
-            return HealthCheckResult(
-                status=HealthStatus.UNHEALTHY,
-                message="Service is down"
-            )
+            return HealthCheckResult(status=HealthStatus.UNHEALTHY, message="Service is down")
 
     health_monitor.add_check("liveness", LivenessCheck())
     health_monitor.add_check("unhealthy", UnhealthyCheck())
@@ -454,6 +444,7 @@ async def test_force_refresh(health_monitor):
 @pytest.mark.asyncio
 async def test_custom_health_check():
     """Test creating and using a custom health check."""
+
     class DatabaseHealthCheck(HealthCheck):
         def __init__(self, db_connected: bool = True):
             self.db_connected = db_connected
@@ -463,13 +454,13 @@ async def test_custom_health_check():
                 return HealthCheckResult(
                     status=HealthStatus.HEALTHY,
                     message="Database connection OK",
-                    details={"connection_pool_size": 10, "active_connections": 3}
+                    details={"connection_pool_size": 10, "active_connections": 3},
                 )
             else:
                 return HealthCheckResult(
                     status=HealthStatus.UNHEALTHY,
                     message="Database connection failed",
-                    details={"error": "Connection timeout"}
+                    details={"error": "Connection timeout"},
                 )
 
     # Test healthy case
@@ -486,14 +477,12 @@ async def test_custom_health_check():
 @pytest.mark.asyncio
 async def test_async_health_check():
     """Test health check with async operations."""
+
     class AsyncHealthCheck(HealthCheck):
         async def check(self) -> HealthCheckResult:
             # Simulate async operation (e.g., network call)
             await asyncio.sleep(0.01)
-            return HealthCheckResult(
-                status=HealthStatus.HEALTHY,
-                message="Async check completed"
-            )
+            return HealthCheckResult(status=HealthStatus.HEALTHY, message="Async check completed")
 
     check = AsyncHealthCheck()
     result = await check.check()
@@ -581,6 +570,7 @@ async def test_full_health_report(health_monitor):
 @pytest.mark.asyncio
 async def test_health_check_error_handling(health_monitor):
     """Test health monitor handles check failures gracefully."""
+
     class FailingCheck(HealthCheck):
         async def check(self) -> HealthCheckResult:
             raise RuntimeError("Check failed")
@@ -599,6 +589,7 @@ async def test_health_check_error_handling(health_monitor):
 @pytest.mark.asyncio
 async def test_parallel_health_checks(health_monitor):
     """Test multiple health checks run in parallel."""
+
     class SlowCheck(HealthCheck):
         def __init__(self, delay: float):
             self.delay = delay
@@ -606,8 +597,7 @@ async def test_parallel_health_checks(health_monitor):
         async def check(self) -> HealthCheckResult:
             await asyncio.sleep(self.delay)
             return HealthCheckResult(
-                status=HealthStatus.HEALTHY,
-                message=f"Check completed after {self.delay}s"
+                status=HealthStatus.HEALTHY, message=f"Check completed after {self.delay}s"
             )
 
     health_monitor.add_check("slow1", SlowCheck(0.1))

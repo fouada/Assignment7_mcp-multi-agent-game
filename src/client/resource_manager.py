@@ -395,10 +395,7 @@ class ResourceManager:
         async with self._lock:
             return {
                 "total_resources": len(self._resources),
-                "by_server": {
-                    name: len(resources)
-                    for name, resources in self._by_server.items()
-                },
+                "by_server": {name: len(resources) for name, resources in self._by_server.items()},
                 "cache": {
                     "entries": len(self._cache),
                     "expired": sum(1 for c in self._cache.values() if c.is_expired),
@@ -408,4 +405,3 @@ class ResourceManager:
                     "resources": len(self._subscriptions),
                 },
             }
-

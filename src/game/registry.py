@@ -277,8 +277,9 @@ class GameRegistry:
             ValueError: If game type is not registered
         """
         if game_type not in cls._games:
-            raise ValueError(f"Unknown game type: {game_type}. "
-                           f"Available types: {list(cls._games.keys())}")
+            raise ValueError(
+                f"Unknown game type: {game_type}. Available types: {list(cls._games.keys())}"
+            )
 
         info = cls._games[game_type]
         game = info.factory(**kwargs)
@@ -336,4 +337,3 @@ try:
 except ImportError:
     # OddEvenGame might not be importable during initial setup
     pass
-

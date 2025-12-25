@@ -50,10 +50,12 @@ class RandomStrategy(Strategy):
 
     def get_stats(self) -> dict[str, Any]:
         stats = super().get_stats()
-        stats.update({
-            "min_value": self.config.min_value,
-            "max_value": self.config.max_value,
-        })
+        stats.update(
+            {
+                "min_value": self.config.min_value,
+                "max_value": self.config.max_value,
+            }
+        )
         return stats
 
 
@@ -134,11 +136,19 @@ class PatternStrategy(Strategy):
 
         # Pick a number with the desired parity
         if should_play_odd:
-            candidates = [n for n in range(self.config.min_value, self.config.max_value + 1) if n % 2 == 1]
+            candidates = [
+                n for n in range(self.config.min_value, self.config.max_value + 1) if n % 2 == 1
+            ]
         else:
-            candidates = [n for n in range(self.config.min_value, self.config.max_value + 1) if n % 2 == 0]
+            candidates = [
+                n for n in range(self.config.min_value, self.config.max_value + 1) if n % 2 == 0
+            ]
 
-        return random.choice(candidates) if candidates else random.randint(self.config.min_value, self.config.max_value)
+        return (
+            random.choice(candidates)
+            if candidates
+            else random.randint(self.config.min_value, self.config.max_value)
+        )
 
     def reset(self) -> None:
         self._opponent_parities.clear()
@@ -174,7 +184,9 @@ class LLMStrategy(Strategy):
         super().__init__(config)
         self.llm_config = llm_config or LLMConfig()
         self._client = None
-        logger.info(f"LLM Strategy initialized: {self.llm_config.provider} / {self.llm_config.model}")
+        logger.info(
+            f"LLM Strategy initialized: {self.llm_config.provider} / {self.llm_config.model}"
+        )
 
     async def _get_client(self):
         """Get or create LLM client."""
@@ -188,6 +200,7 @@ class LLMStrategy(Strategy):
         if self.llm_config.provider == "anthropic":
             try:
                 import anthropic
+
                 self._client = anthropic.AsyncAnthropic(api_key=self.llm_config.api_key)
                 logger.info("Anthropic Claude client initialized")
             except ImportError:
@@ -196,6 +209,7 @@ class LLMStrategy(Strategy):
         elif self.llm_config.provider == "openai":
             try:
                 import openai
+
                 self._client = openai.AsyncOpenAI(api_key=self.llm_config.api_key)
                 logger.info("OpenAI client initialized")
             except ImportError:
@@ -221,9 +235,7 @@ class LLMStrategy(Strategy):
             return random.randint(self.config.min_value, self.config.max_value)
 
         # Build prompt with game theory context
-        prompt = self._build_prompt(
-            round_number, my_role, my_score, opponent_score, history
-        )
+        prompt = self._build_prompt(round_number, my_role, my_score, opponent_score, history)
 
         try:
             if self.llm_config.provider == "anthropic":
@@ -241,7 +253,10 @@ class LLMStrategy(Strategy):
                 response = await client.chat.completions.create(
                     model=self.llm_config.model,
                     messages=[
-                        {"role": "system", "content": "You are an expert game theorist. Respond with ONLY a single number from 1 to 10."},
+                        {
+                            "role": "system",
+                            "content": "You are an expert game theorist. Respond with ONLY a single number from 1 to 10.",
+                        },
                         {"role": "user", "content": prompt},
                     ],
                     temperature=self.llm_config.temperature,
@@ -251,7 +266,7 @@ class LLMStrategy(Strategy):
                 logger.debug(f"OpenAI response: {answer}")
 
             # Parse response - extract first valid number
-            numbers = re.findall(r'\b([1-9]|10)\b', answer)
+            numbers = re.findall(r"\b([1-9]|10)\b", answer)
             if numbers:
                 move = int(numbers[0])
                 if self.config.min_value <= move <= self.config.max_value:
@@ -275,7 +290,8 @@ class LLMStrategy(Strategy):
     ) -> str:
         """Build prompt for LLM with game theory context."""
         role_explanation = (
-            "You win when the sum of both numbers is ODD" if my_role == GameRole.ODD
+            "You win when the sum of both numbers is ODD"
+            if my_role == GameRole.ODD
             else "You win when the sum of both numbers is EVEN"
         )
 
@@ -285,7 +301,9 @@ class LLMStrategy(Strategy):
             opp_moves = [h.get("opponent_move", 0) for h in history]
             opp_odd = sum(1 for m in opp_moves if m % 2 == 1)
             opp_even = len(opp_moves) - opp_odd
-            pattern_analysis = f"\nOpponent's pattern: played odd {opp_odd} times, even {opp_even} times."
+            pattern_analysis = (
+                f"\nOpponent's pattern: played odd {opp_odd} times, even {opp_even} times."
+            )
 
         history_str = ""
         if history:
@@ -294,7 +312,9 @@ class LLMStrategy(Strategy):
                 my_m = h.get("my_move", "?")
                 opp_m = h.get("opponent_move", "?")
                 s = h.get("sum", "?")
-                history_str += f"  Round {h.get('round', '?')}: You: {my_m}, Opponent: {opp_m}, Sum: {s}\n"
+                history_str += (
+                    f"  Round {h.get('round', '?')}: You: {my_m}, Opponent: {opp_m}, Sum: {s}\n"
+                )
 
         return f"""You are playing the Odd/Even game.
 
@@ -326,9 +346,10 @@ Choose a number from 1 to 10. Reply with ONLY the number:"""
 
     def get_stats(self) -> dict[str, Any]:
         stats = super().get_stats()
-        stats.update({
-            "provider": self.llm_config.provider,
-            "model": self.llm_config.model,
-        })
+        stats.update(
+            {
+                "provider": self.llm_config.provider,
+                "model": self.llm_config.model,
+            }
+        )
         return stats
-

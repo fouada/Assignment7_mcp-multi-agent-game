@@ -15,30 +15,20 @@ import pytest
 # PyTest Configuration
 # ====================
 
+
 def pytest_configure(config):
     """Configure pytest with custom markers and settings."""
     # Register custom markers
     config.addinivalue_line(
-        "markers",
-        "integration: mark test as an integration test (requires running services)"
+        "markers", "integration: mark test as an integration test (requires running services)"
     )
-    config.addinivalue_line(
-        "markers",
-        "slow: mark test as slow (takes > 1 second)"
-    )
-    config.addinivalue_line(
-        "markers",
-        "benchmark: mark test as a benchmark test"
-    )
-    config.addinivalue_line(
-        "markers",
-        "unit: mark test as a unit test (default)"
-    )
+    config.addinivalue_line("markers", "slow: mark test as slow (takes > 1 second)")
+    config.addinivalue_line("markers", "benchmark: mark test as a benchmark test")
+    config.addinivalue_line("markers", "unit: mark test as a unit test (default)")
 
     # Configure logging
     logging.basicConfig(
-        level=logging.WARNING,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        level=logging.WARNING, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
 
@@ -46,14 +36,16 @@ def pytest_collection_modifyitems(config, items):
     """Modify test collection to add markers automatically."""
     for item in items:
         # Add 'unit' marker to tests without other markers
-        if not any(marker.name in ['integration', 'slow', 'benchmark']
-                   for marker in item.iter_markers()):
+        if not any(
+            marker.name in ["integration", "slow", "benchmark"] for marker in item.iter_markers()
+        ):
             item.add_marker(pytest.mark.unit)
 
 
 # ====================
 # Async Fixtures
 # ====================
+
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -76,6 +68,7 @@ async def async_setup_teardown():
 # ====================
 # Directory Fixtures
 # ====================
+
 
 @pytest.fixture
 def tmp_path(tmp_path):
@@ -101,6 +94,7 @@ def mock_config_dir(tmp_path):
 # Logging Fixtures
 # ====================
 
+
 @pytest.fixture
 def caplog_debug(caplog):
     """Capture logs at DEBUG level."""
@@ -122,10 +116,12 @@ def suppress_logs():
 # Mock Fixtures
 # ====================
 
+
 @pytest.fixture
 def mock_mcp_client():
     """Provide a mock MCP client."""
     from tests.utils import MockMCPClient
+
     return MockMCPClient()
 
 
@@ -133,6 +129,7 @@ def mock_mcp_client():
 def mock_league():
     """Provide a mock league manager."""
     from tests.utils import MockLeagueManager
+
     return MockLeagueManager()
 
 
@@ -140,6 +137,7 @@ def mock_league():
 def mock_player():
     """Provide a mock player."""
     from tests.utils import MockPlayer
+
     return MockPlayer("TestPlayer")
 
 
@@ -147,6 +145,7 @@ def mock_player():
 def mock_referee():
     """Provide a mock referee."""
     from tests.utils import MockReferee
+
     return MockReferee("TestReferee")
 
 
@@ -154,10 +153,12 @@ def mock_referee():
 # Factory Fixtures
 # ====================
 
+
 @pytest.fixture
 def player_factory():
     """Provide player factory."""
     from tests.utils import PlayerFactory
+
     return PlayerFactory
 
 
@@ -165,6 +166,7 @@ def player_factory():
 def referee_factory():
     """Provide referee factory."""
     from tests.utils import RefereeFactory
+
     return RefereeFactory
 
 
@@ -172,6 +174,7 @@ def referee_factory():
 def match_factory():
     """Provide match factory."""
     from tests.utils import MatchFactory
+
     return MatchFactory
 
 
@@ -179,6 +182,7 @@ def match_factory():
 def game_factory():
     """Provide game factory."""
     from tests.utils import GameFactory
+
     return GameFactory
 
 
@@ -186,6 +190,7 @@ def game_factory():
 def message_factory():
     """Provide message factory."""
     from tests.utils import MessageFactory
+
     return MessageFactory
 
 
@@ -193,6 +198,7 @@ def message_factory():
 def scenario_factory():
     """Provide scenario factory."""
     from tests.utils import ScenarioFactory
+
     return ScenarioFactory
 
 
@@ -200,10 +206,12 @@ def scenario_factory():
 # Performance Fixtures
 # ====================
 
+
 @pytest.fixture
 def performance_timer():
     """Provide performance timer."""
     from tests.utils import PerformanceTimer
+
     return PerformanceTimer
 
 
@@ -211,16 +219,17 @@ def performance_timer():
 def benchmark_threshold():
     """Provide benchmark thresholds."""
     return {
-        "fast": 0.01,      # < 10ms
-        "medium": 0.1,     # < 100ms
-        "slow": 1.0,       # < 1s
-        "very_slow": 5.0   # < 5s
+        "fast": 0.01,  # < 10ms
+        "medium": 0.1,  # < 100ms
+        "slow": 1.0,  # < 1s
+        "very_slow": 5.0,  # < 5s
     }
 
 
 # ====================
 # Test Data Fixtures
 # ====================
+
 
 @pytest.fixture
 def sample_moves():
@@ -243,6 +252,7 @@ def sample_game_history():
 # ====================
 # Cleanup Fixtures
 # ====================
+
 
 @pytest.fixture(autouse=True)
 def cleanup_after_test():
@@ -269,4 +279,3 @@ def cleanup_after_session():
 VALID_MOVES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 INVALID_MOVES = [0, -1, 11, 15, 100, -100]
 STRATEGIES = ["random", "nash", "adaptive", "pattern"]
-

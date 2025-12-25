@@ -90,8 +90,8 @@ class TestPlayerRegistration:
 
         for i in range(5):
             params = {
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
+                "display_name": f"Player{i + 1}",
+                "endpoint": f"http://localhost:810{i + 1}/mcp",
                 "version": "1.0.0",
                 "game_types": ["even_odd"],
             }
@@ -99,7 +99,7 @@ class TestPlayerRegistration:
             result = await manager._handle_registration(params)
 
             assert result["status"] == RegistrationStatus.ACCEPTED.value
-            assert result["player_id"] == f"P0{i+1}"
+            assert result["player_id"] == f"P0{i + 1}"
 
         assert len(manager._players) == 5
 
@@ -115,8 +115,8 @@ class TestPlayerRegistration:
         # Register max players
         for i in range(2):
             params = {
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
+                "display_name": f"Player{i + 1}",
+                "endpoint": f"http://localhost:810{i + 1}/mcp",
                 "game_types": ["even_odd"],
             }
             await manager._handle_registration(params)
@@ -225,9 +225,9 @@ class TestRefereeRegistration:
 
         for i in range(3):
             params = {
-                "referee_id": f"REF0{i+1}",
-                "endpoint": f"http://localhost:800{i+1}/mcp",
-                "display_name": f"Referee_{i+1}",
+                "referee_id": f"REF0{i + 1}",
+                "endpoint": f"http://localhost:800{i + 1}/mcp",
+                "display_name": f"Referee_{i + 1}",
                 "game_types": ["even_odd"],
             }
 
@@ -273,8 +273,8 @@ class TestScheduleGeneration:
         # Register minimum players
         for i in range(4):
             params = {
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
+                "display_name": f"Player{i + 1}",
+                "endpoint": f"http://localhost:810{i + 1}/mcp",
                 "game_types": ["even_odd"],
             }
             await manager._handle_registration(params)
@@ -299,8 +299,8 @@ class TestScheduleGeneration:
         # Register only 2 players
         for i in range(2):
             params = {
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
+                "display_name": f"Player{i + 1}",
+                "endpoint": f"http://localhost:810{i + 1}/mcp",
                 "game_types": ["even_odd"],
             }
             await manager._handle_registration(params)
@@ -376,17 +376,21 @@ class TestRoundExecution:
 
         # Setup: Register players and referees
         for i in range(4):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
-        await manager._handle_referee_registration({
-            "referee_id": "REF01",
-            "endpoint": "http://localhost:8001/mcp",
-            "game_types": ["even_odd"],
-        })
+        await manager._handle_referee_registration(
+            {
+                "referee_id": "REF01",
+                "endpoint": "http://localhost:8001/mcp",
+                "game_types": ["even_odd"],
+            }
+        )
 
         # Start league
         await manager._start_league()
@@ -412,11 +416,13 @@ class TestRoundExecution:
 
         # Register players only
         for i in range(4):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
         # Start league
         await manager._start_league()
@@ -434,11 +440,13 @@ class TestRoundExecution:
 
         # Register players
         for i in range(2):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
         # Start league
         await manager._start_league()
@@ -460,11 +468,13 @@ class TestRoundExecution:
 
         # Register referees
         for i in range(2):
-            await manager._handle_referee_registration({
-                "referee_id": f"REF0{i+1}",
-                "endpoint": f"http://localhost:800{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_referee_registration(
+                {
+                    "referee_id": f"REF0{i + 1}",
+                    "endpoint": f"http://localhost:800{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
         # Assign referees to matches (round-robin)
         ref1 = manager._assign_referee_to_match(0)
@@ -486,11 +496,13 @@ class TestMatchResultProcessing:
 
         # Register players
         for i in range(2):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
         # Create a match
         match = Match(match_id="M001", league_id=manager.league_id)
@@ -511,7 +523,7 @@ class TestMatchResultProcessing:
             "player2_score": 2,
         }
 
-        with patch.object(manager, '_publish_standings_update', new_callable=AsyncMock):
+        with patch.object(manager, "_publish_standings_update", new_callable=AsyncMock):
             result = await manager._handle_match_result(params)
 
         assert result["success"] is True
@@ -526,11 +538,13 @@ class TestMatchResultProcessing:
 
         # Register players
         for i in range(2):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
         # Create a match
         match = Match(match_id="M001", league_id=manager.league_id)
@@ -551,7 +565,7 @@ class TestMatchResultProcessing:
             "player2_score": 2,
         }
 
-        with patch.object(manager, '_publish_standings_update', new_callable=AsyncMock):
+        with patch.object(manager, "_publish_standings_update", new_callable=AsyncMock):
             result = await manager._handle_match_result(params)
 
         assert result["success"] is True
@@ -597,11 +611,13 @@ class TestStandingsManagement:
 
         # Register players
         for i in range(3):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
         # Simulate some games
         manager._players["P01"].record_win()
@@ -676,11 +692,13 @@ class TestLeagueManagerTools:
 
         # Register players
         for i in range(3):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
         # Find and call tool
         tool_func = None
@@ -700,11 +718,13 @@ class TestLeagueManagerTools:
 
         # Register and start
         for i in range(4):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
         await manager._start_league()
 
@@ -775,17 +795,21 @@ class TestLeagueManagerEdgeCases:
 
         # Setup
         for i in range(2):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
-        await manager._handle_referee_registration({
-            "referee_id": "REF01",
-            "endpoint": "http://localhost:8001/mcp",
-            "game_types": ["even_odd"],
-        })
+        await manager._handle_referee_registration(
+            {
+                "referee_id": "REF01",
+                "endpoint": "http://localhost:8001/mcp",
+                "game_types": ["even_odd"],
+            }
+        )
 
         await manager._start_league()
 
@@ -795,7 +819,7 @@ class TestLeagueManagerEdgeCases:
         mock_client.call_tool = AsyncMock(return_value={"success": True})
         manager._client = mock_client
 
-        with patch.object(manager, '_send_match_to_referee', new_callable=AsyncMock):
+        with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
             result = await manager._run_all_rounds()
 
         assert result["success"] is True
@@ -832,11 +856,13 @@ class TestLeagueManagerEdgeCases:
 
         # Register players
         for i in range(4):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
         await manager._start_league()
 
@@ -955,4 +981,3 @@ EDGE CASES TESTED:
     - Many concurrent matches
     - Empty match schedule
 """
-

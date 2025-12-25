@@ -12,7 +12,6 @@ Tests cover:
 - Edge cases and error conditions
 """
 
-
 import pytest
 
 from src.game.match import (
@@ -462,7 +461,7 @@ class TestMatchScheduler:
 
     def test_round_robin_six_players(self):
         """Test round-robin with 6 players."""
-        player_ids = [f"P0{i+1}" for i in range(6)]
+        player_ids = [f"P0{i + 1}" for i in range(6)]
         schedule = MatchScheduler.create_round_robin_schedule(player_ids)
 
         # 6 players = 5 rounds
@@ -725,4 +724,3 @@ EDGE CASES TESTED:
     - Result with tie scores
     - Multiple referee assignments
 """
-

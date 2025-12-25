@@ -12,11 +12,12 @@ from typing import Any
 
 class ErrorCategory(Enum):
     """Categories of errors for retry decisions."""
-    TRANSIENT = "transient"      # Network issues, temporary overload - retry
-    PERMANENT = "permanent"      # Missing file, permission denied - no retry
-    TIMEOUT = "timeout"          # Response took too long - maybe retry
-    VALIDATION = "validation"    # Invalid data - no retry
-    PROTOCOL = "protocol"        # Protocol violation - no retry
+
+    TRANSIENT = "transient"  # Network issues, temporary overload - retry
+    PERMANENT = "permanent"  # Missing file, permission denied - no retry
+    TIMEOUT = "timeout"  # Response took too long - maybe retry
+    VALIDATION = "validation"  # Invalid data - no retry
+    PROTOCOL = "protocol"  # Protocol violation - no retry
 
 
 class MCPError(Exception):
@@ -58,6 +59,7 @@ class MCPError(Exception):
 # Connection Errors
 # ============================================================================
 
+
 class ConnectionError(MCPError):
     """Error establishing or maintaining connection."""
 
@@ -65,13 +67,7 @@ class ConnectionError(MCPError):
     retryable = True
     error_code = "CONNECTION_ERROR"
 
-    def __init__(
-        self,
-        message: str,
-        host: str | None = None,
-        port: int | None = None,
-        **kwargs
-    ):
+    def __init__(self, message: str, host: str | None = None, port: int | None = None, **kwargs):
         details = kwargs.pop("details", {})
         if host:
             details["host"] = host
@@ -102,6 +98,7 @@ class HeartbeatFailedError(ConnectionError):
 # Protocol Errors
 # ============================================================================
 
+
 class ProtocolError(MCPError):
     """Protocol-level errors."""
 
@@ -115,12 +112,7 @@ class InvalidProtocolVersionError(ProtocolError):
 
     error_code = "INVALID_PROTOCOL_VERSION"
 
-    def __init__(
-        self,
-        expected: str,
-        received: str,
-        **kwargs
-    ):
+    def __init__(self, expected: str, received: str, **kwargs):
         message = f"Protocol version mismatch. Expected '{expected}', got '{received}'"
         details = {"expected": expected, "received": received}
         super().__init__(message, details=details, **kwargs)
@@ -155,6 +147,7 @@ class InvalidMessageFormatError(ProtocolError):
 # Validation Errors
 # ============================================================================
 
+
 class ValidationError(MCPError):
     """Data validation errors."""
 
@@ -168,13 +161,7 @@ class InvalidMoveError(ValidationError):
 
     error_code = "INVALID_MOVE"
 
-    def __init__(
-        self,
-        move: Any,
-        reason: str,
-        valid_range: tuple | None = None,
-        **kwargs
-    ):
+    def __init__(self, move: Any, reason: str, valid_range: tuple | None = None, **kwargs):
         message = f"Invalid move '{move}': {reason}"
         details = {"move": move, "reason": reason}
         if valid_range:
@@ -198,6 +185,7 @@ class InvalidGameStateError(ValidationError):
 # Timeout Errors
 # ============================================================================
 
+
 class TimeoutError(MCPError):
     """Operation timed out."""
 
@@ -205,12 +193,7 @@ class TimeoutError(MCPError):
     retryable = True
     error_code = "TIMEOUT_ERROR"
 
-    def __init__(
-        self,
-        message: str,
-        timeout_seconds: float | None = None,
-        **kwargs
-    ):
+    def __init__(self, message: str, timeout_seconds: float | None = None, **kwargs):
         details = kwargs.pop("details", {})
         if timeout_seconds:
             details["timeout_seconds"] = timeout_seconds
@@ -233,6 +216,7 @@ class ResponseTimeoutError(TimeoutError):
 # ============================================================================
 # Game Errors
 # ============================================================================
+
 
 class GameError(MCPError):
     """Game logic errors."""
@@ -270,6 +254,7 @@ class NotPlayersTurnError(GameError):
 # Registration Errors
 # ============================================================================
 
+
 class RegistrationError(MCPError):
     """Player registration errors."""
 
@@ -300,6 +285,7 @@ class UnsupportedGameTypeError(RegistrationError):
 # Server Errors
 # ============================================================================
 
+
 class ServerError(MCPError):
     """Server-side errors."""
 
@@ -325,6 +311,7 @@ class ServerShuttingDownError(ServerError):
 # Circuit Breaker Errors
 # ============================================================================
 
+
 class CircuitBreakerError(MCPError):
     """Circuit breaker is open."""
 
@@ -332,12 +319,7 @@ class CircuitBreakerError(MCPError):
     retryable = False  # Wait for cooldown
     error_code = "CIRCUIT_BREAKER_OPEN"
 
-    def __init__(
-        self,
-        server: str,
-        cooldown_remaining: float | None = None,
-        **kwargs
-    ):
+    def __init__(self, server: str, cooldown_remaining: float | None = None, **kwargs):
         message = f"Circuit breaker open for server '{server}'"
         details = {"server": server}
         if cooldown_remaining:
@@ -349,6 +331,7 @@ class CircuitBreakerError(MCPError):
 # ============================================================================
 # LLM Errors
 # ============================================================================
+
 
 class LLMError(MCPError):
     """LLM-related errors."""
@@ -374,6 +357,7 @@ class LLMRateLimitError(LLMError):
 # Utility Functions
 # ============================================================================
 
+
 def is_retryable(error: Exception) -> bool:
     """Check if an error is retryable."""
     if isinstance(error, MCPError):
@@ -397,4 +381,3 @@ def get_error_category(error: Exception) -> ErrorCategory:
     if isinstance(error, MCPError):
         return error.category
     return ErrorCategory.PERMANENT
-

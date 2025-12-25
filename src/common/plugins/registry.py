@@ -311,9 +311,7 @@ class PluginRegistry:
         """
         if filter_enabled:
             return [
-                self._metadata[name]
-                for name in self._plugins
-                if self._enabled.get(name, False)
+                self._metadata[name] for name in self._plugins if self._enabled.get(name, False)
             ]
         return list(self._metadata.values())
 
@@ -341,9 +339,7 @@ class PluginRegistry:
         """
         return self._enabled.get(name, False)
 
-    def validate_dependencies(
-        self, metadata: PluginMetadata
-    ) -> tuple[bool, list[str]]:
+    def validate_dependencies(self, metadata: PluginMetadata) -> tuple[bool, list[str]]:
         """
         Validate plugin dependencies.
 

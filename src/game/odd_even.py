@@ -31,6 +31,7 @@ logger = get_logger(__name__)
 
 class GameRole(Enum):
     """Player role in Odd/Even game."""
+
     ODD = "odd"
     EVEN = "even"
 
@@ -45,6 +46,7 @@ class GamePhase(Enum):
     - DRAWING_NUMBER: Processing moves and calculating sum
     - FINISHED: Game/round complete
     """
+
     WAITING_FOR_PLAYERS = "waiting_for_players"
     COLLECTING_CHOICES = "collecting_choices"
     DRAWING_NUMBER = "drawing_number"
@@ -68,16 +70,14 @@ class Move:
         """
         if not isinstance(self.value, int):
             raise InvalidMoveError(
-                self.value,
-                "Move must be an integer",
-                valid_range=(min_value, max_value)
+                self.value, "Move must be an integer", valid_range=(min_value, max_value)
             )
 
         if not min_value <= self.value <= max_value:
             raise InvalidMoveError(
                 self.value,
                 f"Move must be between {min_value} and {max_value}",
-                valid_range=(min_value, max_value)
+                valid_range=(min_value, max_value),
             )
 
 
@@ -313,9 +313,7 @@ class OddEvenGame:
         move2 = self._current_moves[self.player2_id]
 
         # Step 4: Calculate sum (Draw Number)
-        sum_value, is_odd, winner_id = self.rules.calculate_result(
-            move1, move2, self.player1_role
-        )
+        sum_value, is_odd, winner_id = self.rules.calculate_result(move1, move2, self.player1_role)
 
         # Step 5: Update scores (Determine Winner)
         if winner_id == self.player1_id:
@@ -505,4 +503,3 @@ class OddEvenGame:
     def awaiting_moves(self) -> bool:
         """Check if collecting choices from players."""
         return self.phase == GamePhase.COLLECTING_CHOICES
-

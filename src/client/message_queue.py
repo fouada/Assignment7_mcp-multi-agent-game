@@ -21,10 +21,10 @@ logger = get_logger(__name__)
 class MessagePriority(IntEnum):
     """Message priority levels (lower = higher priority)."""
 
-    URGENT = 0      # System critical, bypass queue
-    HIGH = 1        # Game state, moves
-    NORMAL = 2      # Regular operations
-    LOW = 3         # Background tasks
+    URGENT = 0  # System critical, bypass queue
+    HIGH = 1  # Game state, moves
+    NORMAL = 2  # Regular operations
+    LOW = 3  # Background tasks
 
 
 @dataclass(order=True)
@@ -165,10 +165,7 @@ class MessageQueue:
             if block:
                 while not self._queue:
                     try:
-                        await asyncio.wait_for(
-                            self._not_empty.wait(),
-                            timeout=timeout
-                        )
+                        await asyncio.wait_for(self._not_empty.wait(), timeout=timeout)
                     except TimeoutError:
                         return None
             elif not self._queue:
@@ -347,4 +344,3 @@ class MessageDispatcher:
                 )
             elif message.callback and not message.callback.done():
                 message.callback.set_exception(e)
-

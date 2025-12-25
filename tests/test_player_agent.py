@@ -88,11 +88,15 @@ class TestPlayerRegistration:
         # Mock MCP client
         mock_client = AsyncMock(spec=MCPClient)
         mock_client.connected_servers = {}
-        mock_client.call_tool = AsyncMock(return_value={
-            "content": [{
-                "text": '{"status": "ACCEPTED", "player_id": "P01", "auth_token": "test_token"}'
-            }]
-        })
+        mock_client.call_tool = AsyncMock(
+            return_value={
+                "content": [
+                    {
+                        "text": '{"status": "ACCEPTED", "player_id": "P01", "auth_token": "test_token"}'
+                    }
+                ]
+            }
+        )
 
         player._client = mock_client
 
@@ -114,11 +118,9 @@ class TestPlayerRegistration:
 
         mock_client = AsyncMock(spec=MCPClient)
         mock_client.connected_servers = {}
-        mock_client.call_tool = AsyncMock(return_value={
-            "content": [{
-                "text": '{"status": "REJECTED", "reason": "League full"}'
-            }]
-        })
+        mock_client.call_tool = AsyncMock(
+            return_value={"content": [{"text": '{"status": "REJECTED", "reason": "League full"}'}]}
+        )
 
         player._client = mock_client
 
@@ -779,4 +781,3 @@ EDGE CASES TESTED:
     - Maximum concurrent games
     - Empty game history
 """
-

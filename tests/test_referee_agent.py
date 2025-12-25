@@ -73,11 +73,11 @@ class TestRefereeRegistration:
 
         mock_client = AsyncMock(spec=MCPClient)
         mock_client.connected_servers = {}
-        mock_client.call_tool = AsyncMock(return_value={
-            "content": [{
-                "text": '{"status": "ACCEPTED", "auth_token": "ref_token_001"}'
-            }]
-        })
+        mock_client.call_tool = AsyncMock(
+            return_value={
+                "content": [{"text": '{"status": "ACCEPTED", "auth_token": "ref_token_001"}'}]
+            }
+        )
 
         referee._client = mock_client
 
@@ -97,11 +97,11 @@ class TestRefereeRegistration:
 
         mock_client = AsyncMock(spec=MCPClient)
         mock_client.connected_servers = {}
-        mock_client.call_tool = AsyncMock(return_value={
-            "content": [{
-                "text": '{"status": "REJECTED", "reason": "Invalid credentials"}'
-            }]
-        })
+        mock_client.call_tool = AsyncMock(
+            return_value={
+                "content": [{"text": '{"status": "REJECTED", "reason": "Invalid credentials"}'}]
+            }
+        )
 
         referee._client = mock_client
 
@@ -145,7 +145,7 @@ class TestMatchManagement:
         referee._client = mock_client
 
         # Mock the full game flow
-        with patch.object(referee, '_run_full_game', new_callable=AsyncMock) as mock_run:
+        with patch.object(referee, "_run_full_game", new_callable=AsyncMock) as mock_run:
             mock_run.return_value = None
 
             params = {
@@ -213,10 +213,12 @@ class TestGameInvitations:
         mock_client = AsyncMock(spec=MCPClient)
         mock_client.connected_servers = {}
         mock_client.connect = AsyncMock()
-        mock_client.send_protocol_message = AsyncMock(return_value={
-            "success": True,
-            "accepted": True,
-        })
+        mock_client.send_protocol_message = AsyncMock(
+            return_value={
+                "success": True,
+                "accepted": True,
+            }
+        )
 
         referee._client = mock_client
 
@@ -255,10 +257,12 @@ class TestGameInvitations:
         mock_client.connect = AsyncMock()
 
         # First player accepts, second rejects
-        mock_client.send_protocol_message = AsyncMock(side_effect=[
-            {"success": True, "accepted": True},
-            {"success": True, "accepted": False},
-        ])
+        mock_client.send_protocol_message = AsyncMock(
+            side_effect=[
+                {"success": True, "accepted": True},
+                {"success": True, "accepted": False},
+            ]
+        )
 
         referee._client = mock_client
 
@@ -300,10 +304,12 @@ class TestRoundExecution:
         mock_client.connected_servers = {"P01": "url1", "P02": "url2"}
 
         # Mock player responses with moves
-        mock_client.send_protocol_message = AsyncMock(return_value={
-            "success": True,
-            "move": 5,
-        })
+        mock_client.send_protocol_message = AsyncMock(
+            return_value={
+                "success": True,
+                "move": 5,
+            }
+        )
 
         referee._client = mock_client
 
@@ -321,7 +327,7 @@ class TestRoundExecution:
         session = GameSession(match=match, game=game, state="running")
 
         # Mock send_round_results
-        with patch.object(referee, '_send_round_results', new_callable=AsyncMock):
+        with patch.object(referee, "_send_round_results", new_callable=AsyncMock):
             await referee._run_round(session)
 
         # Verify round was played
@@ -366,7 +372,7 @@ class TestRoundExecution:
 
         session = GameSession(match=match, game=game, state="running")
 
-        with patch.object(referee, '_send_round_results', new_callable=AsyncMock):
+        with patch.object(referee, "_send_round_results", new_callable=AsyncMock):
             await referee._run_round(session)
 
         # Verify moves were collected and round resolved
@@ -440,23 +446,27 @@ class TestMoveHandling:
         referee._sessions[game.game_id] = session
 
         # Submit first player's move
-        result1 = await referee._handle_move_submission({
-            "game_id": game.game_id,
-            "player_id": "P01",
-            "move": 5,
-        })
+        result1 = await referee._handle_move_submission(
+            {
+                "game_id": game.game_id,
+                "player_id": "P01",
+                "move": 5,
+            }
+        )
 
         assert result1["success"] is True
         assert result1["round_resolved"] is False
 
         # Submit second player's move (should resolve round)
-        with patch.object(referee, '_request_moves', new_callable=AsyncMock):
-            with patch.object(referee, '_send_round_results', new_callable=AsyncMock):
-                result2 = await referee._handle_move_submission({
-                    "game_id": game.game_id,
-                    "player_id": "P02",
-                    "move": 4,
-                })
+        with patch.object(referee, "_request_moves", new_callable=AsyncMock):
+            with patch.object(referee, "_send_round_results", new_callable=AsyncMock):
+                result2 = await referee._handle_move_submission(
+                    {
+                        "game_id": game.game_id,
+                        "player_id": "P02",
+                        "move": 4,
+                    }
+                )
 
         assert result2["success"] is True
         assert result2["round_resolved"] is True
@@ -640,12 +650,12 @@ class TestRefereeTools:
 
         # Create multiple sessions
         for i in range(3):
-            match = Match(match_id=f"M00{i+1}", league_id=referee.league_id)
+            match = Match(match_id=f"M00{i + 1}", league_id=referee.league_id)
             match.set_players(
-                player1_id=f"P0{i*2+1}",
-                player1_endpoint=f"http://localhost:810{i*2+1}/mcp",
-                player2_id=f"P0{i*2+2}",
-                player2_endpoint=f"http://localhost:810{i*2+2}/mcp",
+                player1_id=f"P0{i * 2 + 1}",
+                player1_endpoint=f"http://localhost:810{i * 2 + 1}/mcp",
+                player2_id=f"P0{i * 2 + 2}",
+                player2_endpoint=f"http://localhost:810{i * 2 + 2}/mcp",
             )
             game = match.create_game(total_rounds=5, player1_role=GameRole.ODD)
             session = GameSession(match=match, game=game, state="running")
@@ -723,7 +733,7 @@ class TestRefereeEdgeCases:
             "player2_endpoint": "http://localhost:8102/mcp",
         }
 
-        with patch.object(referee, '_run_full_game', new_callable=AsyncMock):
+        with patch.object(referee, "_run_full_game", new_callable=AsyncMock):
             # Should not raise exception
             try:
                 await referee._start_match(params)
@@ -942,4 +952,3 @@ EDGE CASES TESTED:
     - Zero players (edge case)
     - Many concurrent matches
 """
-

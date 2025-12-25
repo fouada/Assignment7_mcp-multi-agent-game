@@ -43,7 +43,9 @@ class JSONFormatter(logging.Formatter):
             log_data["exception"] = {
                 "type": record.exc_info[0].__name__ if record.exc_info[0] else None,
                 "message": str(record.exc_info[1]) if record.exc_info[1] else None,
-                "traceback": traceback.format_exception(*record.exc_info) if record.exc_info[0] else None,
+                "traceback": traceback.format_exception(*record.exc_info)
+                if record.exc_info[0]
+                else None,
             }
 
         return json.dumps(log_data)
@@ -53,11 +55,11 @@ class ColorFormatter(logging.Formatter):
     """Colored console formatter."""
 
     COLORS = {
-        "DEBUG": "\033[36m",    # Cyan
-        "INFO": "\033[32m",     # Green
+        "DEBUG": "\033[36m",  # Cyan
+        "INFO": "\033[32m",  # Green
         "WARNING": "\033[33m",  # Yellow
-        "ERROR": "\033[31m",    # Red
-        "CRITICAL": "\033[35m", # Magenta
+        "ERROR": "\033[31m",  # Red
+        "CRITICAL": "\033[35m",  # Magenta
     }
     RESET = "\033[0m"
     BOLD = "\033[1m"
@@ -108,15 +110,7 @@ class GameLogger(logging.Logger):
             self._context.pop(key, None)
         return self
 
-    def _log_with_context(
-        self,
-        level: int,
-        msg: str,
-        args,
-        exc_info=None,
-        extra=None,
-        **kwargs
-    ):
+    def _log_with_context(self, level: int, msg: str, args, exc_info=None, extra=None, **kwargs):
         """Log with context data."""
         if extra is None:
             extra = {}
@@ -201,8 +195,10 @@ def get_logger(name: str = "mcp_game") -> GameLogger:
 
 # Decorators for logging
 
+
 def log_call(logger: GameLogger | None = None):
     """Decorator to log function calls."""
+
     def decorator(func):
         nonlocal logger
         if logger is None:
@@ -210,7 +206,9 @@ def log_call(logger: GameLogger | None = None):
 
         @wraps(func)
         def wrapper(*args, **kwargs):
-            logger.debug(f"Calling {func.__name__}", args_count=len(args), kwargs_keys=list(kwargs.keys()))
+            logger.debug(
+                f"Calling {func.__name__}", args_count=len(args), kwargs_keys=list(kwargs.keys())
+            )
             start = time.time()
             try:
                 result = func(*args, **kwargs)
@@ -219,15 +217,21 @@ def log_call(logger: GameLogger | None = None):
                 return result
             except Exception as e:
                 duration = time.time() - start
-                logger.error(f"Error in {func.__name__}: {e}", duration_ms=round(duration * 1000, 2), exc_info=True)
+                logger.error(
+                    f"Error in {func.__name__}: {e}",
+                    duration_ms=round(duration * 1000, 2),
+                    exc_info=True,
+                )
                 raise
 
         return wrapper
+
     return decorator
 
 
 def log_async_call(logger: GameLogger | None = None):
     """Decorator to log async function calls."""
+
     def decorator(func):
         nonlocal logger
         if logger is None:
@@ -244,10 +248,15 @@ def log_async_call(logger: GameLogger | None = None):
                 return result
             except Exception as e:
                 duration = time.time() - start
-                logger.error(f"Error in {func.__name__}: {e}", duration_ms=round(duration * 1000, 2), exc_info=True)
+                logger.error(
+                    f"Error in {func.__name__}: {e}",
+                    duration_ms=round(duration * 1000, 2),
+                    exc_info=True,
+                )
                 raise
 
         return wrapper
+
     return decorator
 
 
@@ -271,15 +280,10 @@ class PerformanceTracker:
 
         if exc_type:
             self.logger.error(
-                f"Failed {self.operation}",
-                duration_ms=round(duration, 2),
-                error=str(exc_val)
+                f"Failed {self.operation}", duration_ms=round(duration, 2), error=str(exc_val)
             )
         else:
-            self.logger.info(
-                f"Completed {self.operation}",
-                duration_ms=round(duration, 2)
-            )
+            self.logger.info(f"Completed {self.operation}", duration_ms=round(duration, 2))
 
         return False  # Don't suppress exceptions
 
@@ -299,6 +303,7 @@ class PerformanceTracker:
 # ============================================================================
 # JSONL File Logging
 # ============================================================================
+
 
 class JSONLWriter:
     """
@@ -326,8 +331,8 @@ class JSONLWriter:
     def _write_entry(self, path: Path, entry: dict[str, Any]) -> None:
         """Write a single JSONL entry."""
         path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, 'a', encoding='utf-8') as f:
-            f.write(json.dumps(entry, default=str, ensure_ascii=False) + '\n')
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, default=str, ensure_ascii=False) + "\n")
 
     def log_league_event(
         self,
@@ -423,7 +428,7 @@ class JSONLWriter:
             return []
 
         events = []
-        with open(path, encoding='utf-8') as f:
+        with open(path, encoding="utf-8") as f:
             for line in f:
                 if line.strip():
                     entry = json.loads(line)
@@ -699,4 +704,3 @@ def get_jsonl_writer(base_path: str = "logs") -> JSONLWriter:
     if _jsonl_writer is None:
         _jsonl_writer = JSONLWriter(base_path)
     return _jsonl_writer
-

@@ -55,18 +55,18 @@ class ByzantineProof:
     def to_dict(self) -> dict:
         """Serialize to dictionary."""
         return {
-            'match_id': self.match_id,
-            'players': self.players,
-            'moves': self.moves,
-            'result': self.result,
-            'player1_signature': self.player1_signature,
-            'player2_signature': self.player2_signature,
-            'referee_signature': self.referee_signature,
-            'witness_signatures': self.witness_signatures,
-            'move_merkle_root': self.move_merkle_root,
-            'move_merkle_proofs': self.move_merkle_proofs,
-            'timestamp': self.timestamp,
-            'nonce': self.nonce
+            "match_id": self.match_id,
+            "players": self.players,
+            "moves": self.moves,
+            "result": self.result,
+            "player1_signature": self.player1_signature,
+            "player2_signature": self.player2_signature,
+            "referee_signature": self.referee_signature,
+            "witness_signatures": self.witness_signatures,
+            "move_merkle_root": self.move_merkle_root,
+            "move_merkle_proofs": self.move_merkle_proofs,
+            "timestamp": self.timestamp,
+            "nonce": self.nonce,
         }
 
     def verify_integrity(self, public_keys: dict[str, str]) -> bool:
@@ -131,11 +131,7 @@ class ByzantineFaultTolerantTournament:
     Paper: "Byzantine Fault Tolerant Tournaments for Multi-Agent Systems"
     """
 
-    def __init__(
-        self,
-        num_referees: int = 5,
-        byzantine_tolerance: int = 1
-    ):
+    def __init__(self, num_referees: int = 5, byzantine_tolerance: int = 1):
         """
         Initialize BFT tournament.
 
@@ -148,7 +144,7 @@ class ByzantineFaultTolerantTournament:
         """
         if num_referees < 3 * byzantine_tolerance + 1:
             raise ValueError(
-                f"Need at least {3*byzantine_tolerance + 1} referees "
+                f"Need at least {3 * byzantine_tolerance + 1} referees "
                 f"to tolerate {byzantine_tolerance} Byzantine failures. "
                 f"Got {num_referees} referees."
             )
@@ -186,11 +182,7 @@ class ByzantineFaultTolerantTournament:
         self.reputation[referee_id] = 1.0
 
     async def execute_match_with_bft(
-        self,
-        player1_id: str,
-        player2_id: str,
-        match_id: str,
-        referee_execute_func: callable
+        self, player1_id: str, player2_id: str, match_id: str, referee_execute_func: callable
     ) -> tuple[dict, ByzantineProof]:
         """
         Execute match with Byzantine fault tolerance.
@@ -212,31 +204,27 @@ class ByzantineFaultTolerantTournament:
         primary_referee = self._select_primary_referee()
 
         {
-            'match_id': match_id,
-            'players': (player1_id, player2_id),
-            'primary_referee': primary_referee,
-            'timestamp': int(time.time())
+            "match_id": match_id,
+            "players": (player1_id, player2_id),
+            "primary_referee": primary_referee,
+            "timestamp": int(time.time()),
         }
 
         # Phase 2: PREPARE (Execute with multiple witness referees)
         print(f"🔒 BFT: Executing match {match_id} with {self.num_referees} referees")
 
-        referee_observations = await asyncio.gather(*[
-            self._execute_witnessed_match(
-                referee_id,
-                player1_id,
-                player2_id,
-                match_id,
-                referee_execute_func
-            )
-            for referee_id in self.referee_ids
-        ], return_exceptions=True)
+        referee_observations = await asyncio.gather(
+            *[
+                self._execute_witnessed_match(
+                    referee_id, player1_id, player2_id, match_id, referee_execute_func
+                )
+                for referee_id in self.referee_ids
+            ],
+            return_exceptions=True,
+        )
 
         # Filter out exceptions
-        valid_observations = [
-            obs for obs in referee_observations
-            if not isinstance(obs, Exception)
-        ]
+        valid_observations = [obs for obs in referee_observations if not isinstance(obs, Exception)]
 
         if len(valid_observations) < self.quorum_size:
             raise ByzantineAttackDetected(
@@ -260,7 +248,7 @@ class ByzantineFaultTolerantTournament:
             match_id=match_id,
             players=(player1_id, player2_id),
             result=consensus_result,
-            observations=valid_observations
+            observations=valid_observations,
         )
 
         # Update reputation based on agreement
@@ -278,7 +266,7 @@ class ByzantineFaultTolerantTournament:
         player1_id: str,
         player2_id: str,
         match_id: str,
-        execute_func: callable
+        execute_func: callable,
     ) -> dict:
         """
         Execute match as witnessed by one referee.
@@ -290,12 +278,12 @@ class ByzantineFaultTolerantTournament:
             result = await execute_func(referee_id, player1_id, player2_id)
 
             return {
-                'referee_id': referee_id,
-                'match_id': match_id,
-                'players': (player1_id, player2_id),
-                'result': result,
-                'moves': result.get('moves', {}),
-                'timestamp': int(time.time())
+                "referee_id": referee_id,
+                "match_id": match_id,
+                "players": (player1_id, player2_id),
+                "result": result,
+                "moves": result.get("moves", {}),
+                "timestamp": int(time.time()),
             }
         except Exception as e:
             # Referee failed (Byzantine or crashed)
@@ -319,7 +307,7 @@ class ByzantineFaultTolerantTournament:
         result_mapping = {}
 
         for obs in observations:
-            result = obs['result']
+            result = obs["result"]
             result_hash = self._hash_result(result)
 
             if result_hash not in result_hashes:
@@ -338,11 +326,7 @@ class ByzantineFaultTolerantTournament:
         return None
 
     def _generate_byzantine_proof(
-        self,
-        match_id: str,
-        players: tuple[str, str],
-        result: dict,
-        observations: list[dict]
+        self, match_id: str, players: tuple[str, str], result: dict, observations: list[dict]
     ) -> ByzantineProof:
         """
         Generate cryptographic proof of match result.
@@ -356,8 +340,8 @@ class ByzantineFaultTolerantTournament:
         # Extract moves from consensus observations
         moves = {}
         for obs in observations:
-            if self._hash_result(obs['result']) == self._hash_result(result):
-                moves.update(obs.get('moves', {}))
+            if self._hash_result(obs["result"]) == self._hash_result(result):
+                moves.update(obs.get("moves", {}))
                 break
 
         # Build Merkle tree
@@ -366,8 +350,8 @@ class ByzantineFaultTolerantTournament:
         # Collect signatures from quorum
         referee_signatures = []
         for obs in observations:
-            if self._hash_result(obs['result']) == self._hash_result(result):
-                signature = self._sign(obs['referee_id'], result)
+            if self._hash_result(obs["result"]) == self._hash_result(result):
+                signature = self._sign(obs["referee_id"], result)
                 referee_signatures.append(signature)
 
                 if len(referee_signatures) >= self.quorum_size:
@@ -389,7 +373,7 @@ class ByzantineFaultTolerantTournament:
             move_merkle_root=move_merkle_root,
             move_merkle_proofs={},  # Simplified
             timestamp=int(time.time()),
-            nonce=nonce
+            nonce=nonce,
         )
 
         return proof
@@ -403,8 +387,8 @@ class ByzantineFaultTolerantTournament:
         consensus_hash = self._hash_result(consensus)
 
         for obs in observations:
-            referee_id = obs['referee_id']
-            obs_hash = self._hash_result(obs['result'])
+            referee_id = obs["referee_id"]
+            obs_hash = self._hash_result(obs["result"])
 
             if obs_hash == consensus_hash:
                 # Agreed with consensus: boost reputation
@@ -439,6 +423,7 @@ class ByzantineFaultTolerantTournament:
 
         # Weighted random selection
         import numpy as np
+
         return np.random.choice(self.referee_ids, p=probs)
 
     def detect_collusion(self) -> list[tuple[str, str, float]]:
@@ -466,26 +451,23 @@ class ByzantineFaultTolerantTournament:
             pair = tuple(sorted([p1, p2]))
 
             if pair not in player_pairs:
-                player_pairs[pair] = {
-                    'matches': 0,
-                    'wins': {p1: 0, p2: 0}
-                }
+                player_pairs[pair] = {"matches": 0, "wins": {p1: 0, p2: 0}}
 
-            player_pairs[pair]['matches'] += 1
+            player_pairs[pair]["matches"] += 1
 
-            winner = proof.result.get('winner')
+            winner = proof.result.get("winner")
             if winner:
-                player_pairs[pair]['wins'][winner] += 1
+                player_pairs[pair]["wins"][winner] += 1
 
         # Detect suspicious patterns
         for pair, stats in player_pairs.items():
-            if stats['matches'] < 3:
+            if stats["matches"] < 3:
                 continue  # Too few matches
 
             p1, p2 = pair
 
-            p1_win_rate = stats['wins'][p1] / stats['matches']
-            p2_win_rate = stats['wins'][p2] / stats['matches']
+            p1_win_rate = stats["wins"][p1] / stats["matches"]
+            p2_win_rate = stats["wins"][p2] / stats["matches"]
 
             # Suspicion: One player wins >= 90% of matches
             if p1_win_rate >= 0.9:
@@ -520,10 +502,10 @@ class ByzantineFaultTolerantTournament:
             agreement_rate = agreements / total if total > 0 else 0.0
 
             report[ref_id] = {
-                'reputation': rep,
-                'agreement_rate': agreement_rate,
-                'total_matches_witnessed': total,
-                'status': 'trusted' if rep > 0.8 else 'suspicious' if rep < 0.5 else 'normal'
+                "reputation": rep,
+                "agreement_rate": agreement_rate,
+                "total_matches_witnessed": total,
+                "status": "trusted" if rep > 0.8 else "suspicious" if rep < 0.5 else "normal",
             }
 
         return report
@@ -572,12 +554,12 @@ class ByzantineFaultTolerantTournament:
 
 class ByzantineAttackDetected(Exception):
     """Raised when Byzantine attack or failure is detected."""
+
     pass
 
 
 def create_bft_tournament(
-    num_referees: int = 5,
-    byzantine_tolerance: int = 1
+    num_referees: int = 5, byzantine_tolerance: int = 1
 ) -> ByzantineFaultTolerantTournament:
     """
     Factory function to create BFT tournament.
@@ -594,7 +576,5 @@ def create_bft_tournament(
         >>> # Can tolerate up to 2 malicious referees
     """
     return ByzantineFaultTolerantTournament(
-        num_referees=num_referees,
-        byzantine_tolerance=byzantine_tolerance
+        num_referees=num_referees, byzantine_tolerance=byzantine_tolerance
     )
-

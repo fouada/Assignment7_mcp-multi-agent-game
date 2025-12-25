@@ -100,9 +100,7 @@ class TestMiddleware(Middleware):
         context.response[f"{self.name}_after"] = True
         return context
 
-    async def on_error(
-        self, context: RequestContext, error: Exception
-    ) -> dict[str, Any] | None:
+    async def on_error(self, context: RequestContext, error: Exception) -> dict[str, Any] | None:
         self.error_called = True
         self.call_order.append("error")
         return None
@@ -449,9 +447,7 @@ async def test_logging_middleware(clean_pipeline, sample_request, sample_handler
 
 
 @pytest.mark.asyncio
-async def test_authentication_middleware_required(
-    clean_pipeline, sample_request, sample_handler
-):
+async def test_authentication_middleware_required(clean_pipeline, sample_request, sample_handler):
     """Test AuthenticationMiddleware with required authentication."""
     auth_middleware = AuthenticationMiddleware(
         name="auth",
@@ -477,9 +473,7 @@ async def test_authentication_middleware_required(
 
 
 @pytest.mark.asyncio
-async def test_authentication_middleware_optional(
-    clean_pipeline, sample_request, sample_handler
-):
+async def test_authentication_middleware_optional(clean_pipeline, sample_request, sample_handler):
     """Test AuthenticationMiddleware with optional authentication."""
     auth_middleware = AuthenticationMiddleware(
         name="auth",
@@ -592,9 +586,7 @@ async def test_caching_middleware(clean_pipeline, sample_handler):
         call_count += 1
         return {"success": True, "call_count": call_count}
 
-    caching_middleware = CachingMiddleware(
-        name="caching", max_size=10, ttl_seconds=300
-    )
+    caching_middleware = CachingMiddleware(name="caching", max_size=10, ttl_seconds=300)
 
     clean_pipeline.add_middleware(caching_middleware, priority=40)
 
@@ -662,15 +654,9 @@ async def test_full_pipeline_integration(sample_request, sample_handler):
 
     # Add middleware in priority order (like BaseGameServer)
     pipeline.add_middleware(TracingMiddleware(service_name="test"), priority=100)
-    pipeline.add_middleware(
-        LoggingMiddleware(log_requests=True, log_responses=True), priority=90
-    )
-    pipeline.add_middleware(
-        AuthenticationMiddleware(required=False), priority=80
-    )  # Optional auth
-    pipeline.add_middleware(
-        RateLimitMiddleware(requests_per_minute=100), priority=70
-    )
+    pipeline.add_middleware(LoggingMiddleware(log_requests=True, log_responses=True), priority=90)
+    pipeline.add_middleware(AuthenticationMiddleware(required=False), priority=80)  # Optional auth
+    pipeline.add_middleware(RateLimitMiddleware(requests_per_minute=100), priority=70)
     pipeline.add_middleware(MetricsMiddleware(), priority=50)
     pipeline.add_middleware(ErrorHandlerMiddleware(), priority=10)
 

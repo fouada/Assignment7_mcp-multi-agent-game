@@ -54,7 +54,7 @@ class PlayerFactory(TestDataFactory):
         strategy: str = "random",
         endpoint: str | None = None,
         port: int | None = None,
-        **kwargs
+        **kwargs,
     ) -> dict[str, Any]:
         """
         Create a player configuration.
@@ -85,10 +85,14 @@ class PlayerFactory(TestDataFactory):
                 "wins": kwargs.get("wins", 0),
                 "losses": kwargs.get("losses", 0),
                 "draws": kwargs.get("draws", 0),
-                "points": kwargs.get("points", 0)
+                "points": kwargs.get("points", 0),
             },
             "created_at": cls.timestamp(),
-            **{k: v for k, v in kwargs.items() if k not in ["wins", "losses", "draws", "points", "game_types"]}
+            **{
+                k: v
+                for k, v in kwargs.items()
+                if k not in ["wins", "losses", "draws", "points", "game_types"]
+            },
         }
 
     @classmethod
@@ -123,7 +127,7 @@ class RefereeFactory(TestDataFactory):
         referee_id: str | None = None,
         endpoint: str | None = None,
         port: int | None = None,
-        **kwargs
+        **kwargs,
     ) -> dict[str, Any]:
         """
         Create a referee configuration.
@@ -149,7 +153,11 @@ class RefereeFactory(TestDataFactory):
             "active_matches": kwargs.get("active_matches", 0),
             "completed_matches": kwargs.get("completed_matches", 0),
             "created_at": cls.timestamp(),
-            **{k: v for k, v in kwargs.items() if k not in ["capacity", "active_matches", "completed_matches"]}
+            **{
+                k: v
+                for k, v in kwargs.items()
+                if k not in ["capacity", "active_matches", "completed_matches"]
+            },
         }
 
     @classmethod
@@ -177,7 +185,7 @@ class MatchFactory(TestDataFactory):
         referee_id: str | None = None,
         rounds: int = 5,
         status: str = "pending",
-        **kwargs
+        **kwargs,
     ) -> dict[str, Any]:
         """
         Create a match configuration.
@@ -212,15 +220,15 @@ class MatchFactory(TestDataFactory):
             "started_at": kwargs.get("started_at"),
             "completed_at": kwargs.get("completed_at"),
             "created_at": cls.timestamp(),
-            **{k: v for k, v in kwargs.items() if k not in ["current_round", "scores", "winner_id", "started_at", "completed_at"]}
+            **{
+                k: v
+                for k, v in kwargs.items()
+                if k not in ["current_round", "scores", "winner_id", "started_at", "completed_at"]
+            },
         }
 
     @classmethod
-    def create_completed(
-        cls,
-        winner_id: str | None = None,
-        **kwargs
-    ) -> dict[str, Any]:
+    def create_completed(cls, winner_id: str | None = None, **kwargs) -> dict[str, Any]:
         """Create a completed match."""
         match = cls.create(status="completed", **kwargs)
         match["winner_id"] = winner_id or match["player1_id"]
@@ -231,10 +239,7 @@ class MatchFactory(TestDataFactory):
     def create_in_progress(cls, current_round: int = 3, **kwargs) -> dict[str, Any]:
         """Create a match in progress."""
         return cls.create(
-            status="in_progress",
-            current_round=current_round,
-            started_at=cls.timestamp(),
-            **kwargs
+            status="in_progress", current_round=current_round, started_at=cls.timestamp(), **kwargs
         )
 
 
@@ -251,7 +256,7 @@ class GameFactory(TestDataFactory):
         rounds: int = 5,
         odd_player: str | None = None,
         even_player: str | None = None,
-        **kwargs
+        **kwargs,
     ) -> dict[str, Any]:
         """
         Create a game configuration.
@@ -282,15 +287,15 @@ class GameFactory(TestDataFactory):
             "history": kwargs.get("history", []),
             "status": kwargs.get("status", "pending"),
             "created_at": cls.timestamp(),
-            **{k: v for k, v in kwargs.items() if k not in ["current_round", "scores", "history", "status"]}
+            **{
+                k: v
+                for k, v in kwargs.items()
+                if k not in ["current_round", "scores", "history", "status"]
+            },
         }
 
     @classmethod
-    def create_with_history(
-        cls,
-        rounds_played: int = 3,
-        **kwargs
-    ) -> dict[str, Any]:
+    def create_with_history(cls, rounds_played: int = 3, **kwargs) -> dict[str, Any]:
         """Create a game with simulated history."""
         game = cls.create(**kwargs)
 
@@ -302,13 +307,9 @@ class GameFactory(TestDataFactory):
             is_odd = total % 2 == 1
             winner = game["odd_player"] if is_odd else game["even_player"]
 
-            history.append({
-                "round": round_num,
-                "move1": move1,
-                "move2": move2,
-                "sum": total,
-                "winner": winner
-            })
+            history.append(
+                {"round": round_num, "move1": move1, "move2": move2, "sum": total, "winner": winner}
+            )
 
             game["scores"][winner] += 1
 
@@ -329,7 +330,7 @@ class MessageFactory(TestDataFactory):
         cls,
         player_id: str | None = None,
         endpoint: str | None = None,
-        game_types: list[str] | None = None
+        game_types: list[str] | None = None,
     ) -> dict[str, Any]:
         """Create a player registration message."""
         player_id = player_id or cls.random_id("P")
@@ -338,15 +339,12 @@ class MessageFactory(TestDataFactory):
             "player_id": player_id,
             "endpoint": endpoint or f"http://localhost:{cls.random_port()}",
             "game_types": game_types or ["even_odd"],
-            "timestamp": cls.timestamp()
+            "timestamp": cls.timestamp(),
         }
 
     @classmethod
     def create_game_invite(
-        cls,
-        game_id: str | None = None,
-        player_id: str | None = None,
-        role: str = "odd"
+        cls, game_id: str | None = None, player_id: str | None = None, role: str = "odd"
     ) -> dict[str, Any]:
         """Create a game invitation message."""
         return {
@@ -356,15 +354,12 @@ class MessageFactory(TestDataFactory):
             "role": role,
             "game_type": "even_odd",
             "rounds": 5,
-            "timestamp": cls.timestamp()
+            "timestamp": cls.timestamp(),
         }
 
     @classmethod
     def create_move_request(
-        cls,
-        game_id: str | None = None,
-        player_id: str | None = None,
-        round_num: int = 1
+        cls, game_id: str | None = None, player_id: str | None = None, round_num: int = 1
     ) -> dict[str, Any]:
         """Create a move request message."""
         return {
@@ -372,15 +367,12 @@ class MessageFactory(TestDataFactory):
             "game_id": game_id or cls.random_id("G"),
             "player_id": player_id or cls.random_id("P"),
             "round": round_num,
-            "timestamp": cls.timestamp()
+            "timestamp": cls.timestamp(),
         }
 
     @classmethod
     def create_move_response(
-        cls,
-        game_id: str | None = None,
-        player_id: str | None = None,
-        move: int | None = None
+        cls, game_id: str | None = None, player_id: str | None = None, move: int | None = None
     ) -> dict[str, Any]:
         """Create a move response message."""
         return {
@@ -388,15 +380,12 @@ class MessageFactory(TestDataFactory):
             "game_id": game_id or cls.random_id("G"),
             "player_id": player_id or cls.random_id("P"),
             "move": move if move is not None else cls.random_move(),
-            "timestamp": cls.timestamp()
+            "timestamp": cls.timestamp(),
         }
 
     @classmethod
     def create_round_result(
-        cls,
-        game_id: str | None = None,
-        round_num: int = 1,
-        winner_id: str | None = None
+        cls, game_id: str | None = None, round_num: int = 1, winner_id: str | None = None
     ) -> dict[str, Any]:
         """Create a round result message."""
         move1 = cls.random_move()
@@ -409,7 +398,7 @@ class MessageFactory(TestDataFactory):
             "move2": move2,
             "sum": move1 + move2,
             "winner_id": winner_id or cls.random_id("P"),
-            "timestamp": cls.timestamp()
+            "timestamp": cls.timestamp(),
         }
 
     @classmethod
@@ -417,7 +406,7 @@ class MessageFactory(TestDataFactory):
         cls,
         game_id: str | None = None,
         winner_id: str | None = None,
-        final_scores: dict[str, int] | None = None
+        final_scores: dict[str, int] | None = None,
     ) -> dict[str, Any]:
         """Create a game over message."""
         return {
@@ -425,15 +414,12 @@ class MessageFactory(TestDataFactory):
             "game_id": game_id or cls.random_id("G"),
             "winner_id": winner_id or cls.random_id("P"),
             "final_scores": final_scores or {"P1": 3, "P2": 2},
-            "timestamp": cls.timestamp()
+            "timestamp": cls.timestamp(),
         }
 
     @classmethod
     def create_match_result(
-        cls,
-        match_id: str | None = None,
-        winner_id: str | None = None,
-        loser_id: str | None = None
+        cls, match_id: str | None = None, winner_id: str | None = None, loser_id: str | None = None
     ) -> dict[str, Any]:
         """Create a match result message."""
         return {
@@ -441,7 +427,7 @@ class MessageFactory(TestDataFactory):
             "match_id": match_id or cls.random_id("M"),
             "winner_id": winner_id or cls.random_id("P"),
             "loser_id": loser_id or cls.random_id("P"),
-            "timestamp": cls.timestamp()
+            "timestamp": cls.timestamp(),
         }
 
 
@@ -457,17 +443,10 @@ class ScenarioFactory(TestDataFactory):
         player2 = PlayerFactory.create(player_id="P2")
         referee = RefereeFactory.create(referee_id="R1")
         match = MatchFactory.create(
-            match_id="M1",
-            player1_id="P1",
-            player2_id="P2",
-            referee_id="R1"
+            match_id="M1", player1_id="P1", player2_id="P2", referee_id="R1"
         )
 
-        return {
-            "players": [player1, player2],
-            "referee": referee,
-            "match": match
-        }
+        return {"players": [player1, player2], "referee": referee, "match": match}
 
     @classmethod
     def create_league_scenario(cls, num_players: int = 4) -> dict[str, Any]:
@@ -478,11 +457,11 @@ class ScenarioFactory(TestDataFactory):
         # Generate round-robin matches
         matches = []
         for i, p1 in enumerate(players):
-            for p2 in players[i+1:]:
+            for p2 in players[i + 1 :]:
                 match = MatchFactory.create(
                     player1_id=p1["player_id"],
                     player2_id=p2["player_id"],
-                    referee_id=random.choice(referees)["referee_id"]
+                    referee_id=random.choice(referees)["referee_id"],
                 )
                 matches.append(match)
 
@@ -490,7 +469,7 @@ class ScenarioFactory(TestDataFactory):
             "players": players,
             "referees": referees,
             "matches": matches,
-            "num_rounds": len(players) - 1
+            "num_rounds": len(players) - 1,
         }
 
     @classmethod
@@ -502,6 +481,5 @@ class ScenarioFactory(TestDataFactory):
         return {
             "players": players,
             "referees": referees,
-            "total_matches": (num_players * (num_players - 1)) // 2
+            "total_matches": (num_players * (num_players - 1)) // 2,
         }
-

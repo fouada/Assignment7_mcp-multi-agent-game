@@ -236,7 +236,7 @@ class TestAfterDecorator:
 
         @after("sync.after", include_result=True)
         def sync_compute(x):
-            return x ** 2
+            return x**2
 
         result = sync_compute(3)
         assert result == 9

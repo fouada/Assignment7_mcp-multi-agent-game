@@ -121,7 +121,7 @@ class RefereeAgent(BaseGameServer):
                     "rounds": {"type": "integer"},
                 },
                 "required": ["match_id", "player1_id", "player2_id"],
-            }
+            },
         )
         async def start_match(params: dict) -> dict:
             return await self._start_match(params)
@@ -137,7 +137,7 @@ class RefereeAgent(BaseGameServer):
                     "move": {"type": "integer"},
                 },
                 "required": ["game_id", "player_id", "move"],
-            }
+            },
         )
         async def submit_move(params: dict) -> dict:
             return await self._handle_move_submission(params)
@@ -151,7 +151,7 @@ class RefereeAgent(BaseGameServer):
                     "game_id": {"type": "string"},
                 },
                 "required": ["game_id"],
-            }
+            },
         )
         async def get_game_state(params: dict) -> dict:
             return self._get_game_state(params.get("game_id"))
@@ -182,7 +182,7 @@ class RefereeAgent(BaseGameServer):
                     "match_id": {"type": "string"},
                 },
                 "required": ["match_id"],
-            }
+            },
         )
         async def get_match_state(params: dict) -> dict:
             """Get match state including game details."""
@@ -196,7 +196,9 @@ class RefereeAgent(BaseGameServer):
                         "match_id": match_id,
                         "game_id": game.game_id,
                         "state": session.state,
-                        "game_phase": game.phase.value if hasattr(game.phase, 'value') else str(game.phase),
+                        "game_phase": game.phase.value
+                        if hasattr(game.phase, "value")
+                        else str(game.phase),
                         "current_round": game.current_round,
                         "total_rounds": game.total_rounds,
                         "is_complete": game.is_complete,
@@ -210,10 +212,15 @@ class RefereeAgent(BaseGameServer):
                             "role": game.player2_role.value if game.player2_role else None,
                             "score": game.player2_score,
                         },
-                        "round_history": [r.to_dict() for r in game.history] if hasattr(game, 'history') else [],
+                        "round_history": [r.to_dict() for r in game.history]
+                        if hasattr(game, "history")
+                        else [],
                     }
 
-            return {"error": f"Match {match_id} not found", "active_matches": list(self._sessions.keys())}
+            return {
+                "error": f"Match {match_id} not found",
+                "active_matches": list(self._sessions.keys()),
+            }
 
     def _register_resources(self) -> None:
         """Register referee resources."""
@@ -263,6 +270,7 @@ class RefereeAgent(BaseGameServer):
             if isinstance(result, dict):
                 text = result.get("text", "{}")
                 import json
+
                 data = json.loads(text)
             else:
                 data = response
@@ -346,7 +354,9 @@ class RefereeAgent(BaseGameServer):
             "match_id": match_id,
             "game_id": game.game_id,
             "state": "complete",
-            "result": session.match.get_result() if session.match.state.value == "complete" else None,
+            "result": session.match.get_result()
+            if session.match.state.value == "complete"
+            else None,
         }
 
     async def _run_full_game(self, session: GameSession) -> None:
@@ -375,7 +385,7 @@ class RefereeAgent(BaseGameServer):
                     players=[session.game.player1_id, session.game.player2_id],
                     referee_id=self.referee_id,
                     source=f"referee:{self.referee_id}",
-                )
+                ),
             )
         except Exception as e:
             logger.error(f"Failed to emit MatchStartedEvent: {e}")
@@ -449,13 +459,14 @@ class RefereeAgent(BaseGameServer):
                     round_number=game.current_round,
                     players=[game.player1_id, game.player2_id],
                     source=f"referee:{self.referee_id}",
-                )
+                ),
             )
         except Exception as e:
             logger.error(f"Failed to emit RoundStartedEvent: {e}")
 
         # Calculate deadline (30 seconds from now)
         from datetime import datetime, timedelta
+
         deadline = (datetime.utcnow() + timedelta(seconds=self.move_timeout)).isoformat() + "Z"
 
         # Request parity choices from both players
@@ -651,7 +662,7 @@ class RefereeAgent(BaseGameServer):
                         game.player2_id: game.player2_score,
                     },
                     source=f"referee:{self.referee_id}",
-                )
+                ),
             )
         except Exception as e:
             logger.error(f"Failed to emit RoundCompletedEvent: {e}")
@@ -761,7 +772,7 @@ class RefereeAgent(BaseGameServer):
                     total_rounds=len(game_result.rounds),
                     duration_seconds=duration_seconds,
                     source=f"referee:{self.referee_id}",
-                )
+                ),
             )
         except Exception as e:
             logger.error(f"Failed to emit MatchCompletedEvent: {e}")
@@ -869,11 +880,13 @@ class RefereeAgent(BaseGameServer):
         player_id = message.get("sender", "").replace("player:", "")
         move = message.get("move")
 
-        return await self._handle_move_submission({
-            "game_id": game_id,
-            "player_id": player_id,
-            "move": move,
-        })
+        return await self._handle_move_submission(
+            {
+                "game_id": game_id,
+                "player_id": player_id,
+                "move": move,
+            }
+        )
 
     async def _handle_choose_parity_response(self, message: dict) -> dict:
         """
@@ -915,9 +928,10 @@ class RefereeAgent(BaseGameServer):
 
         logger.debug(f"Player {player_id} chose parity '{parity_choice}' with move {move_value}")
 
-        return await self._handle_move_submission({
-            "game_id": game_id,
-            "player_id": player_id,
-            "move": move_value,
-        })
-
+        return await self._handle_move_submission(
+            {
+                "game_id": game_id,
+                "player_id": player_id,
+                "move": move_value,
+            }
+        )

@@ -39,52 +39,67 @@ class TestConfigLoader:
         (self.temp_dir / "defaults").mkdir()
 
         # system.json
-        with open(self.temp_dir / "system.json", 'w') as f:
-            json.dump({
-                "version": "2.0",
-                "environment": "test",
-                "debug": True,
-                "timeouts": {
-                    "referee_register": 15,
-                    "default": 10,
-                },
-            }, f)
-
-        # leagues/test_league.json
-        with open(self.temp_dir / "leagues" / "test_league.json", 'w') as f:
-            json.dump({
-                "league_id": "test_league",
-                "name": "Test League",
-                "min_players": 4,
-                "max_players": 8,
-            }, f)
-
-        # games/games_registry.json
-        with open(self.temp_dir / "games" / "games_registry.json", 'w') as f:
-            json.dump({
-                "games": {
-                    "even_odd": {
-                        "display_name": "Even/Odd",
-                        "min_players": 2,
-                        "max_players": 2,
+        with open(self.temp_dir / "system.json", "w") as f:
+            json.dump(
+                {
+                    "version": "2.0",
+                    "environment": "test",
+                    "debug": True,
+                    "timeouts": {
+                        "referee_register": 15,
+                        "default": 10,
                     },
                 },
-                "default_game": "even_odd",
-            }, f)
+                f,
+            )
+
+        # leagues/test_league.json
+        with open(self.temp_dir / "leagues" / "test_league.json", "w") as f:
+            json.dump(
+                {
+                    "league_id": "test_league",
+                    "name": "Test League",
+                    "min_players": 4,
+                    "max_players": 8,
+                },
+                f,
+            )
+
+        # games/games_registry.json
+        with open(self.temp_dir / "games" / "games_registry.json", "w") as f:
+            json.dump(
+                {
+                    "games": {
+                        "even_odd": {
+                            "display_name": "Even/Odd",
+                            "min_players": 2,
+                            "max_players": 2,
+                        },
+                    },
+                    "default_game": "even_odd",
+                },
+                f,
+            )
 
         # defaults/referee.json
-        with open(self.temp_dir / "defaults" / "referee.json", 'w') as f:
-            json.dump({
-                "move_timeout": 45,
-                "max_retries": 5,
-            }, f)
+        with open(self.temp_dir / "defaults" / "referee.json", "w") as f:
+            json.dump(
+                {
+                    "move_timeout": 45,
+                    "max_retries": 5,
+                },
+                f,
+            )
 
         # defaults/player.json
-        with open(self.temp_dir / "defaults" / "player.json", 'w') as f:
-            json.dump({
-                "strategy": "pattern",
-                "response_timeout": 20,
-            }, f)
+        with open(self.temp_dir / "defaults" / "player.json", "w") as f:
+            json.dump(
+                {
+                    "strategy": "pattern",
+                    "response_timeout": 20,
+                },
+                f,
+            )
 
     def test_load_system(self):
         """Test loading system configuration."""
@@ -244,4 +259,3 @@ class TestLoadFromActualConfig:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

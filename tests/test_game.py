@@ -36,9 +36,7 @@ class TestOddEvenRules:
         move2 = Move(player_id="P2", value=3)
 
         # Sum = 5 (odd), P1 is ODD role -> P1 wins
-        sum_value, is_odd, winner = rules.calculate_result(
-            move1, move2, GameRole.ODD
-        )
+        sum_value, is_odd, winner = rules.calculate_result(move1, move2, GameRole.ODD)
 
         assert sum_value == 5
         assert is_odd is True
@@ -51,9 +49,7 @@ class TestOddEvenRules:
         move2 = Move(player_id="P2", value=4)
 
         # Sum = 6 (even), P1 is ODD role -> P2 wins
-        sum_value, is_odd, winner = rules.calculate_result(
-            move1, move2, GameRole.ODD
-        )
+        sum_value, is_odd, winner = rules.calculate_result(move1, move2, GameRole.ODD)
 
         assert sum_value == 6
         assert is_odd is False
@@ -253,6 +249,7 @@ class TestGameRegistry:
     def setup_method(self):
         """Setup for each test - ensure registry has default games."""
         from src.game.registry import register_default_games
+
         register_default_games()
 
     def test_default_game_registered(self):
@@ -391,4 +388,3 @@ class TestGameMove:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

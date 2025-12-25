@@ -281,4 +281,3 @@ class SessionPool:
             if server_name in self._pools:
                 if session in self._pools[server_name]:
                     self._pools[server_name].remove(session)
-

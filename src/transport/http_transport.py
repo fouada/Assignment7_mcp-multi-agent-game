@@ -22,6 +22,7 @@ from .json_rpc import (
 
 try:
     import httpx
+
     HAS_HTTPX = True
 except ImportError:
     HAS_HTTPX = False
@@ -53,7 +54,9 @@ class HTTPTransport(Transport):
             url: The URL to connect to (e.g., http://localhost:8000/mcp)
         """
         if not HAS_HTTPX:
-            raise TransportError("httpx is required for HTTP transport. Install with: pip install httpx")
+            raise TransportError(
+                "httpx is required for HTTP transport. Install with: pip install httpx"
+            )
 
         self._url = url
 
@@ -107,7 +110,9 @@ class HTTPTransport(Transport):
         Receive is not directly supported for HTTP.
         Use request() for request/response pattern.
         """
-        raise TransportError("HTTP transport does not support standalone receive. Use request() instead.")
+        raise TransportError(
+            "HTTP transport does not support standalone receive. Use request() instead."
+        )
 
     async def request(
         self,
@@ -266,7 +271,7 @@ class RetryableHTTPTransport(HTTPTransport):
         """Calculate delay with exponential backoff and jitter."""
         import random
 
-        delay = min(self.base_delay * (2 ** attempt), self.max_delay)
+        delay = min(self.base_delay * (2**attempt), self.max_delay)
         jitter = delay * self.jitter_factor * random.random()
         return delay + jitter
 
@@ -298,8 +303,7 @@ class RetryableHTTPTransport(HTTPTransport):
                 await asyncio.sleep(delay)
 
         raise TransportError(
-            f"Request failed after {self.max_retries + 1} attempts",
-            cause=last_error
+            f"Request failed after {self.max_retries + 1} attempts", cause=last_error
         )
 
 
@@ -353,4 +357,3 @@ class ConnectionPool:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close_all()
         return False
-

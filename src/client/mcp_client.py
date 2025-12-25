@@ -154,8 +154,8 @@ class MCPClient:
                 "clientInfo": {
                     "name": self.name,
                     "version": self.version,
-                }
-            }
+                },
+            },
         )
 
         response = await transport.request(init_request.to_dict())
@@ -216,10 +216,7 @@ class MCPClient:
         session.resources = resources
 
         # Register in resource manager
-        await self.resources.register_resources_from_server(
-            session.server_name,
-            resources
-        )
+        await self.resources.register_resources_from_server(session.server_name, resources)
 
     def _parse_response(self, response: dict) -> Any:
         """Parse JSON-RPC response and extract result."""
@@ -228,8 +225,7 @@ class MCPClient:
         if isinstance(parsed, JsonRpcResponse):
             if parsed.is_error:
                 raise ProtocolError(
-                    f"RPC error: {parsed.error.message}",
-                    details={"code": parsed.error.code}
+                    f"RPC error: {parsed.error.message}", details={"code": parsed.error.code}
                 )
             return parsed.result
 
@@ -305,7 +301,7 @@ class MCPClient:
                 {
                     "name": tool_name,
                     "arguments": arguments or {},
-                }
+                },
             )
 
             try:
@@ -364,10 +360,7 @@ class MCPClient:
         if not transport:
             raise ConnectionError(f"Not connected to {server_name}")
 
-        request = create_request(
-            MCPMethods.RESOURCES_READ,
-            {"uri": uri}
-        )
+        request = create_request(MCPMethods.RESOURCES_READ, {"uri": uri})
 
         response = await transport.request(request.to_dict())
         result = self._parse_response(response)
@@ -393,10 +386,7 @@ class MCPClient:
             raise ConnectionError(f"Not connected to {server_name}")
 
         # Send subscribe request
-        request = create_request(
-            MCPMethods.RESOURCES_SUBSCRIBE,
-            {"uri": uri}
-        )
+        request = create_request(MCPMethods.RESOURCES_SUBSCRIBE, {"uri": uri})
 
         await transport.request(request.to_dict())
 
@@ -429,10 +419,7 @@ class MCPClient:
             raise ConnectionError(f"Not connected to {server_name}")
 
         # Wrap in JSON-RPC
-        request = create_request(
-            "protocol/message",
-            {"message": message}
-        )
+        request = create_request("protocol/message", {"message": message})
 
         response = await transport.request(request.to_dict(), timeout=timeout)
         return self._parse_response(response)
@@ -481,9 +468,7 @@ class MCPClient:
 
     def get_all_tools(self) -> list[dict[str, Any]]:
         """Get list of all available tools (sync wrapper)."""
-        return asyncio.get_event_loop().run_until_complete(
-            self.tools.list_tools()
-        )
+        return asyncio.get_event_loop().run_until_complete(self.tools.list_tools())
 
     async def get_health_report(self) -> dict[str, Any]:
         """Get health report for all connections."""
@@ -514,4 +499,3 @@ class MCPClient:
     def connected_servers(self) -> list[str]:
         """Get list of connected server names."""
         return list(self._transports.keys())
-

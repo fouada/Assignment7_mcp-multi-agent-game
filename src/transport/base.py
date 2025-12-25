@@ -122,4 +122,3 @@ class StreamingTransport(Transport):
             Response data chunks
         """
         pass
-

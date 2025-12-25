@@ -236,10 +236,13 @@ class StrategyFactory:
             default_config = cls._DEFAULT_CONFIGS.get(strategy_type, {}).copy()
             # Override with kwargs
             default_config.update(kwargs)
-            config = StrategyConfig(**{
-                k: v for k, v in default_config.items()
-                if k in StrategyConfig.__dataclass_fields__
-            })
+            config = StrategyConfig(
+                **{
+                    k: v
+                    for k, v in default_config.items()
+                    if k in StrategyConfig.__dataclass_fields__
+                }
+            )
 
         # Create strategy
         if strategy_type == StrategyType.LLM:
@@ -289,8 +292,7 @@ class StrategyFactory:
             config = kwargs.get("config")
             if config is None:
                 config_dict = {
-                    k: v for k, v in kwargs.items()
-                    if k in StrategyConfig.__dataclass_fields__
+                    k: v for k, v in kwargs.items() if k in StrategyConfig.__dataclass_fields__
                 }
                 if config_dict:
                     config = StrategyConfig(**config_dict)
@@ -353,6 +355,7 @@ class StrategyFactory:
 # Convenience functions
 # =============================================================================
 
+
 def create_strategy(strategy_name: str, **kwargs) -> Strategy:
     """
     Convenience function to create a strategy.
@@ -378,4 +381,3 @@ def list_strategies() -> dict[str, str]:
 def get_recommended() -> Strategy:
     """Get the recommended strategy."""
     return StrategyFactory.get_recommended_strategy()
-

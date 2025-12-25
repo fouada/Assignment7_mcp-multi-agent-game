@@ -21,6 +21,7 @@ PROTOCOL_VERSION = "league.v2"
 # Timeouts - Response time limits per message type
 # ============================================================================
 
+
 class Timeouts:
     """
     Response timeout values in seconds (Table 5).
@@ -28,14 +29,14 @@ class Timeouts:
     If an agent doesn't respond within the timeout, the action fails.
     """
 
-    REFEREE_REGISTER = 10.0      # Referee registration to league
-    LEAGUE_REGISTER = 10.0       # Player registration to league
-    GAME_JOIN_ACK = 5.0          # Confirm joining a game
-    CHOOSE_PARITY = 30.0         # Choose odd/even (make a move)
-    GAME_OVER = 5.0              # Receive game result
-    MATCH_RESULT_REPORT = 10.0   # Report result to league
-    LEAGUE_QUERY = 10.0          # Query league information
-    DEFAULT = 10.0               # Default timeout for all other messages
+    REFEREE_REGISTER = 10.0  # Referee registration to league
+    LEAGUE_REGISTER = 10.0  # Player registration to league
+    GAME_JOIN_ACK = 5.0  # Confirm joining a game
+    CHOOSE_PARITY = 30.0  # Choose odd/even (make a move)
+    GAME_OVER = 5.0  # Receive game result
+    MATCH_RESULT_REPORT = 10.0  # Report result to league
+    LEAGUE_QUERY = 10.0  # Query league information
+    DEFAULT = 10.0  # Default timeout for all other messages
 
     @classmethod
     def get_timeout(cls, message_type: str) -> float:
@@ -135,7 +136,7 @@ class MessageType(str, Enum):
 
     # Error types
     LEAGUE_ERROR = "LEAGUE_ERROR"  # League-level errors from league_manager
-    GAME_ERROR = "GAME_ERROR"      # Game-level errors from referee
+    GAME_ERROR = "GAME_ERROR"  # Game-level errors from referee
 
 
 class GameStatus(str, Enum):
@@ -163,11 +164,11 @@ class AgentState(str, Enum):
     - SUSPENDED → SHUTDOWN (max_fails)
     """
 
-    INIT = "INIT"              # Agent started but not yet registered
+    INIT = "INIT"  # Agent started but not yet registered
     REGISTERED = "REGISTERED"  # Registered successfully, has auth_token
-    ACTIVE = "ACTIVE"          # Active and participating in games
-    SUSPENDED = "SUSPENDED"    # Temporarily suspended (not responding)
-    SHUTDOWN = "SHUTDOWN"      # Agent has finished activity
+    ACTIVE = "ACTIVE"  # Active and participating in games
+    SUSPENDED = "SUSPENDED"  # Temporarily suspended (not responding)
+    SHUTDOWN = "SHUTDOWN"  # Agent has finished activity
 
     @classmethod
     def can_transition(cls, from_state: "AgentState", to_state: "AgentState") -> bool:
@@ -307,6 +308,7 @@ class BaseMessage:
 # Registration Messages
 # ============================================================================
 
+
 @dataclass
 class PlayerMeta:
     """Player metadata for registration."""
@@ -352,6 +354,7 @@ class LeagueRegisterResponse(BaseMessage):
 # ============================================================================
 # Game Messages
 # ============================================================================
+
 
 @dataclass
 class GameInvite(BaseMessage):
@@ -439,6 +442,7 @@ class GameEnd(BaseMessage):
 # Move Messages
 # ============================================================================
 
+
 @dataclass
 class MoveRequest(BaseMessage):
     """Request for player to make a move."""
@@ -481,6 +485,7 @@ class MoveResult(BaseMessage):
 # Round Messages
 # ============================================================================
 
+
 @dataclass
 class RoundStart(BaseMessage):
     """Round start notification."""
@@ -502,6 +507,7 @@ class RoundResult(BaseMessage):
 # ============================================================================
 # System Messages
 # ============================================================================
+
 
 @dataclass
 class Heartbeat(BaseMessage):
@@ -543,8 +549,12 @@ class Acknowledgement(BaseMessage):
 # ============================================================================
 
 REQUIRED_FIELDS = {
-    "protocol", "message_type", "league_id", "conversation_id",
-    "sender", "timestamp"
+    "protocol",
+    "message_type",
+    "league_id",
+    "conversation_id",
+    "sender",
+    "timestamp",
 }
 
 
@@ -557,7 +567,10 @@ def validate_message(data: dict[str, Any]) -> tuple[bool, str | None]:
     """
     # Check protocol version FIRST
     if data.get("protocol") != PROTOCOL_VERSION:
-        return False, f"Invalid protocol version. Expected '{PROTOCOL_VERSION}', got '{data.get('protocol')}'"
+        return (
+            False,
+            f"Invalid protocol version. Expected '{PROTOCOL_VERSION}', got '{data.get('protocol')}'",
+        )
 
     # Check required fields
     missing = REQUIRED_FIELDS - set(data.keys())
@@ -582,10 +595,7 @@ def validate_message(data: dict[str, Any]) -> tuple[bool, str | None]:
 
 
 def create_message(
-    message_type: MessageType,
-    sender: str,
-    league_id: str,
-    **kwargs
+    message_type: MessageType, sender: str, league_id: str, **kwargs
 ) -> dict[str, Any]:
     """
     Create a properly formatted protocol message.
@@ -601,7 +611,9 @@ def create_message(
     """
     message = {
         "protocol": PROTOCOL_VERSION,
-        "message_type": message_type.value if isinstance(message_type, MessageType) else message_type,
+        "message_type": message_type.value
+        if isinstance(message_type, MessageType)
+        else message_type,
         "league_id": league_id,
         "conversation_id": str(uuid.uuid4()),
         "sender": sender,
@@ -617,6 +629,7 @@ def create_message(
 # ============================================================================
 # Message Factory
 # ============================================================================
+
 
 class MessageFactory:
     """Factory for creating protocol messages."""
@@ -639,7 +652,7 @@ class MessageFactory:
             "conversation_id": str(uuid.uuid4()),
             "sender": self.sender,
             "timestamp": datetime.utcnow().isoformat() + "Z",
-            **extra
+            **extra,
         }
         # Include auth_token if set (required after registration)
         if self.auth_token:
@@ -660,7 +673,7 @@ class MessageFactory:
                 "version": version,
                 "game_types": ["even_odd"],
                 "contact_endpoint": endpoint,
-            }
+            },
         }
 
     def referee_register_request(
@@ -691,7 +704,7 @@ class MessageFactory:
                 "game_types": game_types or ["even_odd"],
                 "contact_endpoint": endpoint,
                 "max_concurrent_matches": max_concurrent_matches,
-            }
+            },
         }
 
     def referee_register_response(
@@ -1365,6 +1378,6 @@ class MessageFactory:
             "action_required": action_required,
             "retry_count": retry_count,
             "max_retries": max_retries,
-            "consequence": consequence or f"Technical loss if no response after {max_retries} retries",
+            "consequence": consequence
+            or f"Technical loss if no response after {max_retries} retries",
         }
-

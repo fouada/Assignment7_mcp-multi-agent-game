@@ -41,6 +41,7 @@ logger = get_logger(__name__)
 # Nash Equilibrium Strategy
 # =============================================================================
 
+
 class NashEquilibriumStrategy(GameTheoryStrategy):
     """
     Plays the Nash Equilibrium mixed strategy.
@@ -89,6 +90,7 @@ class NashEquilibriumStrategy(GameTheoryStrategy):
 # =============================================================================
 # Best Response Strategy
 # =============================================================================
+
 
 class BestResponseStrategy(GameTheoryStrategy):
     """
@@ -166,6 +168,7 @@ class BestResponseStrategy(GameTheoryStrategy):
 # Adaptive Bayesian Strategy
 # =============================================================================
 
+
 class AdaptiveBayesianStrategy(GameTheoryStrategy):
     """
     Adapts between Nash and exploitation using Bayesian inference.
@@ -192,8 +195,9 @@ class AdaptiveBayesianStrategy(GameTheoryStrategy):
     @dataclass
     class BayesianBelief:
         """Beta distribution belief about opponent's odd probability."""
+
         alpha: float = 1.0  # Prior successes (odd)
-        beta: float = 1.0   # Prior failures (even)
+        beta: float = 1.0  # Prior failures (even)
 
         def update(self, is_odd: bool) -> None:
             """Update belief with observation."""
@@ -302,8 +306,10 @@ class AdaptiveBayesianStrategy(GameTheoryStrategy):
             logger.debug(f"[Adaptive] Exploring: {parity.value}")
 
         # Exploitation: if confident in bias, play best response
-        elif (belief.observations >= self.config.min_observations and
-              belief.confidence_in_bias() >= self.config.confidence_threshold):
+        elif (
+            belief.observations >= self.config.min_observations
+            and belief.confidence_in_bias() >= self.config.confidence_threshold
+        ):
             parity = self._calculate_best_response_parity(my_role, belief.mean)
             logger.debug(
                 f"[Adaptive] Exploiting: {parity.value} "
@@ -324,25 +330,28 @@ class AdaptiveBayesianStrategy(GameTheoryStrategy):
 
     def get_stats(self) -> dict[str, Any]:
         stats = super().get_stats()
-        stats.update({
-            "exploration_rate": self.config.exploration_rate,
-            "confidence_threshold": self.config.confidence_threshold,
-            "beliefs": {
-                game_id: {
-                    "mean": b.mean,
-                    "std": b.std,
-                    "confidence": b.confidence_in_bias(),
-                    "observations": b.observations,
-                }
-                for game_id, b in self._beliefs.items()
+        stats.update(
+            {
+                "exploration_rate": self.config.exploration_rate,
+                "confidence_threshold": self.config.confidence_threshold,
+                "beliefs": {
+                    game_id: {
+                        "mean": b.mean,
+                        "std": b.std,
+                        "confidence": b.confidence_in_bias(),
+                        "observations": b.observations,
+                    }
+                    for game_id, b in self._beliefs.items()
+                },
             }
-        })
+        )
         return stats
 
 
 # =============================================================================
 # Fictitious Play Strategy
 # =============================================================================
+
 
 class FictitiousPlayStrategy(GameTheoryStrategy):
     """
@@ -408,6 +417,7 @@ class FictitiousPlayStrategy(GameTheoryStrategy):
 # Regret Matching Strategy
 # =============================================================================
 
+
 class RegretMatchingStrategy(GameTheoryStrategy):
     """
     Regret-based learning inspired by Counterfactual Regret Minimization (CFR).
@@ -469,7 +479,7 @@ class RegretMatchingStrategy(GameTheoryStrategy):
             if my_parity == ParityChoice.ODD:
                 sum_is_odd = opponent_parity == ParityChoice.EVEN  # ODD + EVEN = ODD
             else:
-                sum_is_odd = opponent_parity == ParityChoice.ODD   # EVEN + ODD = ODD
+                sum_is_odd = opponent_parity == ParityChoice.ODD  # EVEN + ODD = ODD
 
             # Did we win?
             if my_role == GameRole.ODD:
@@ -559,6 +569,7 @@ class RegretMatchingStrategy(GameTheoryStrategy):
 # UCB (Upper Confidence Bound) Strategy
 # =============================================================================
 
+
 class UCBStrategy(GameTheoryStrategy):
     """
     Multi-Armed Bandit approach using Upper Confidence Bound.
@@ -583,6 +594,7 @@ class UCBStrategy(GameTheoryStrategy):
     @dataclass
     class ArmStats:
         """Statistics for one arm (parity choice)."""
+
         pulls: int = 0
         total_reward: float = 0.0
 
@@ -624,7 +636,7 @@ class UCBStrategy(GameTheoryStrategy):
         UCB1: mean + c * sqrt(ln(n) / n_i)
         """
         if arm.pulls == 0:
-            return float('inf')  # Play unexplored arms first
+            return float("inf")  # Play unexplored arms first
 
         exploration = c * math.sqrt(math.log(total_pulls) / arm.pulls)
         return arm.mean_reward + exploration
@@ -689,10 +701,7 @@ class UCBStrategy(GameTheoryStrategy):
 
         self._last_action[game_id] = parity
 
-        logger.debug(
-            f"[UCB] Scores: odd={ucb_odd:.3f}, even={ucb_even:.3f}, "
-            f"chose: {parity.value}"
-        )
+        logger.debug(f"[UCB] Scores: odd={ucb_odd:.3f}, even={ucb_even:.3f}, chose: {parity.value}")
 
         return self._parity_to_move(parity)
 
@@ -718,6 +727,7 @@ class UCBStrategy(GameTheoryStrategy):
 # Thompson Sampling Strategy
 # =============================================================================
 
+
 class ThompsonSamplingStrategy(GameTheoryStrategy):
     """
     Bayesian bandit strategy using Thompson Sampling.
@@ -741,12 +751,14 @@ class ThompsonSamplingStrategy(GameTheoryStrategy):
     @dataclass
     class BetaPosterior:
         """Beta distribution posterior for one action."""
+
         alpha: float = 1.0  # Prior wins + 1
-        beta: float = 1.0   # Prior losses + 1
+        beta: float = 1.0  # Prior losses + 1
 
         def sample(self) -> float:
             """Sample from Beta distribution."""
             import random
+
             # Use random.betavariate for Beta sampling
             return random.betavariate(self.alpha, self.beta)
 
@@ -864,4 +876,3 @@ class ThompsonSamplingStrategy(GameTheoryStrategy):
             for game_id, posteriors in self._posteriors.items()
         }
         return stats
-

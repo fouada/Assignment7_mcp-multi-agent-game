@@ -23,7 +23,7 @@ def tracing_manager():
     manager.initialize(
         service_name="test_service",
         enabled=True,
-        sample_rate=1.0  # Always sample for tests
+        sample_rate=1.0,  # Always sample for tests
     )
     # Clear any existing spans
     manager._active_spans.clear()
@@ -44,11 +44,7 @@ def global_tracing():
     old_completed = manager._completed_spans.copy()
 
     # Initialize for test
-    manager.initialize(
-        service_name="test_service",
-        enabled=True,
-        sample_rate=1.0
-    )
+    manager.initialize(service_name="test_service", enabled=True, sample_rate=1.0)
     manager._active_spans.clear()
     manager._completed_spans.clear()
 
@@ -82,11 +78,7 @@ def test_start_span(tracing_manager):
 
 def test_start_span_with_attributes(tracing_manager):
     """Test span can have attributes."""
-    attributes = {
-        "http.method": "GET",
-        "http.url": "/api/users",
-        "user.id": "12345"
-    }
+    attributes = {"http.method": "GET", "http.url": "/api/users", "user.id": "12345"}
 
     span = tracing_manager.start_span("http_request", attributes=attributes)
 
@@ -370,9 +362,7 @@ def test_disabled_tracing():
 def test_span_context_creation():
     """Test SpanContext creation."""
     context = SpanContext(
-        trace_id="4bf92f3577b34da6a3ce929d0e0e4736",
-        span_id="00f067aa0ba902b7",
-        sampled=True
+        trace_id="4bf92f3577b34da6a3ce929d0e0e4736", span_id="00f067aa0ba902b7", sampled=True
     )
 
     assert context.trace_id == "4bf92f3577b34da6a3ce929d0e0e4736"
@@ -383,9 +373,7 @@ def test_span_context_creation():
 def test_span_context_to_traceparent():
     """Test SpanContext converts to W3C traceparent format."""
     context = SpanContext(
-        trace_id="4bf92f3577b34da6a3ce929d0e0e4736",
-        span_id="00f067aa0ba902b7",
-        sampled=True
+        trace_id="4bf92f3577b34da6a3ce929d0e0e4736", span_id="00f067aa0ba902b7", sampled=True
     )
 
     traceparent = context.to_traceparent()
@@ -479,7 +467,9 @@ def test_full_distributed_trace_workflow(tracing_manager):
         # Service B: Receive request
         backend_context = tracing_manager.extract_context(headers)
 
-        with tracing_manager.span("backend.api_call", parent_context=backend_context) as span_backend:
+        with tracing_manager.span(
+            "backend.api_call", parent_context=backend_context
+        ) as span_backend:
             assert span_backend.trace_id == trace_id
             span_backend.add_event("Processing request")
 
@@ -523,7 +513,7 @@ def test_trace_with_metadata(tracing_manager):
         "order.id": "ORD-12345",
         "user.id": "USR-67890",
         "items.count": 3,
-        "total.amount": 99.99
+        "total.amount": 99.99,
     }
 
     with tracing_manager.span("create_order", attributes=attributes) as span:

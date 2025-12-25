@@ -154,11 +154,7 @@ class TestParseMessage:
 
     def test_parse_request(self):
         """Test parsing a request."""
-        data = {
-            "jsonrpc": "2.0",
-            "method": "test",
-            "id": "1"
-        }
+        data = {"jsonrpc": "2.0", "method": "test", "id": "1"}
 
         result = parse_message(data)
 
@@ -167,11 +163,7 @@ class TestParseMessage:
 
     def test_parse_response(self):
         """Test parsing a response."""
-        data = {
-            "jsonrpc": "2.0",
-            "result": "ok",
-            "id": "1"
-        }
+        data = {"jsonrpc": "2.0", "result": "ok", "id": "1"}
 
         result = parse_message(data)
 
@@ -210,4 +202,3 @@ class TestParseMessage:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

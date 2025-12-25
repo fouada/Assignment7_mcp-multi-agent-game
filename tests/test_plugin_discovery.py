@@ -153,9 +153,7 @@ class TestPluginDiscovery:
     @pytest.mark.asyncio
     async def test_discover_all_disabled(self):
         """Test discover_all with discovery disabled."""
-        config = {
-            "directory_scan": {"enabled": False, "paths": ["/some/path"]}
-        }
+        config = {"directory_scan": {"enabled": False, "paths": ["/some/path"]}}
 
         plugins = await PluginDiscovery.discover_all(config)
         # Should not discover anything when disabled
@@ -185,9 +183,7 @@ class TestPluginDiscovery:
         }
 
         # Load and register
-        count = await PluginDiscovery.load_and_register_plugins(
-            config, auto_enable=True
-        )
+        count = await PluginDiscovery.load_and_register_plugins(config, auto_enable=True)
 
         assert count >= 1
         assert clean_registry.is_registered("test_discovery_plugin")
@@ -255,9 +251,7 @@ class TestConvenienceFunctions:
         assert isinstance(plugins, list)
 
     @pytest.mark.asyncio
-    async def test_auto_discover_and_register_function(
-        self, temp_plugin_dir, clean_registry
-    ):
+    async def test_auto_discover_and_register_function(self, temp_plugin_dir, clean_registry):
         """Test auto_discover_and_register convenience function."""
         (temp_plugin_dir / "test_plugin.py").write_text(SIMPLE_PLUGIN_CODE)
 
@@ -289,9 +283,7 @@ class TestEntryPointDiscovery:
     @pytest.mark.asyncio
     async def test_discover_from_entry_points_no_group(self):
         """Test discovering with nonexistent entry point group."""
-        plugins = await PluginDiscovery.discover_from_entry_points(
-            group="nonexistent.group"
-        )
+        plugins = await PluginDiscovery.discover_from_entry_points(group="nonexistent.group")
         # Should return empty list, not error
         assert isinstance(plugins, list)
         assert len(plugins) == 0
@@ -312,13 +304,13 @@ class TestMultiplePlugins:
         """Test discovering multiple plugins from directory."""
         # Create multiple plugin files with _plugin.py suffix
         for i in range(3):
-            plugin_code = f'''
+            plugin_code = f"""
 from src.common.plugins import PluginInterface, PluginMetadata
 
 class TestPlugin{i}(PluginInterface):
     def get_metadata(self):
         return PluginMetadata(name="plugin_{i}", version="1.0.0")
-'''
+"""
             (temp_plugin_dir / f"test{i}_plugin.py").write_text(plugin_code)
 
         # Discover all (using default pattern)
@@ -351,14 +343,14 @@ class TestPluginLoadingErrors:
     @pytest.mark.asyncio
     async def test_discover_plugin_with_import_error(self, temp_plugin_dir):
         """Test discovering plugin with import error."""
-        broken_plugin = '''
+        broken_plugin = """
 from src.common.plugins import PluginInterface, PluginMetadata
 from nonexistent_module import something
 
 class BrokenPlugin(PluginInterface):
     def get_metadata(self):
         return PluginMetadata(name="broken", version="1.0.0")
-'''
+"""
         (temp_plugin_dir / "broken_plugin.py").write_text(broken_plugin)
 
         # Should handle error gracefully
@@ -369,7 +361,7 @@ class BrokenPlugin(PluginInterface):
     @pytest.mark.asyncio
     async def test_discover_plugin_with_runtime_error(self, temp_plugin_dir):
         """Test discovering plugin that raises error on instantiation."""
-        error_plugin = '''
+        error_plugin = """
 from src.common.plugins import PluginInterface, PluginMetadata
 
 class ErrorPlugin(PluginInterface):
@@ -378,7 +370,7 @@ class ErrorPlugin(PluginInterface):
 
     def get_metadata(self):
         return PluginMetadata(name="error", version="1.0.0")
-'''
+"""
         (temp_plugin_dir / "error_plugin.py").write_text(error_plugin)
 
         # Should handle error gracefully

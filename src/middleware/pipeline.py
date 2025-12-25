@@ -136,9 +136,7 @@ class MiddlewarePipeline:
         # Sort by priority (descending)
         self._middleware.sort(key=lambda m: m.priority, reverse=True)
 
-        logger.debug(
-            f"Added middleware: {middleware.name} (priority={priority})"
-        )
+        logger.debug(f"Added middleware: {middleware.name} (priority={priority})")
 
         return middleware.name
 
@@ -153,9 +151,7 @@ class MiddlewarePipeline:
             True if removed, False if not found
         """
         initial_count = len(self._middleware)
-        self._middleware = [
-            m for m in self._middleware if m.middleware.name != name
-        ]
+        self._middleware = [m for m in self._middleware if m.middleware.name != name]
 
         removed = len(self._middleware) < initial_count
 
@@ -249,9 +245,7 @@ class MiddlewarePipeline:
 
         except TimeoutError:
             self._stats["total_timeouts"] += 1
-            logger.error(
-                f"Middleware pipeline timeout after {self._timeout_seconds}s"
-            )
+            logger.error(f"Middleware pipeline timeout after {self._timeout_seconds}s")
             raise MiddlewareTimeoutError(
                 f"Pipeline execution exceeded {self._timeout_seconds}s timeout"
             ) from None
@@ -292,9 +286,7 @@ class MiddlewarePipeline:
             Response data
         """
         # Get enabled middleware
-        enabled_middleware = [
-            m for m in self._middleware if m.enabled
-        ]
+        enabled_middleware = [m for m in self._middleware if m.enabled]
 
         # Phase 1: Before hooks (high to low priority)
         for metadata in enabled_middleware:
@@ -311,14 +303,10 @@ class MiddlewarePipeline:
                 metadata.total_time_ms += duration
 
             except Exception as e:
-                logger.error(
-                    f"Error in {metadata.middleware.name}.before: {e}"
-                )
+                logger.error(f"Error in {metadata.middleware.name}.before: {e}")
 
                 # Try error handler
-                error_response = await self._handle_error(
-                    context, e, enabled_middleware
-                )
+                error_response = await self._handle_error(context, e, enabled_middleware)
 
                 if error_response:
                     return error_response
@@ -338,9 +326,7 @@ class MiddlewarePipeline:
                 logger.error(f"Error in handler: {e}")
 
                 # Try error handlers
-                error_response = await self._handle_error(
-                    context, e, enabled_middleware
-                )
+                error_response = await self._handle_error(context, e, enabled_middleware)
 
                 if error_response:
                     return error_response
@@ -368,9 +354,7 @@ class MiddlewarePipeline:
                 metadata.total_time_ms += duration
 
             except Exception as e:
-                logger.error(
-                    f"Error in {metadata.middleware.name}.after: {e}"
-                )
+                logger.error(f"Error in {metadata.middleware.name}.after: {e}")
                 metadata.total_errors += 1
 
                 if self._error_handling == "raise":
@@ -404,9 +388,7 @@ class MiddlewarePipeline:
                 if error_response:
                     return error_response
             except Exception as e:
-                logger.error(
-                    f"Error in {metadata.middleware.name}.on_error: {e}"
-                )
+                logger.error(f"Error in {metadata.middleware.name}.on_error: {e}")
 
         return None
 
@@ -440,9 +422,7 @@ class MiddlewarePipeline:
                     "total_requests": m.total_requests,
                     "total_errors": m.total_errors,
                     "avg_time_ms": (
-                        m.total_time_ms / m.total_requests
-                        if m.total_requests > 0
-                        else 0
+                        m.total_time_ms / m.total_requests if m.total_requests > 0 else 0
                     ),
                 },
             }

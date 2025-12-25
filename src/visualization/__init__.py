@@ -67,7 +67,6 @@ __all__ = [
     "CounterfactualVisualization",
     "get_dashboard",
     "reset_dashboard",
-
     # Integration
     "DashboardIntegration",
     "PlayerDashboardState",

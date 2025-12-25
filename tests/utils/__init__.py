@@ -67,4 +67,3 @@ __all__ = [
     "assert_valid_move",
     "assert_protocol_message",
 ]
-

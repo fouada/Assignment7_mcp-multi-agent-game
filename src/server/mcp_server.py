@@ -39,6 +39,7 @@ logger = get_logger(__name__)
 # MCP Primitives
 # ============================================================================
 
+
 @dataclass
 class Tool:
     """
@@ -57,10 +58,11 @@ class Tool:
         return {
             "name": self.name,
             "description": self.description,
-            "inputSchema": self.input_schema or {
+            "inputSchema": self.input_schema
+            or {
                 "type": "object",
                 "properties": {},
-            }
+            },
         }
 
 
@@ -117,6 +119,7 @@ class Prompt:
 # ============================================================================
 # MCP Server
 # ============================================================================
+
 
 class MCPServer:
     """
@@ -193,6 +196,7 @@ class MCPServer:
             async def my_tool(params):
                 return {"result": "done"}
         """
+
         def decorator(func: Callable) -> Callable:
             tool = Tool(
                 name=name,
@@ -202,6 +206,7 @@ class MCPServer:
             )
             self.register_tool(tool)
             return func
+
         return decorator
 
     def register_resource(self, resource: Resource) -> None:
@@ -224,6 +229,7 @@ class MCPServer:
             async def get_game_state(params):
                 return {"state": "running"}
         """
+
         def decorator(func: Callable) -> Callable:
             resource = Resource(
                 uri=uri,
@@ -234,6 +240,7 @@ class MCPServer:
             )
             self.register_resource(resource)
             return func
+
         return decorator
 
     def register_prompt(self, prompt: Prompt) -> None:
@@ -261,14 +268,12 @@ class MCPServer:
             "serverInfo": {
                 "name": self.name,
                 "version": self.version,
-            }
+            },
         }
 
     async def _handle_tools_list(self, params: dict | None) -> dict[str, Any]:
         """Handle tools/list request."""
-        return {
-            "tools": [tool.to_dict() for tool in self._tools.values()]
-        }
+        return {"tools": [tool.to_dict() for tool in self._tools.values()]}
 
     async def _handle_tools_call(self, params: dict | None) -> dict[str, Any]:
         """Handle tools/call request."""
@@ -311,9 +316,7 @@ class MCPServer:
 
     async def _handle_resources_list(self, params: dict | None) -> dict[str, Any]:
         """Handle resources/list request."""
-        return {
-            "resources": [res.to_dict() for res in self._resources.values()]
-        }
+        return {"resources": [res.to_dict() for res in self._resources.values()]}
 
     async def _handle_resources_read(self, params: dict | None) -> dict[str, Any]:
         """Handle resources/read request."""
@@ -377,9 +380,7 @@ class MCPServer:
 
     async def _handle_prompts_list(self, params: dict | None) -> dict[str, Any]:
         """Handle prompts/list request."""
-        return {
-            "prompts": [prompt.to_dict() for prompt in self._prompts.values()]
-        }
+        return {"prompts": [prompt.to_dict() for prompt in self._prompts.values()]}
 
     async def _handle_prompts_get(self, params: dict | None) -> dict[str, Any]:
         """Handle prompts/get request."""
@@ -410,9 +411,9 @@ class MCPServer:
                     "content": {
                         "type": "text",
                         "text": rendered,
-                    }
+                    },
                 }
-            ]
+            ],
         }
 
     # ========================================================================
@@ -488,14 +489,16 @@ class MCPServer:
         if self._start_time:
             uptime = (datetime.now() - self._start_time).total_seconds()
 
-        return web.json_response({
-            "status": "healthy",
-            "server": self.name,
-            "version": self.version,
-            "uptime_seconds": uptime,
-            "tools_count": len(self._tools),
-            "resources_count": len(self._resources),
-        })
+        return web.json_response(
+            {
+                "status": "healthy",
+                "server": self.name,
+                "version": self.version,
+                "uptime_seconds": uptime,
+                "tools_count": len(self._tools),
+                "resources_count": len(self._resources),
+            }
+        )
 
     # ========================================================================
     # Server Lifecycle
@@ -527,7 +530,7 @@ class MCPServer:
             "MCP Server started",
             host=self.host,
             port=self.port,
-            url=f"http://{self.host}:{self.port}/mcp"
+            url=f"http://{self.host}:{self.port}/mcp",
         )
 
     async def stop(self) -> None:
@@ -568,6 +571,7 @@ class MCPServer:
 # ============================================================================
 # Helper Functions
 # ============================================================================
+
 
 def create_tool(
     name: str,
@@ -619,4 +623,3 @@ def create_prompt(
         template=template,
         arguments=arguments or [],
     )
-

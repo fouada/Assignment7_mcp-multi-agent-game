@@ -102,9 +102,7 @@ def test_counter_never_decreases(metrics_collector):
 def test_counter_registration_with_description(metrics_collector):
     """Test counter registration with metadata."""
     counter = metrics_collector.register_counter(
-        "described_counter",
-        description="A counter with description",
-        labels={"type": "test"}
+        "described_counter", description="A counter with description", labels={"type": "test"}
     )
 
     assert counter.name == "described_counter"
@@ -182,16 +180,13 @@ def test_histogram_buckets(metrics_collector):
     """Test histogram bucket distribution."""
     # Create histogram with custom buckets
     buckets = [0.1, 0.5, 1.0, 5.0]
-    histogram = metrics_collector.register_histogram(
-        "custom_latency",
-        buckets=buckets
-    )
+    histogram = metrics_collector.register_histogram("custom_latency", buckets=buckets)
 
     # Observe values
     metrics_collector.observe_histogram("custom_latency", 0.05)  # < 0.1
-    metrics_collector.observe_histogram("custom_latency", 0.2)   # 0.1-0.5
-    metrics_collector.observe_histogram("custom_latency", 0.7)   # 0.5-1.0
-    metrics_collector.observe_histogram("custom_latency", 2.0)   # 1.0-5.0
+    metrics_collector.observe_histogram("custom_latency", 0.2)  # 0.1-0.5
+    metrics_collector.observe_histogram("custom_latency", 0.7)  # 0.5-1.0
+    metrics_collector.observe_histogram("custom_latency", 2.0)  # 1.0-5.0
     metrics_collector.observe_histogram("custom_latency", 10.0)  # > 5.0
 
     histogram = metrics_collector._histograms.get("custom_latency||")
@@ -345,10 +340,7 @@ def test_prometheus_export_empty_metrics(metrics_collector):
 
 def test_prometheus_export_special_characters(metrics_collector):
     """Test Prometheus export handles label values with special characters."""
-    metrics_collector.increment(
-        "api_calls",
-        labels={"endpoint": "/api/v1/users", "method": "GET"}
-    )
+    metrics_collector.increment("api_calls", labels={"endpoint": "/api/v1/users", "method": "GET"})
 
     prometheus_text = metrics_collector.export_prometheus()
 
@@ -425,7 +417,9 @@ def test_high_cardinality_labels(metrics_collector):
         metrics_collector.increment("high_cardinality_metric", labels={"id": str(i)})
 
     # Should have 1000 separate counters
-    counters = [k for k in metrics_collector._counters.keys() if k.startswith("high_cardinality_metric")]
+    counters = [
+        k for k in metrics_collector._counters.keys() if k.startswith("high_cardinality_metric")
+    ]
     assert len(counters) == 1000
 
 

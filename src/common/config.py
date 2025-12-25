@@ -123,15 +123,11 @@ class Config:
     # Server configs
     league_manager: ServerConfig = field(
         default_factory=lambda: ServerConfig(
-            name="league_manager",
-            port=DEFAULT_PORTS["league_manager"]
+            name="league_manager", port=DEFAULT_PORTS["league_manager"]
         )
     )
     referee: ServerConfig = field(
-        default_factory=lambda: ServerConfig(
-            name="referee",
-            port=DEFAULT_PORTS["referee"]
-        )
+        default_factory=lambda: ServerConfig(name="referee", port=DEFAULT_PORTS["referee"])
     )
 
     # Player configs (will be populated dynamically)
@@ -156,10 +152,7 @@ class Config:
             # Auto-assign port: 8101, 8102, etc.
             port = DEFAULT_PORTS["player_base"] + len(self.players) + 1
 
-        player_config = ServerConfig(
-            name=f"player_{player_id}",
-            port=port
-        )
+        player_config = ServerConfig(name=f"player_{player_id}", port=port)
         self.players[player_id] = player_config
         return player_config
 
@@ -178,6 +171,7 @@ class Config:
     def _filter_config_data(data: dict, config_class: type) -> dict:
         """Filter config data to only include fields that the config class accepts."""
         import dataclasses
+
         valid_fields = {f.name for f in dataclasses.fields(config_class)}
         return {k: v for k, v in data.items() if k in valid_fields}
 
@@ -280,4 +274,3 @@ def set_config(config: Config) -> None:
     """Set global configuration instance."""
     global _config
     _config = config
-

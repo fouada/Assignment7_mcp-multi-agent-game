@@ -41,28 +41,18 @@ class TestSimpleMatchIntegration:
 
         # Act - Register players
         reg1 = await league.register_player(
-            player1.player_id,
-            scenario["players"][0]["endpoint"],
-            ["even_odd"]
+            player1.player_id, scenario["players"][0]["endpoint"], ["even_odd"]
         )
         reg2 = await league.register_player(
-            player2.player_id,
-            scenario["players"][1]["endpoint"],
-            ["even_odd"]
+            player2.player_id, scenario["players"][1]["endpoint"], ["even_odd"]
         )
 
         # Register referee
-        ref_reg = await league.register_referee(
-            referee.referee_id,
-            scenario["referee"]["endpoint"]
-        )
+        ref_reg = await league.register_referee(referee.referee_id, scenario["referee"]["endpoint"])
 
         # Start match
         match_result = await referee.start_match(
-            scenario["match"]["match_id"],
-            player1.player_id,
-            player2.player_id,
-            rounds=5
+            scenario["match"]["match_id"], player1.player_id, player2.player_id, rounds=5
         )
 
         # Accept invitations
@@ -87,11 +77,7 @@ class TestSimpleMatchIntegration:
         loser_id = player2.player_id if winner_id == player1.player_id else player1.player_id
 
         # Report result
-        reported = await referee.report_result(
-            scenario["match"]["match_id"],
-            winner_id,
-            loser_id
-        )
+        reported = await referee.report_result(scenario["match"]["match_id"], winner_id, loser_id)
 
         # Assert
         assert reg1["success"]
@@ -112,15 +98,13 @@ class TestSimpleMatchIntegration:
         player2 = MockPlayer(
             scenario["players"][1]["player_id"],
             strategy="random",
-            fail_on_move=True  # This player will fail
+            fail_on_move=True,  # This player will fail
         )
         referee = MockReferee(scenario["referee"]["referee_id"])
 
         # Act & Assert
         await referee.start_match(
-            scenario["match"]["match_id"],
-            player1.player_id,
-            player2.player_id
+            scenario["match"]["match_id"], player1.player_id, player2.player_id
         )
 
         await player1.accept_invitation(scenario["match"]["match_id"])
@@ -153,9 +137,7 @@ class TestLeagueIntegration:
             players[player.player_id] = player
 
             result = await league.register_player(
-                player.player_id,
-                player_data["endpoint"],
-                ["even_odd"]
+                player.player_id, player_data["endpoint"], ["even_odd"]
             )
             assert result["success"]
 
@@ -165,10 +147,7 @@ class TestLeagueIntegration:
             referee = MockReferee(referee_data["referee_id"])
             referees[referee.referee_id] = referee
 
-            result = await league.register_referee(
-                referee.referee_id,
-                referee_data["endpoint"]
-            )
+            result = await league.register_referee(referee.referee_id, referee_data["endpoint"])
             assert result["success"]
 
         # Play all matches
@@ -178,11 +157,7 @@ class TestLeagueIntegration:
             player2 = players[match_data["player2_id"]]
 
             # Start match
-            await referee.start_match(
-                match_data["match_id"],
-                player1.player_id,
-                player2.player_id
-            )
+            await referee.start_match(match_data["match_id"], player1.player_id, player2.player_id)
 
             # Play rounds and determine winner (simplified)
             winner = player1 if asyncio.get_event_loop().time() % 2 == 0 else player2
@@ -194,11 +169,7 @@ class TestLeagueIntegration:
             league.players[loser.player_id]["losses"] += 1
 
             # Report result
-            await referee.report_result(
-                match_data["match_id"],
-                winner.player_id,
-                loser.player_id
-            )
+            await referee.report_result(match_data["match_id"], winner.player_id, loser.player_id)
 
         # Get final standings
         standings = league.get_standings()
@@ -220,19 +191,13 @@ class TestLeagueIntegration:
 
         # Act
         result1 = await league.register_player(
-            player1_data["player_id"],
-            player1_data["endpoint"],
-            ["even_odd"]
+            player1_data["player_id"], player1_data["endpoint"], ["even_odd"]
         )
         result2 = await league.register_player(
-            player2_data["player_id"],
-            player2_data["endpoint"],
-            ["even_odd"]
+            player2_data["player_id"], player2_data["endpoint"], ["even_odd"]
         )
         result3 = await league.register_player(
-            player3_data["player_id"],
-            player3_data["endpoint"],
-            ["even_odd"]
+            player3_data["player_id"], player3_data["endpoint"], ["even_odd"]
         )
 
         # Assert
@@ -255,11 +220,7 @@ class TestConcurrentOperations:
 
         # Act - Register all players concurrently
         tasks = [
-            league.register_player(
-                player["player_id"],
-                player["endpoint"],
-                ["even_odd"]
-            )
+            league.register_player(player["player_id"], player["endpoint"], ["even_odd"])
             for player in players_data
         ]
         results = await asyncio.gather(*tasks)
@@ -277,11 +238,7 @@ class TestConcurrentOperations:
 
         # Act - Start all matches concurrently
         tasks = [
-            referee.start_match(
-                match["match_id"],
-                match["player1_id"],
-                match["player2_id"]
-            )
+            referee.start_match(match["match_id"], match["player1_id"], match["player2_id"])
             for match in matches_data
         ]
         results = await asyncio.gather(*tasks)
@@ -303,25 +260,19 @@ class TestErrorRecovery:
         match_data = MatchFactory.create()
 
         await referee.start_match(
-            match_data["match_id"],
-            match_data["player1_id"],
-            match_data["player2_id"]
+            match_data["match_id"], match_data["player1_id"], match_data["player2_id"]
         )
 
         # Act & Assert
         with pytest.raises(ConnectionError):
             await referee.report_result(
-                match_data["match_id"],
-                match_data["player1_id"],
-                match_data["player2_id"]
+                match_data["match_id"], match_data["player1_id"], match_data["player2_id"]
             )
 
         # Recovery: disable failure and retry
         referee.fail_on_report = False
         result = await referee.report_result(
-            match_data["match_id"],
-            match_data["player1_id"],
-            match_data["player2_id"]
+            match_data["match_id"], match_data["player1_id"], match_data["player2_id"]
         )
 
         assert result
@@ -336,14 +287,10 @@ class TestErrorRecovery:
 
         # Act - Register same player twice
         result1 = await league.register_player(
-            player_data["player_id"],
-            player_data["endpoint"],
-            ["even_odd"]
+            player_data["player_id"], player_data["endpoint"], ["even_odd"]
         )
         result2 = await league.register_player(
-            player_data["player_id"],
-            player_data["endpoint"],
-            ["even_odd"]
+            player_data["player_id"], player_data["endpoint"], ["even_odd"]
         )
 
         # Assert
@@ -368,11 +315,7 @@ class TestPerformanceIntegration:
         start_time = asyncio.get_event_loop().time()
 
         tasks = [
-            league.register_player(
-                player["player_id"],
-                player["endpoint"],
-                ["even_odd"]
-            )
+            league.register_player(player["player_id"], player["endpoint"], ["even_odd"])
             for player in scenario["players"]
         ]
         results = await asyncio.gather(*tasks)
@@ -389,6 +332,7 @@ class TestPerformanceIntegration:
 # ====================
 # Edge Case Integration Tests
 # ====================
+
 
 @pytest.mark.integration
 class TestEdgeCaseIntegration:
@@ -423,9 +367,7 @@ class TestEdgeCaseIntegration:
         # Register players
         for player_data in players_data:
             await league.register_player(
-                player_data["player_id"],
-                player_data["endpoint"],
-                ["even_odd"]
+                player_data["player_id"], player_data["endpoint"], ["even_odd"]
             )
 
         # Register single referee
@@ -480,4 +422,3 @@ EDGE CASES TESTED:
    - State consistency after errors
    - Graceful degradation
 """
-

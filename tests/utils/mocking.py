@@ -40,11 +40,9 @@ class MockMCPClient:
     async def call_tool(self, tool_name: str, **kwargs) -> dict[str, Any]:
         """Simulate tool call with configurable behavior."""
         # Record call
-        self.call_history.append({
-            "tool": tool_name,
-            "kwargs": kwargs,
-            "timestamp": asyncio.get_event_loop().time()
-        })
+        self.call_history.append(
+            {"tool": tool_name, "kwargs": kwargs, "timestamp": asyncio.get_event_loop().time()}
+        )
 
         # Simulate delay
         if self.delay > 0:
@@ -87,12 +85,7 @@ class MockPlayer:
     - Error injection
     """
 
-    def __init__(
-        self,
-        player_id: str,
-        strategy: str = "random",
-        fail_on_move: bool = False
-    ):
+    def __init__(self, player_id: str, strategy: str = "random", fail_on_move: bool = False):
         """Initialize mock player."""
         self.player_id = player_id
         self.strategy = strategy
@@ -123,11 +116,7 @@ class MockPlayer:
 
     async def accept_invitation(self, game_id: str) -> bool:
         """Simulate accepting game invitation."""
-        self.games[game_id] = {
-            "accepted": True,
-            "score": 0,
-            "rounds": 0
-        }
+        self.games[game_id] = {"accepted": True, "score": 0, "rounds": 0}
         return True
 
     def update_score(self, game_id: str, points: int):
@@ -155,36 +144,23 @@ class MockReferee:
         self.reported_results: list[dict[str, Any]] = []
 
     async def start_match(
-        self,
-        match_id: str,
-        player1_id: str,
-        player2_id: str,
-        rounds: int = 5
+        self, match_id: str, player1_id: str, player2_id: str, rounds: int = 5
     ) -> dict[str, Any]:
         """Simulate starting a match."""
         self.matches[match_id] = {
             "players": [player1_id, player2_id],
             "rounds": rounds,
             "current_round": 0,
-            "status": "in_progress"
+            "status": "in_progress",
         }
         return {"match_id": match_id, "status": "started"}
 
-    async def report_result(
-        self,
-        match_id: str,
-        winner_id: str,
-        loser_id: str
-    ) -> bool:
+    async def report_result(self, match_id: str, winner_id: str, loser_id: str) -> bool:
         """Simulate reporting match result."""
         if self.fail_on_report:
             raise ConnectionError("Failed to report result")
 
-        result = {
-            "match_id": match_id,
-            "winner": winner_id,
-            "loser": loser_id
-        }
+        result = {"match_id": match_id, "winner": winner_id, "loser": loser_id}
         self.reported_results.append(result)
 
         if match_id in self.matches:
@@ -212,63 +188,42 @@ class MockLeagueManager:
         self.rounds_completed = 0
 
     async def register_player(
-        self,
-        player_id: str,
-        endpoint: str,
-        game_types: list[str]
+        self, player_id: str, endpoint: str, game_types: list[str]
     ) -> dict[str, Any]:
         """Simulate player registration."""
         if len(self.players) >= self.max_players:
-            return {
-                "success": False,
-                "error": "League is full"
-            }
+            return {"success": False, "error": "League is full"}
 
         if player_id in self.players:
-            return {
-                "success": False,
-                "error": "Already registered"
-            }
+            return {"success": False, "error": "Already registered"}
 
         self.players[player_id] = {
             "endpoint": endpoint,
             "game_types": game_types,
             "wins": 0,
             "losses": 0,
-            "points": 0
+            "points": 0,
         }
 
-        return {
-            "success": True,
-            "player_id": player_id,
-            "auth_token": f"token_{player_id}"
-        }
+        return {"success": True, "player_id": player_id, "auth_token": f"token_{player_id}"}
 
-    async def register_referee(
-        self,
-        referee_id: str,
-        endpoint: str
-    ) -> dict[str, Any]:
+    async def register_referee(self, referee_id: str, endpoint: str) -> dict[str, Any]:
         """Simulate referee registration."""
-        self.referees[referee_id] = {
-            "endpoint": endpoint,
-            "matches_handled": 0
-        }
-        return {
-            "success": True,
-            "referee_id": referee_id
-        }
+        self.referees[referee_id] = {"endpoint": endpoint, "matches_handled": 0}
+        return {"success": True, "referee_id": referee_id}
 
     def get_standings(self) -> list[dict[str, Any]]:
         """Get current league standings."""
         standings = []
         for player_id, data in self.players.items():
-            standings.append({
-                "player_id": player_id,
-                "wins": data["wins"],
-                "losses": data["losses"],
-                "points": data["points"]
-            })
+            standings.append(
+                {
+                    "player_id": player_id,
+                    "wins": data["wins"],
+                    "losses": data["losses"],
+                    "points": data["points"],
+                }
+            )
         # Sort by points descending
         standings.sort(key=lambda x: x["points"], reverse=True)
         return standings
@@ -286,11 +241,7 @@ class MockGameSession:
     """
 
     def __init__(
-        self,
-        game_id: str,
-        rounds: int = 5,
-        odd_player: str = "P1",
-        even_player: str = "P2"
+        self, game_id: str, rounds: int = 5, odd_player: str = "P1", even_player: str = "P2"
     ):
         """Initialize mock game session."""
         self.game_id = game_id
@@ -326,7 +277,7 @@ class MockGameSession:
             "move2": move2,
             "sum": total,
             "winner": winner,
-            "scores": dict(self.scores)
+            "scores": dict(self.scores),
         }
 
         self.history.append(round_result)
@@ -375,6 +326,7 @@ def create_mock_event_bus() -> Mock:
 # Error Injection Utilities
 # ====================
 
+
 class NetworkErrorInjector:
     """Inject network errors for testing resilience."""
 
@@ -408,22 +360,16 @@ class TimeoutSimulator:
 # Test Fixtures
 # ====================
 
+
 def create_mock_player_client(player_id: str = "TestPlayer") -> MockMCPClient:
     """Create a configured mock player client."""
     client = MockMCPClient()
 
     async def mock_register(**kwargs):
-        return {
-            "success": True,
-            "player_id": player_id,
-            "auth_token": f"token_{player_id}"
-        }
+        return {"success": True, "player_id": player_id, "auth_token": f"token_{player_id}"}
 
     async def mock_make_move(**kwargs):
-        return {
-            "success": True,
-            "move": random.randint(1, 10)
-        }
+        return {"success": True, "move": random.randint(1, 10)}
 
     client.register_tool_response("register_player", mock_register)
     client.register_tool_response("make_move", mock_make_move)
@@ -436,19 +382,12 @@ def create_mock_referee_client(referee_id: str = "TestReferee") -> MockMCPClient
     client = MockMCPClient()
 
     async def mock_register(**kwargs):
-        return {
-            "success": True,
-            "referee_id": referee_id
-        }
+        return {"success": True, "referee_id": referee_id}
 
     async def mock_report_result(**kwargs):
-        return {
-            "success": True,
-            "acknowledged": True
-        }
+        return {"success": True, "acknowledged": True}
 
     client.register_tool_response("register_referee", mock_register)
     client.register_tool_response("report_match_result", mock_report_result)
 
     return client
-

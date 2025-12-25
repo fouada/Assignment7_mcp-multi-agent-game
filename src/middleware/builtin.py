@@ -152,19 +152,23 @@ class AuthenticationMiddleware(Middleware):
         token = context.request.get(self.token_field)
 
         if not token and self.required:
-            context.set_response({
-                "error": "Authentication required",
-                "error_type": "AuthenticationError",
-            })
+            context.set_response(
+                {
+                    "error": "Authentication required",
+                    "error_type": "AuthenticationError",
+                }
+            )
             return context
 
         if token:
             # Validate token
             if not self._validate_token(token):
-                context.set_response({
-                    "error": "Invalid authentication token",
-                    "error_type": "AuthenticationError",
-                })
+                context.set_response(
+                    {
+                        "error": "Invalid authentication token",
+                        "error_type": "AuthenticationError",
+                    }
+                )
                 return context
 
             # Store validated token in context
@@ -239,11 +243,13 @@ class RateLimitMiddleware(Middleware):
         context.state["rate_limit_remaining"] = remaining
 
         if not allowed:
-            context.set_response({
-                "error": "Rate limit exceeded",
-                "error_type": "RateLimitError",
-                "retry_after": 60,  # seconds
-            })
+            context.set_response(
+                {
+                    "error": "Rate limit exceeded",
+                    "error_type": "RateLimitError",
+                    "retry_after": 60,  # seconds
+                }
+            )
 
         return context
 
@@ -263,10 +269,7 @@ class RateLimitMiddleware(Middleware):
         """Extract client identifier from context."""
         # Try multiple sources
         return (
-            context.client_id
-            or context.request.get("sender")
-            or context.client_ip
-            or "anonymous"
+            context.client_id or context.request.get("sender") or context.client_ip or "anonymous"
         )
 
     def _check_rate_limit(self, client_id: str) -> tuple:
@@ -365,9 +368,7 @@ class MetricsMiddleware(Middleware):
                 if self.metrics["total_requests"] > 0
                 else 0
             ),
-            "avg_response_time_ms": (
-                (sum(times) / len(times)) * 1000 if times else 0
-            ),
+            "avg_response_time_ms": ((sum(times) / len(times)) * 1000 if times else 0),
             "min_response_time_ms": (min(times) * 1000 if times else 0),
             "max_response_time_ms": (max(times) * 1000 if times else 0),
             "requests_by_type": dict(self.metrics["requests_by_type"]),
@@ -412,11 +413,13 @@ class ValidationMiddleware(Middleware):
             errors = self._validate_request(context.request, schema)
 
             if errors:
-                context.set_response({
-                    "error": "Validation failed",
-                    "error_type": "ValidationError",
-                    "validation_errors": errors,
-                })
+                context.set_response(
+                    {
+                        "error": "Validation failed",
+                        "error_type": "ValidationError",
+                        "validation_errors": errors,
+                    }
+                )
 
         return context
 
@@ -597,6 +600,7 @@ class ErrorHandlerMiddleware(Middleware):
         # Add traceback in debug mode
         if self.include_traceback:
             import traceback
+
             error_response["traceback"] = traceback.format_exc()
 
         return error_response
@@ -669,4 +673,5 @@ class TracingMiddleware(Middleware):
     def _generate_trace_id(self) -> str:
         """Generate unique trace ID."""
         import uuid
+
         return str(uuid.uuid4())[:16]

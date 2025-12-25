@@ -85,7 +85,9 @@ class JsonRpcError:
     @classmethod
     def server_error(cls, code: int, message: str, data: Any = None) -> "JsonRpcError":
         if not (SERVER_ERROR_START <= code <= SERVER_ERROR_END):
-            raise ValueError(f"Server error code must be between {SERVER_ERROR_START} and {SERVER_ERROR_END}")
+            raise ValueError(
+                f"Server error code must be between {SERVER_ERROR_START} and {SERVER_ERROR_END}"
+            )
         return cls(code, message, data)
 
 
@@ -202,6 +204,7 @@ class JsonRpcBatch:
 # Factory Functions
 # ============================================================================
 
+
 def create_request(
     method: str,
     params: list | dict | None = None,
@@ -264,7 +267,7 @@ def create_error_response(
 
 
 def parse_message(
-    data: str | bytes | dict | list
+    data: str | bytes | dict | list,
 ) -> JsonRpcRequest | JsonRpcResponse | JsonRpcBatch | JsonRpcError:
     """
     Parse a JSON-RPC message.
@@ -317,6 +320,7 @@ def parse_message(
 # ============================================================================
 # MCP-Specific Helpers
 # ============================================================================
+
 
 class MCPMethods:
     """Standard MCP method names."""
@@ -377,8 +381,8 @@ def create_initialize_request(
             "clientInfo": {
                 "name": client_name,
                 "version": client_version,
-            }
-        }
+            },
+        },
     )
 
 
@@ -397,7 +401,7 @@ def create_tools_call_request(
         {
             "name": tool_name,
             "arguments": arguments or {},
-        }
+        },
     )
 
 
@@ -408,8 +412,4 @@ def create_resources_list_request() -> dict[str, Any]:
 
 def create_resources_read_request(uri: str) -> dict[str, Any]:
     """Create resources/read request."""
-    return create_mcp_request(
-        MCPMethods.RESOURCES_READ,
-        {"uri": uri}
-    )
-
+    return create_mcp_request(MCPMethods.RESOURCES_READ, {"uri": uri})

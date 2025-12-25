@@ -98,6 +98,7 @@ class GameOrchestrator:
         # Load plugin configuration from config loader
         try:
             from .common.config_loader import get_config_loader
+
             plugin_config = get_config_loader().load_plugins_config()
         except Exception as e:
             logger.warning(f"Could not load plugin config: {e}. Using defaults.")
@@ -112,7 +113,7 @@ class GameOrchestrator:
             registry=self.plugin_registry,
             config=full_config,
             logger=logger,
-            event_bus=self.event_bus
+            event_bus=self.event_bus,
         )
         self.plugin_registry.set_context(context)
 
@@ -121,14 +122,17 @@ class GameOrchestrator:
         plugin_paths = ["plugins", os.path.expanduser("~/.mcp_game/plugins")]
 
         # Use config if available, otherwise defaults
-        discovery_config = plugin_config.get("plugin_discovery", {
-            "entry_point_group": "mcp_game.plugins",
-            "directory_scan": {
-                "enabled": True,
-                "paths": plugin_paths,
-                "pattern": "*_plugin.py"
-            }
-        })
+        discovery_config = plugin_config.get(
+            "plugin_discovery",
+            {
+                "entry_point_group": "mcp_game.plugins",
+                "directory_scan": {
+                    "enabled": True,
+                    "paths": plugin_paths,
+                    "pattern": "*_plugin.py",
+                },
+            },
+        )
 
         # Auto-discover and register
         count = await auto_discover_and_register(discovery_config, auto_enable=True)
@@ -203,6 +207,7 @@ class GameOrchestrator:
         else:
             # Try to load from strategy registry (plugins)
             from .agents.strategies.plugin_registry import get_strategy_plugin_registry
+
             strategy_registry = get_strategy_plugin_registry()
 
             if strategy_registry.is_registered(strategy_type):
@@ -237,16 +242,16 @@ class GameOrchestrator:
         """
         Start all components.
         """
-        logger.info("="*60)
+        logger.info("=" * 60)
         logger.info("Starting MCP Game League")
-        logger.info("="*60)
+        logger.info("=" * 60)
         logger.info("  League Manager: 1")
         logger.info(f"  Referees: {num_referees}")
         logger.info(f"  Players: {num_players}")
         logger.info(f"  Strategy: {strategy}")
         if strategy == "llm":
             logger.info(f"  LLM: {self.config.llm.provider} / {self.config.llm.model}")
-        logger.info("="*60)
+        logger.info("=" * 60)
 
         # Initialize Plugins
         await self._init_plugins()
@@ -261,10 +266,7 @@ class GameOrchestrator:
             integration = get_dashboard_integration()
 
             # Start dashboard server in background
-            await dashboard.start_server_background(
-                host="0.0.0.0",
-                port=8050
-            )
+            await dashboard.start_server_background(host="0.0.0.0", port=8050)
 
             # Connect event bus to dashboard
             self.event_bus.on("game.round.start", integration.on_round_start)
@@ -323,7 +325,9 @@ class GameOrchestrator:
 
         # Wait for enough players
         while self.league_manager.player_count < self.config.league.min_players:
-            logger.info(f"Waiting for players... ({self.league_manager.player_count}/{self.config.league.min_players})")
+            logger.info(
+                f"Waiting for players... ({self.league_manager.player_count}/{self.config.league.min_players})"
+            )
             await asyncio.sleep(1)
 
         # Start the league
@@ -337,9 +341,9 @@ class GameOrchestrator:
         # Run rounds
         total_rounds = result.get("rounds", 0)
         for round_num in range(total_rounds):
-            logger.info(f"\n{'='*50}")
+            logger.info(f"\n{'=' * 50}")
             logger.info(f"Starting Round {round_num + 1}/{total_rounds}")
-            logger.info(f"{'='*50}\n")
+            logger.info(f"{'=' * 50}\n")
 
             # Start round
             round_result = await self.league_manager.start_next_round()
@@ -365,13 +369,15 @@ class GameOrchestrator:
                 logger.info(f"  {entry['rank']}. {entry['display_name']}: {entry['points']} pts")
 
         # Final standings
-        logger.info("\n" + "="*50)
+        logger.info("\n" + "=" * 50)
         logger.info("LEAGUE COMPLETE - Final Standings")
-        logger.info("="*50)
+        logger.info("=" * 50)
 
         standings = self.league_manager._get_standings()
         for entry in standings.get("standings", []):
-            logger.info(f"  {entry['rank']}. {entry['display_name']}: {entry['points']} pts ({entry['wins']}W-{entry['losses']}L)")
+            logger.info(
+                f"  {entry['rank']}. {entry['display_name']}: {entry['points']} pts ({entry['wins']}W-{entry['losses']}L)"
+            )
 
     async def _run_match(self, match_data: dict, round_num: int = 0) -> None:
         """Run a single match through a referee (round-robin assignment)."""
@@ -383,16 +389,20 @@ class GameOrchestrator:
             player_a_id = match_data.get("player_A_id")
             player_b_id = match_data.get("player_B_id")
 
-            logger.info(f"Match {match_data.get('match_id')}: {player_a_id} vs {player_b_id} (Referee: {referee.referee_id})")
+            logger.info(
+                f"Match {match_data.get('match_id')}: {player_a_id} vs {player_b_id} (Referee: {referee.referee_id})"
+            )
 
-            result = await referee._start_match({
-                "match_id": match_data.get("match_id"),
-                "player1_id": player_a_id,
-                "player1_endpoint": match_data.get("_player_A_endpoint"),
-                "player2_id": player_b_id,
-                "player2_endpoint": match_data.get("_player_B_endpoint"),
-                "rounds": self.config.game.rounds_per_match,
-            })
+            result = await referee._start_match(
+                {
+                    "match_id": match_data.get("match_id"),
+                    "player1_id": player_a_id,
+                    "player1_endpoint": match_data.get("_player_A_endpoint"),
+                    "player2_id": player_b_id,
+                    "player2_endpoint": match_data.get("_player_B_endpoint"),
+                    "rounds": self.config.game.rounds_per_match,
+                }
+            )
 
             logger.debug(f"Match started: {result}")
 
@@ -458,7 +468,7 @@ async def run_component(component: str, args: argparse.Namespace) -> None:
         )
     elif component == "player":
         # Determine strategy
-        strategy_type = getattr(args, 'strategy', 'random')
+        strategy_type = getattr(args, "strategy", "random")
         if strategy_type == "llm":
             strategy = LLMStrategy(config.llm)
             logger.info(f"Using LLM strategy: {config.llm.provider} / {config.llm.model}")
@@ -517,11 +527,8 @@ async def send_league_command(command: str, arguments: dict = None) -> None:
     request = {
         "jsonrpc": "2.0",
         "method": "tools/call",
-        "params": {
-            "name": command,
-            "arguments": arguments or {}
-        },
-        "id": 1
+        "params": {"name": command, "arguments": arguments or {}},
+        "id": 1,
     }
 
     try:
@@ -559,11 +566,12 @@ async def run_full_league(args: argparse.Namespace) -> None:
         # Auto-update model if not explicitly set
         if not args.llm_model:
             from .common.config import DEFAULT_LLM_MODELS
+
             config.llm.model = DEFAULT_LLM_MODELS.get(args.llm_provider)
     if args.llm_model:
         config.llm.model = args.llm_model
 
-    orchestrator = GameOrchestrator(config, enable_dashboard=getattr(args, 'dashboard', False))
+    orchestrator = GameOrchestrator(config, enable_dashboard=getattr(args, "dashboard", False))
 
     # Handle shutdown
     loop = asyncio.get_event_loop()
@@ -576,8 +584,8 @@ async def run_full_league(args: argparse.Namespace) -> None:
 
     try:
         # Pass strategy and referee count from command line
-        strategy = getattr(args, 'strategy', 'mixed')
-        num_referees = getattr(args, 'referees', 2)
+        strategy = getattr(args, "strategy", "mixed")
+        num_referees = getattr(args, "referees", 2)
         await orchestrator.start_all(
             num_players=args.players,
             num_referees=num_referees,
@@ -626,7 +634,7 @@ Examples:
 
   # Get current standings
   python -m src.main --get-standings
-        """
+        """,
     )
 
     parser.add_argument(

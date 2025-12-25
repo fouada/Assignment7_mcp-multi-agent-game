@@ -40,9 +40,7 @@ class TestPerformanceBasics:
             for i in range(100):
                 player_data = PlayerFactory.create(player_id=f"P{i:03d}")
                 task = league.register_player(
-                    player_data["player_id"],
-                    player_data["endpoint"],
-                    ["even_odd"]
+                    player_data["player_id"], player_data["endpoint"], ["even_odd"]
                 )
                 tasks.append(task)
 
@@ -80,11 +78,7 @@ class TestPerformanceBasics:
         with PerformanceTimer("Starting 50 concurrent matches"):
             tasks = []
             for i in range(50):
-                task = referee.start_match(
-                    f"M{i:03d}",
-                    f"P{i*2:03d}",
-                    f"P{i*2+1:03d}"
-                )
+                task = referee.start_match(f"M{i:03d}", f"P{i * 2:03d}", f"P{i * 2 + 1:03d}")
                 tasks.append(task)
 
             results = await asyncio.gather(*tasks)
@@ -109,9 +103,7 @@ class TestLoadTesting:
 
         for player_data in scenario["players"]:
             await league.register_player(
-                player_data["player_id"],
-                player_data["endpoint"],
-                ["even_odd"]
+                player_data["player_id"], player_data["endpoint"], ["even_odd"]
             )
 
         reg_time = time.perf_counter() - start_time
@@ -130,11 +122,7 @@ class TestLoadTesting:
 
         # Register all players concurrently
         tasks = [
-            league.register_player(
-                p["player_id"],
-                p["endpoint"],
-                ["even_odd"]
-            )
+            league.register_player(p["player_id"], p["endpoint"], ["even_odd"])
             for p in scenario["players"]
         ]
         results = await asyncio.gather(*tasks)
@@ -162,14 +150,9 @@ class TestLoadTesting:
         # Register in batches for better control
         batch_size = 20
         for i in range(0, len(scenario["players"]), batch_size):
-            batch = scenario["players"][i:i+batch_size]
+            batch = scenario["players"][i : i + batch_size]
             tasks = [
-                league.register_player(
-                    p["player_id"],
-                    p["endpoint"],
-                    ["even_odd"]
-                )
-                for p in batch
+                league.register_player(p["player_id"], p["endpoint"], ["even_odd"]) for p in batch
             ]
             await asyncio.gather(*tasks)
 
@@ -196,11 +179,7 @@ class TestStressTesting:
         start_time = time.perf_counter()
 
         tasks = [
-            referee.start_match(
-                f"M{i:04d}",
-                f"P{i*2:04d}",
-                f"P{i*2+1:04d}"
-            )
+            referee.start_match(f"M{i:04d}", f"P{i * 2:04d}", f"P{i * 2 + 1:04d}")
             for i in range(num_matches)
         ]
         results = await asyncio.gather(*tasks)
@@ -211,7 +190,7 @@ class TestStressTesting:
         assert len(results) == num_matches
         assert len(referee.matches) == num_matches
         print(f"\n  Started {num_matches} matches in {total_time:.2f}s")
-        print(f"  Average: {total_time/num_matches*1000:.2f}ms per match")
+        print(f"  Average: {total_time / num_matches * 1000:.2f}ms per match")
 
     @pytest.mark.asyncio
     async def test_rapid_move_submission(self):
@@ -222,7 +201,7 @@ class TestStressTesting:
         start_time = time.perf_counter()
 
         for i in range(num_moves):
-            await player.make_move(f"G{i%100}", "odd")
+            await player.make_move(f"G{i % 100}", "odd")
 
         total_time = time.perf_counter() - start_time
         moves_per_second = num_moves / total_time
@@ -244,7 +223,7 @@ class TestStressTesting:
         total_size = sum(sys.getsizeof(p) for p in players)
         avg_size = total_size / len(players)
 
-        print(f"\n  1000 players: {total_size/1024:.2f} KB")
+        print(f"\n  1000 players: {total_size / 1024:.2f} KB")
         print(f"  Average per player: {avg_size:.2f} bytes")
 
         # Assert reasonable memory usage
@@ -268,11 +247,7 @@ class TestEnduranceTesting:
             player = MockPlayer(player_data["player_id"])
             players[player.player_id] = player
 
-            await league.register_player(
-                player.player_id,
-                player_data["endpoint"],
-                ["even_odd"]
-            )
+            await league.register_player(player.player_id, player_data["endpoint"], ["even_odd"])
 
         # Simulate many rounds
         num_rounds = 100
@@ -299,7 +274,7 @@ class TestEnduranceTesting:
         standings = league.get_standings()
         assert len(standings) == 20
         print(f"\n  {num_rounds} rounds completed in {total_time:.2f}s")
-        print(f"  Average: {total_time/num_rounds*1000:.2f}ms per round")
+        print(f"  Average: {total_time / num_rounds * 1000:.2f}ms per round")
 
     @pytest.mark.asyncio
     async def test_continuous_operation(self):
@@ -320,11 +295,7 @@ class TestEnduranceTesting:
                 continue
 
             player_data = PlayerFactory.create(player_id=player_id)
-            await league.register_player(
-                player_id,
-                player_data["endpoint"],
-                ["even_odd"]
-            )
+            await league.register_player(player_id, player_data["endpoint"], ["even_odd"])
             operations += 1
 
         ops_per_second = operations / duration
@@ -351,11 +322,7 @@ class TestScalabilityTesting:
             start_time = time.perf_counter()
 
             tasks = [
-                league.register_player(
-                    f"P{i:04d}",
-                    f"http://localhost:{8000+i}",
-                    ["even_odd"]
-                )
+                league.register_player(f"P{i:04d}", f"http://localhost:{8000 + i}", ["even_odd"])
                 for i in range(num_players)
             ]
             await asyncio.gather(*tasks)
@@ -363,11 +330,7 @@ class TestScalabilityTesting:
             duration = time.perf_counter() - start_time
             throughput = num_players / duration
 
-            results.append({
-                "players": num_players,
-                "time": duration,
-                "throughput": throughput
-            })
+            results.append({"players": num_players, "time": duration, "throughput": throughput})
 
         # Print results
         print("\n  Scalability Results:")
@@ -392,11 +355,7 @@ class TestScalabilityTesting:
             start_time = time.perf_counter()
 
             tasks = [
-                referee.start_match(
-                    f"M{i:05d}",
-                    f"P{i*2:05d}",
-                    f"P{i*2+1:05d}"
-                )
+                referee.start_match(f"M{i:05d}", f"P{i * 2:05d}", f"P{i * 2 + 1:05d}")
                 for i in range(num_matches)
             ]
             await asyncio.gather(*tasks)
@@ -404,11 +363,7 @@ class TestScalabilityTesting:
             duration = time.perf_counter() - start_time
             throughput = num_matches / duration
 
-            results.append({
-                "matches": num_matches,
-                "time": duration,
-                "throughput": throughput
-            })
+            results.append({"matches": num_matches, "time": duration, "throughput": throughput})
 
         # Print results
         print("\n  Match Scalability Results:")
@@ -496,4 +451,3 @@ PERFORMANCE METRICS TESTED:
    - Player creation speed
    - Operation latencies
 """
-

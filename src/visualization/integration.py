@@ -143,9 +143,7 @@ class DashboardIntegration:
 
         # Initialize tournament state
         self.tournament_state = TournamentDashboardState(
-            tournament_id=tournament_id,
-            start_time=datetime.now(),
-            total_rounds=total_rounds
+            tournament_id=tournament_id, start_time=datetime.now(), total_rounds=total_rounds
         )
 
         # Start dashboard server (non-blocking)
@@ -168,7 +166,7 @@ class DashboardIntegration:
         strategy_name: str,
         opponent_modeling_engine: OpponentModelingEngine | None = None,
         cfr_engine: CounterfactualReasoningEngine | None = None,
-        strategy_composition: CompositeStrategy | None = None
+        strategy_composition: CompositeStrategy | None = None,
     ):
         """
         Register a player and their innovation engines with dashboard.
@@ -180,8 +178,7 @@ class DashboardIntegration:
 
         # Create player state
         self.tournament_state.players[player_id] = PlayerDashboardState(
-            player_id=player_id,
-            strategy_name=strategy_name
+            player_id=player_id, strategy_name=strategy_name
         )
 
         # Track engines
@@ -218,7 +215,7 @@ class DashboardIntegration:
             players=[],
             moves={},
             scores={},
-            metadata={"matches": len(matches)}
+            metadata={"matches": len(matches)},
         )
 
         # Stream to dashboard
@@ -227,12 +224,7 @@ class DashboardIntegration:
         logger.debug(f"Streamed round_start event for round {round_num}")
 
     async def on_move_decision(
-        self,
-        player_id: str,
-        opponent_id: str,
-        round_num: int,
-        move: str,
-        game_state: dict
+        self, player_id: str, opponent_id: str, round_num: int, move: str, game_state: dict
     ):
         """Handle move decision event."""
         if not self.enabled:
@@ -246,7 +238,7 @@ class DashboardIntegration:
             players=[player_id, opponent_id],
             moves={player_id: move},
             scores={},
-            metadata={"game_state": game_state}
+            metadata={"game_state": game_state},
         )
 
         # Stream to dashboard
@@ -264,7 +256,7 @@ class DashboardIntegration:
         player1_id: str,
         player2_id: str,
         moves: dict[str, str],
-        scores: dict[str, float]
+        scores: dict[str, float],
     ):
         """Handle round complete event."""
         if not self.enabled:
@@ -278,7 +270,7 @@ class DashboardIntegration:
             players=[player1_id, player2_id],
             moves=moves,
             scores=scores,
-            metadata={}
+            metadata={},
         )
 
         # Update player states
@@ -299,7 +291,9 @@ class DashboardIntegration:
                 ):
                     state.total_wins += 1
 
-                state.win_rate = state.total_wins / state.total_rounds if state.total_rounds > 0 else 0
+                state.win_rate = (
+                    state.total_wins / state.total_rounds if state.total_rounds > 0 else 0
+                )
                 state.win_rate_history.append(state.win_rate)
 
         # Stream to dashboard
@@ -342,8 +336,8 @@ class DashboardIntegration:
                 "reactivity": model.reactivity,
                 "adaptability": model.adaptability,
                 "concept_drift": model.concept_drift_detected,
-                "accuracy": model.prediction_accuracy
-            }
+                "accuracy": model.prediction_accuracy,
+            },
         )
 
         # Update player state
@@ -351,29 +345,33 @@ class DashboardIntegration:
         state.opponent_models[opponent_id] = model
 
         # Add to recent predictions
-        state.recent_predictions.append({
-            "timestamp": datetime.now().isoformat(),
-            "opponent_id": opponent_id,
-            "predicted_strategy": model.strategy_type,
-            "confidence": model.confidence
-        })
+        state.recent_predictions.append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "opponent_id": opponent_id,
+                "predicted_strategy": model.strategy_type,
+                "confidence": model.confidence,
+            }
+        )
 
         # Keep only last 20 predictions
         if len(state.recent_predictions) > 20:
             state.recent_predictions = state.recent_predictions[-20:]
 
         # Stream to dashboard (custom message)
-        await self.dashboard.broadcast({
-            "type": "opponent_model_update",
-            "player_id": player_id,
-            "opponent_id": opponent_id,
-            "data": {
-                "predicted_strategy": viz.predicted_strategy,
-                "confidence": viz.confidence,
-                "move_distribution": viz.move_distribution,
-                "metadata": viz.metadata
+        await self.dashboard.broadcast(
+            {
+                "type": "opponent_model_update",
+                "player_id": player_id,
+                "opponent_id": opponent_id,
+                "data": {
+                    "predicted_strategy": viz.predicted_strategy,
+                    "confidence": viz.confidence,
+                    "move_distribution": viz.move_distribution,
+                    "metadata": viz.metadata,
+                },
             }
-        })
+        )
 
         logger.debug(f"Updated opponent model viz for {player_id} -> {opponent_id}")
 
@@ -388,10 +386,7 @@ class DashboardIntegration:
             return
 
         # Get recent counterfactual analysis
-        recent_cfs = [
-            cf for cf in engine.counterfactual_history
-            if cf.round == round_num
-        ]
+        recent_cfs = [cf for cf in engine.counterfactual_history if cf.round == round_num]
 
         if not recent_cfs:
             return
@@ -408,30 +403,30 @@ class DashboardIntegration:
                     "move": cf.counterfactual_move,
                     "estimated_reward": cf.counterfactual_reward,
                     "regret": cf.regret,
-                    "confidence": cf.confidence
+                    "confidence": cf.confidence,
                 }
                 for cf in recent_cfs
             ],
             cumulative_regret={},  # Will populate from regret table
-            metadata={"round": round_num}
+            metadata={"round": round_num},
         )
 
         # Get cumulative regrets from regret table
         infoset = engine._get_infoset(None)  # Simplified - would need actual game state
         if infoset in engine.regret_table.cumulative_regret:
-            viz.cumulative_regret = dict(
-                engine.regret_table.cumulative_regret[infoset]
-            )
+            viz.cumulative_regret = dict(engine.regret_table.cumulative_regret[infoset])
 
         # Update player state
         state = self.tournament_state.players[player_id]
-        state.recent_regrets.append({
-            "timestamp": datetime.now().isoformat(),
-            "round": round_num,
-            "actual_move": viz.actual_move,
-            "actual_reward": viz.actual_reward,
-            "counterfactuals": viz.counterfactuals
-        })
+        state.recent_regrets.append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "round": round_num,
+                "actual_move": viz.actual_move,
+                "actual_reward": viz.actual_reward,
+                "counterfactuals": viz.counterfactuals,
+            }
+        )
 
         # Keep only last 20 regrets
         if len(state.recent_regrets) > 20:
@@ -441,17 +436,19 @@ class DashboardIntegration:
         state.cumulative_regret = viz.cumulative_regret
 
         # Stream to dashboard
-        await self.dashboard.broadcast({
-            "type": "counterfactual_update",
-            "player_id": player_id,
-            "round": round_num,
-            "data": {
-                "actual_move": viz.actual_move,
-                "actual_reward": viz.actual_reward,
-                "counterfactuals": viz.counterfactuals,
-                "cumulative_regret": viz.cumulative_regret
+        await self.dashboard.broadcast(
+            {
+                "type": "counterfactual_update",
+                "player_id": player_id,
+                "round": round_num,
+                "data": {
+                    "actual_move": viz.actual_move,
+                    "actual_reward": viz.actual_reward,
+                    "counterfactuals": viz.counterfactuals,
+                    "cumulative_regret": viz.cumulative_regret,
+                },
             }
-        })
+        )
 
         logger.debug(f"Updated counterfactual viz for {player_id} at round {round_num}")
 
@@ -471,11 +468,7 @@ class DashboardIntegration:
             strategy_name = state.strategy_name
 
             if strategy_name not in strategy_stats:
-                strategy_stats[strategy_name] = {
-                    "rounds": [],
-                    "win_rates": [],
-                    "avg_scores": []
-                }
+                strategy_stats[strategy_name] = {"rounds": [], "win_rates": [], "avg_scores": []}
 
             # Aggregate data
             if state.round_history:
@@ -492,19 +485,21 @@ class DashboardIntegration:
                 strategy_name=strategy_name,
                 rounds=stats["rounds"],
                 win_rates=stats["win_rates"],
-                avg_scores=stats["avg_scores"]
+                avg_scores=stats["avg_scores"],
             )
 
             # Stream to dashboard
-            await self.dashboard.broadcast({
-                "type": "strategy_performance_update",
-                "strategy_name": strategy_name,
-                "data": {
-                    "rounds": perf.rounds,
-                    "win_rates": perf.win_rates,
-                    "avg_scores": perf.avg_scores
+            await self.dashboard.broadcast(
+                {
+                    "type": "strategy_performance_update",
+                    "strategy_name": strategy_name,
+                    "data": {
+                        "rounds": perf.rounds,
+                        "win_rates": perf.win_rates,
+                        "avg_scores": perf.avg_scores,
+                    },
                 }
-            })
+            )
 
         logger.debug("Updated strategy performance metrics")
 
@@ -523,7 +518,7 @@ class DashboardIntegration:
             "current_round": self.tournament_state.current_round,
             "total_rounds": self.tournament_state.total_rounds,
             "num_players": len(self.tournament_state.players),
-            "matches_played": len(self.tournament_state.matches)
+            "matches_played": len(self.tournament_state.matches),
         }
 
     def get_player_standings(self) -> list[dict]:
@@ -533,15 +528,17 @@ class DashboardIntegration:
 
         standings = []
         for player_id, state in self.tournament_state.players.items():
-            standings.append({
-                "player_id": player_id,
-                "strategy": state.strategy_name,
-                "total_rounds": state.total_rounds,
-                "total_wins": state.total_wins,
-                "win_rate": state.win_rate,
-                "total_score": state.total_score,
-                "avg_score": state.avg_score_per_round
-            })
+            standings.append(
+                {
+                    "player_id": player_id,
+                    "strategy": state.strategy_name,
+                    "total_rounds": state.total_rounds,
+                    "total_wins": state.total_wins,
+                    "win_rate": state.win_rate,
+                    "total_score": state.total_score,
+                    "avg_score": state.avg_score_per_round,
+                }
+            )
 
         # Sort by win rate (descending)
         standings.sort(key=lambda x: x["win_rate"], reverse=True)
@@ -555,7 +552,8 @@ class DashboardIntegration:
 
         # Find players using this strategy
         players_with_strategy = [
-            state for state in self.tournament_state.players.values()
+            state
+            for state in self.tournament_state.players.values()
             if state.strategy_name == strategy_name
         ]
 
@@ -577,7 +575,7 @@ class DashboardIntegration:
             "num_players": len(players_with_strategy),
             "rounds": all_rounds,
             "win_rates": all_win_rates,
-            "avg_scores": all_scores
+            "avg_scores": all_scores,
         }
 
     def get_opponent_model(self, player_id: str, opponent_id: str) -> dict | None:
@@ -600,7 +598,7 @@ class DashboardIntegration:
             "reactivity": model.reactivity,
             "adaptability": model.adaptability,
             "concept_drift": model.concept_drift_detected,
-            "accuracy": model.prediction_accuracy
+            "accuracy": model.prediction_accuracy,
         }
 
     def get_counterfactual_data(self, player_id: str, round_num: int | None = None) -> dict | None:
@@ -623,7 +621,7 @@ class DashboardIntegration:
 
             return {
                 "recent_regrets": state.recent_regrets[-5:],  # Last 5
-                "cumulative_regret": state.cumulative_regret
+                "cumulative_regret": state.cumulative_regret,
             }
 
 

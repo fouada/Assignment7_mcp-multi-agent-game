@@ -30,6 +30,7 @@ class ParityChoice(Enum):
     In Odd/Even game, what matters is not the specific number,
     but whether it's odd or even.
     """
+
     ODD = "odd"
     EVEN = "even"
 
@@ -412,12 +413,12 @@ class GameTheoryStrategy(Strategy):
             if opponent_likely_odd:
                 return ParityChoice.EVEN  # ODD + EVEN = ODD ✓
             else:
-                return ParityChoice.ODD   # ODD + EVEN = ODD ✓
+                return ParityChoice.ODD  # ODD + EVEN = ODD ✓
         else:
             # We want sum to be even
             # Play SAME as opponent's likely parity
             if opponent_likely_odd:
-                return ParityChoice.ODD   # ODD + ODD = EVEN ✓
+                return ParityChoice.ODD  # ODD + ODD = EVEN ✓
             else:
                 return ParityChoice.EVEN  # EVEN + EVEN = EVEN ✓
 
@@ -461,9 +462,10 @@ class GameTheoryStrategy(Strategy):
     def get_stats(self) -> dict[str, Any]:
         """Get strategy statistics."""
         stats = super().get_stats()
-        stats.update({
-            "games_tracked": len(self._games),
-            "total_observations": sum(m.total_observations for m in self._games.values()),
-        })
+        stats.update(
+            {
+                "games_tracked": len(self._games),
+                "total_observations": sum(m.total_observations for m in self._games.values()),
+            }
+        )
         return stats
-

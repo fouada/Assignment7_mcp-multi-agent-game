@@ -304,9 +304,7 @@ class EventBus:
             logger.debug(f"No handlers registered for event '{event_type}'")
             return []
 
-        logger.debug(
-            f"Emitting event '{event_type}' to {len(handlers)} handler(s)"
-        )
+        logger.debug(f"Emitting event '{event_type}' to {len(handlers)} handler(s)")
 
         results = []
 
@@ -368,17 +366,13 @@ class EventBus:
         self._stats["total_events"] += 1
 
         # Get matching sync handlers only
-        handlers = [
-            h for h in self._get_matching_handlers(event_type) if not h.is_async
-        ]
+        handlers = [h for h in self._get_matching_handlers(event_type) if not h.is_async]
 
         if not handlers:
             logger.debug(f"No sync handlers registered for event '{event_type}'")
             return []
 
-        logger.debug(
-            f"Emitting event '{event_type}' to {len(handlers)} sync handler(s)"
-        )
+        logger.debug(f"Emitting event '{event_type}' to {len(handlers)} sync handler(s)")
 
         results = []
 

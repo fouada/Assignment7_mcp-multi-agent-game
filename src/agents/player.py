@@ -49,6 +49,7 @@ logger = get_logger(__name__)
 # Player Agent
 # ============================================================================
 
+
 @dataclass
 class GameSession:
     """Player's view of an active game."""
@@ -143,7 +144,7 @@ class PlayerAgent(BaseGameServer):
                     "accept": {"type": "boolean"},
                 },
                 "required": ["game_id"],
-            }
+            },
         )
         async def accept_game(params: dict) -> dict:
             game_id = params.get("game_id")
@@ -159,7 +160,7 @@ class PlayerAgent(BaseGameServer):
                     "game_id": {"type": "string"},
                 },
                 "required": ["game_id"],
-            }
+            },
         )
         async def get_game_state(params: dict) -> dict:
             game_id = params.get("game_id")
@@ -185,16 +186,18 @@ class PlayerAgent(BaseGameServer):
             # Compile game history
             game_history = []
             for game_id, session in self._games.items():
-                game_history.append({
-                    "game_id": game_id,
-                    "opponent_id": session.opponent_id,
-                    "my_role": session.my_role.value if session.my_role else None,
-                    "state": session.state,
-                    "my_score": session.my_score,
-                    "opponent_score": session.opponent_score,
-                    "rounds_played": session.current_round,
-                    "result": self._get_game_result(session),
-                })
+                game_history.append(
+                    {
+                        "game_id": game_id,
+                        "opponent_id": session.opponent_id,
+                        "my_role": session.my_role.value if session.my_role else None,
+                        "state": session.state,
+                        "my_score": session.my_score,
+                        "opponent_score": session.opponent_score,
+                        "rounds_played": session.current_round,
+                        "result": self._get_game_result(session),
+                    }
+                )
 
             # Get completed games summary
             wins = sum(1 for g in game_history if g["result"] == "win")
@@ -212,7 +215,9 @@ class PlayerAgent(BaseGameServer):
                     "wins": wins,
                     "losses": losses,
                     "draws": draws,
-                    "active_games": sum(1 for g in game_history if g["state"] not in ("complete", "finished")),
+                    "active_games": sum(
+                        1 for g in game_history if g["state"] not in ("complete", "finished")
+                    ),
                 },
                 "game_history": game_history,
             }
@@ -263,6 +268,7 @@ class PlayerAgent(BaseGameServer):
             if isinstance(result, dict):
                 text = result.get("text", "{}")
                 import json
+
                 data = json.loads(text)
             else:
                 data = response
@@ -328,7 +334,7 @@ class PlayerAgent(BaseGameServer):
                         game_id=game_id,
                         role=session.my_role.value,
                         source=f"player:{self.player_name}",
-                    )
+                    ),
                 )
             except Exception as e:
                 logger.error(f"Failed to emit PlayerGameJoinedEvent: {e}")
@@ -354,13 +360,14 @@ class PlayerAgent(BaseGameServer):
                     my_score=session.my_score,
                     opponent_score=session.opponent_score,
                     source=f"player:{self.player_name}",
-                )
+                ),
             )
         except Exception as e:
             logger.error(f"Failed to emit PlayerMoveBeforeEvent: {e}")
 
         # Use strategy to decide move
         import time
+
         start_time = time.time()
 
         move = await self.strategy.decide_move(
@@ -388,7 +395,7 @@ class PlayerAgent(BaseGameServer):
                     move=move,
                     decision_time_ms=decision_time_ms,
                     source=f"player:{self.player_name}",
-                )
+                ),
             )
         except Exception as e:
             logger.error(f"Failed to emit PlayerMoveAfterEvent: {e}")
@@ -450,7 +457,7 @@ class PlayerAgent(BaseGameServer):
                     game_type="even_odd",
                     referee_id=message.get("referee_id", ""),
                     source=f"player:{self.player_name}",
-                )
+                ),
             )
         except Exception as e:
             logger.error(f"Failed to emit PlayerGameInvitedEvent: {e}")
@@ -556,13 +563,15 @@ class PlayerAgent(BaseGameServer):
             return {"error": "Unknown game"}
 
         # Update session with result
-        session.history.append({
-            "round": message.get("round_number"),
-            "my_move": message.get("your_move"),
-            "opponent_move": message.get("opponent_move"),
-            "sum": message.get("sum_value"),
-            "winner": message.get("round_winner_id"),
-        })
+        session.history.append(
+            {
+                "round": message.get("round_number"),
+                "my_move": message.get("your_move"),
+                "opponent_move": message.get("opponent_move"),
+                "sum": message.get("sum_value"),
+                "winner": message.get("round_winner_id"),
+            }
+        )
 
         session.my_score = message.get("your_new_score", session.my_score)
         session.opponent_score = message.get("opponent_new_score", session.opponent_score)
@@ -632,6 +641,7 @@ class PlayerAgent(BaseGameServer):
 # ============================================================================
 # Factory Functions
 # ============================================================================
+
 
 def create_player(
     name: str,
@@ -728,4 +738,3 @@ def get_recommended_strategy() -> Strategy:
         AdaptiveBayesianStrategy with optimized defaults
     """
     return StrategyFactory.get_recommended_strategy()
-

@@ -216,8 +216,7 @@ class DashboardAPI:
                     await websocket.receive_text()
                     # Echo back for ping/pong
                     await self.connection_manager.send_personal_message(
-                        {"type": "pong", "timestamp": datetime.now().isoformat()},
-                        websocket
+                        {"type": "pong", "timestamp": datetime.now().isoformat()}, websocket
                     )
             except WebSocketDisconnect:
                 self.connection_manager.disconnect(websocket)
@@ -285,10 +284,7 @@ class DashboardAPI:
 
     async def stream_event(self, event: GameEvent):
         """Stream event to all connected clients."""
-        message = {
-            "type": "game_event",
-            "data": asdict(event)
-        }
+        message = {"type": "game_event", "data": asdict(event)}
         await self.connection_manager.broadcast(message)
 
         # Store event
@@ -301,20 +297,14 @@ class DashboardAPI:
         """Update and broadcast tournament state."""
         self.tournament_states[state.tournament_id] = state
 
-        message = {
-            "type": "tournament_update",
-            "data": asdict(state)
-        }
+        message = {"type": "tournament_update", "data": asdict(state)}
         await self.connection_manager.broadcast(message)
 
     async def update_strategy_performance(self, perf: StrategyPerformance):
         """Update strategy performance metrics."""
         self.strategy_performance[perf.strategy_name] = perf
 
-        message = {
-            "type": "strategy_performance",
-            "data": asdict(perf)
-        }
+        message = {"type": "strategy_performance", "data": asdict(perf)}
         await self.connection_manager.broadcast(message)
 
     async def update_opponent_model(self, player_id: str, model: OpponentModelVisualization):
@@ -325,10 +315,7 @@ class DashboardAPI:
 
         message = {
             "type": "opponent_model_update",
-            "data": {
-                "player_id": player_id,
-                "model": asdict(model)
-            }
+            "data": {"player_id": player_id, "model": asdict(model)},
         }
         await self.connection_manager.broadcast(message)
 
@@ -340,30 +327,19 @@ class DashboardAPI:
 
         message = {
             "type": "counterfactual_update",
-            "data": {
-                "player_id": player_id,
-                "counterfactual": asdict(cf)
-            }
+            "data": {"player_id": player_id, "counterfactual": asdict(cf)},
         }
         await self.connection_manager.broadcast(message)
 
     async def broadcast_match_update(self, match_data: dict):
         """Broadcast live match state to all connected clients."""
-        message = {
-            "type": "match_update",
-            "data": match_data
-        }
+        message = {"type": "match_update", "data": match_data}
         await self.connection_manager.broadcast(message)
         logger.debug(f"Broadcasted match update: {match_data.get('match_id', 'unknown')}")
 
     async def broadcast_tournament_complete(self, winner_data: dict):
         """Broadcast tournament completion with winner data."""
-        message = {
-            "type": "tournament_complete",
-            "data": {
-                "winner": winner_data
-            }
-        }
+        message = {"type": "tournament_complete", "data": {"winner": winner_data}}
         await self.connection_manager.broadcast(message)
         logger.info(f"Tournament complete! Winner: {winner_data.get('player_id', 'unknown')}")
 
@@ -381,12 +357,7 @@ class DashboardAPI:
         import uvicorn
 
         logger.info(f"Starting dashboard server on {host}:{port}")
-        config = uvicorn.Config(
-            self.app,
-            host=host,
-            port=port,
-            log_level="info"
-        )
+        config = uvicorn.Config(self.app, host=host, port=port, log_level="info")
         server = uvicorn.Server(config)
         self._server = server
         await server.serve()
@@ -404,12 +375,7 @@ class DashboardAPI:
         import uvicorn
 
         logger.info(f"Starting dashboard server in background on {host}:{port}")
-        config = uvicorn.Config(
-            self.app,
-            host=host,
-            port=port,
-            log_level="info"
-        )
+        config = uvicorn.Config(self.app, host=host, port=port, log_level="info")
         server = uvicorn.Server(config)
         self._server = server
 
@@ -2531,7 +2497,7 @@ async def stream_game_event(
     players: list[str],
     moves: dict[str, str],
     scores: dict[str, float],
-    **metadata
+    **metadata,
 ):
     """Convenience function to stream game event to dashboard."""
     dashboard = get_dashboard()
@@ -2542,6 +2508,6 @@ async def stream_game_event(
         players=players,
         moves=moves,
         scores=scores,
-        metadata=metadata
+        metadata=metadata,
     )
     await dashboard.stream_event(event)

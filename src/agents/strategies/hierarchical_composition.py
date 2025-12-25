@@ -61,7 +61,7 @@ class StrategyNode:
     """Node in strategy composition tree."""
 
     name: str
-    strategy: Union[Strategy, 'CompositeStrategy']
+    strategy: Union[Strategy, "CompositeStrategy"]
     weight: float = 1.0
     condition: Callable[[GameState], bool] | None = None
 
@@ -84,14 +84,14 @@ class AlwaysCooperatePrimitive(PrimitiveStrategy):
     """Always cooperate."""
 
     async def decide_move(self, game_state: GameState) -> Move:
-        return 'cooperate' if 'cooperate' in game_state.valid_moves else game_state.valid_moves[0]
+        return "cooperate" if "cooperate" in game_state.valid_moves else game_state.valid_moves[0]
 
 
 class AlwaysDefectPrimitive(PrimitiveStrategy):
     """Always defect."""
 
     async def decide_move(self, game_state: GameState) -> Move:
-        return 'defect' if 'defect' in game_state.valid_moves else game_state.valid_moves[0]
+        return "defect" if "defect" in game_state.valid_moves else game_state.valid_moves[0]
 
 
 class RandomPrimitive(PrimitiveStrategy):
@@ -111,10 +111,10 @@ class TitForTatPrimitive(PrimitiveStrategy):
     async def decide_move(self, game_state: GameState) -> Move:
         if self.opponent_last_move:
             return self.opponent_last_move
-        return 'cooperate' if 'cooperate' in game_state.valid_moves else game_state.valid_moves[0]
+        return "cooperate" if "cooperate" in game_state.valid_moves else game_state.valid_moves[0]
 
     def _observe_outcome(self, move: Move, outcome: dict, game_state: GameState):
-        self.opponent_last_move = outcome.get('opponent_move')
+        self.opponent_last_move = outcome.get("opponent_move")
 
 
 class GrudgerPrimitive(PrimitiveStrategy):
@@ -126,11 +126,11 @@ class GrudgerPrimitive(PrimitiveStrategy):
 
     async def decide_move(self, game_state: GameState) -> Move:
         if self.grudge:
-            return 'defect' if 'defect' in game_state.valid_moves else game_state.valid_moves[0]
-        return 'cooperate' if 'cooperate' in game_state.valid_moves else game_state.valid_moves[0]
+            return "defect" if "defect" in game_state.valid_moves else game_state.valid_moves[0]
+        return "cooperate" if "cooperate" in game_state.valid_moves else game_state.valid_moves[0]
 
     def _observe_outcome(self, move: Move, outcome: dict, game_state: GameState):
-        if outcome.get('opponent_move') == 'defect':
+        if outcome.get("opponent_move") == "defect":
             self.grudge = True
 
 
@@ -153,7 +153,7 @@ class PavlovPrimitive(PrimitiveStrategy):
 
     def _observe_outcome(self, move: Move, outcome: dict, game_state: GameState):
         self.last_move = move
-        self.last_outcome_good = outcome.get('reward', 0) > 0
+        self.last_outcome_good = outcome.get("reward", 0) > 0
 
 
 # ============================================================================
@@ -174,7 +174,7 @@ class CompositeStrategy(Strategy):
         self,
         components: list[StrategyNode],
         operator: CompositionOperator,
-        config: StrategyConfig = None
+        config: StrategyConfig = None,
     ):
         super().__init__(config)
         self.components = components
@@ -257,7 +257,9 @@ class CompositeStrategy(Strategy):
         # Find best performing component
         best_node = max(
             self.components,
-            key=lambda node: np.mean(self.component_scores[node.name]) if self.component_scores[node.name] else 0
+            key=lambda node: np.mean(self.component_scores[node.name])
+            if self.component_scores[node.name]
+            else 0,
         )
 
         return await best_node.strategy.decide_move(game_state)
@@ -269,7 +271,7 @@ class CompositeStrategy(Strategy):
 
     def _observe_outcome(self, move: Move, outcome: dict, game_state: GameState):
         """Propagate outcome to all components and track performance."""
-        reward = outcome.get('reward', 0)
+        reward = outcome.get("reward", 0)
 
         # Update all component strategies
         for node in self.components:
@@ -283,17 +285,19 @@ class CompositeStrategy(Strategy):
         lines = [f"CompositeStrategy ({self.operator.value})"]
 
         for i, node in enumerate(self.components):
-            is_last = (i == len(self.components) - 1)
+            is_last = i == len(self.components) - 1
             prefix = "└─" if is_last else "├─"
 
             if isinstance(node.strategy, CompositeStrategy):
                 # Recursive visualization
                 sub_tree = node.strategy.get_composition_tree()
                 lines.append(f"{prefix} {node.name} (weight: {node.weight})")
-                for sub_line in sub_tree.split('\n')[1:]:
+                for sub_line in sub_tree.split("\n")[1:]:
                     lines.append(f"{'   ' if is_last else '│  '}{sub_line}")
             else:
-                lines.append(f"{prefix} {node.name} (weight: {node.weight}) - {type(node.strategy).__name__}")
+                lines.append(
+                    f"{prefix} {node.name} (weight: {node.weight}) - {type(node.strategy).__name__}"
+                )
 
         return "\n".join(lines)
 
@@ -326,26 +330,22 @@ class StrategyComposer:
         self.components = []
         self.current_operator = None
 
-    def add(self, strategy: Strategy, name: str = None, weight: float = 1.0) -> 'StrategyComposer':
+    def add(self, strategy: Strategy, name: str = None, weight: float = 1.0) -> "StrategyComposer":
         """Add a strategy component."""
         if name is None:
             name = f"component_{len(self.components)}"
 
-        self.components.append(StrategyNode(
-            name=name,
-            strategy=strategy,
-            weight=weight
-        ))
+        self.components.append(StrategyNode(name=name, strategy=strategy, weight=weight))
         return self
 
-    def sequence(self, *strategies: Strategy) -> 'StrategyComposer':
+    def sequence(self, *strategies: Strategy) -> "StrategyComposer":
         """Execute strategies in sequence."""
         self.current_operator = CompositionOperator.SEQUENCE
         for i, strat in enumerate(strategies):
             self.add(strat, name=f"seq_{i}")
         return self
 
-    def parallel(self, *strategies: Strategy, weights: list[float] = None) -> 'StrategyComposer':
+    def parallel(self, *strategies: Strategy, weights: list[float] = None) -> "StrategyComposer":
         """Execute strategies in parallel with voting."""
         self.current_operator = CompositionOperator.PARALLEL
         if weights is None:
@@ -355,36 +355,36 @@ class StrategyComposer:
             self.add(strat, name=f"parallel_{i}", weight=weight)
         return self
 
-    def if_condition(self, condition: Callable[[GameState], bool]) -> 'StrategyComposer':
+    def if_condition(self, condition: Callable[[GameState], bool]) -> "StrategyComposer":
         """Start conditional composition."""
         self.current_operator = CompositionOperator.CONDITIONAL
         self._pending_condition = condition
         return self
 
-    def then(self, strategy: Strategy) -> 'StrategyComposer':
+    def then(self, strategy: Strategy) -> "StrategyComposer":
         """Add strategy for current condition."""
         node = StrategyNode(
             name=f"then_{len(self.components)}",
             strategy=strategy,
-            condition=self._pending_condition
+            condition=self._pending_condition,
         )
         self.components.append(node)
         self._pending_condition = None
         return self
 
-    def otherwise(self, strategy: Strategy) -> 'StrategyComposer':
+    def otherwise(self, strategy: Strategy) -> "StrategyComposer":
         """Default strategy (no condition)."""
         self.add(strategy, name="otherwise")
         return self
 
-    def weighted(self, strategy_weight_pairs: list[tuple[Strategy, float]]) -> 'StrategyComposer':
+    def weighted(self, strategy_weight_pairs: list[tuple[Strategy, float]]) -> "StrategyComposer":
         """Weighted probabilistic composition."""
         self.current_operator = CompositionOperator.WEIGHTED
         for i, (strat, weight) in enumerate(strategy_weight_pairs):
             self.add(strat, name=f"weighted_{i}", weight=weight)
         return self
 
-    def best_of(self, *strategies: Strategy) -> 'StrategyComposer':
+    def best_of(self, *strategies: Strategy) -> "StrategyComposer":
         """Choose best performing strategy adaptively."""
         self.current_operator = CompositionOperator.BEST_OF
         for i, strat in enumerate(strategies):
@@ -399,10 +399,7 @@ class StrategyComposer:
         if self.current_operator is None:
             self.current_operator = CompositionOperator.SEQUENCE
 
-        return CompositeStrategy(
-            components=self.components,
-            operator=self.current_operator
-        )
+        return CompositeStrategy(components=self.components, operator=self.current_operator)
 
 
 # ============================================================================
@@ -422,12 +419,14 @@ def create_adaptive_mixed_strategy() -> CompositeStrategy:
     """
     composer = StrategyComposer()
 
-    return composer.weighted([
-        (TitForTatPrimitive(), 0.4),
-        (PavlovPrimitive(), 0.3),
-        (RandomPrimitive(), 0.2),
-        (GrudgerPrimitive(), 0.1),
-    ]).build()
+    return composer.weighted(
+        [
+            (TitForTatPrimitive(), 0.4),
+            (PavlovPrimitive(), 0.3),
+            (RandomPrimitive(), 0.2),
+            (GrudgerPrimitive(), 0.1),
+        ]
+    ).build()
 
 
 def create_conditional_strategy() -> CompositeStrategy:
@@ -442,11 +441,10 @@ def create_conditional_strategy() -> CompositeStrategy:
     composer = StrategyComposer()
 
     return (
-        composer
-        .if_condition(lambda s: s.round < 10)
-            .then(AlwaysCooperatePrimitive())
+        composer.if_condition(lambda s: s.round < 10)
+        .then(AlwaysCooperatePrimitive())
         .if_condition(lambda s: 10 <= s.round < 50)
-            .then(TitForTatPrimitive())
+        .then(TitForTatPrimitive())
         .otherwise(AlwaysDefectPrimitive())
         .build()
     )
@@ -480,11 +478,7 @@ def create_defensive_strategy() -> CompositeStrategy:
     composer = StrategyComposer()
 
     # This would need opponent_last_move in GameState
-    return composer.parallel(
-        GrudgerPrimitive(),
-        TitForTatPrimitive(),
-        weights=[0.6, 0.4]
-    ).build()
+    return composer.parallel(GrudgerPrimitive(), TitForTatPrimitive(), weights=[0.6, 0.4]).build()
 
 
 # ============================================================================
@@ -503,12 +497,12 @@ class StrategyGenome:
         if genes is None:
             # Random initialization
             primitives = [
-                'tit_for_tat',
-                'pavlov',
-                'grudger',
-                'always_cooperate',
-                'always_defect',
-                'random'
+                "tit_for_tat",
+                "pavlov",
+                "grudger",
+                "always_cooperate",
+                "always_defect",
+                "random",
             ]
             genes = [
                 (random.choice(primitives), random.uniform(0, 1))
@@ -522,18 +516,15 @@ class StrategyGenome:
         composer = StrategyComposer()
 
         primitive_map = {
-            'tit_for_tat': TitForTatPrimitive,
-            'pavlov': PavlovPrimitive,
-            'grudger': GrudgerPrimitive,
-            'always_cooperate': AlwaysCooperatePrimitive,
-            'always_defect': AlwaysDefectPrimitive,
-            'random': RandomPrimitive,
+            "tit_for_tat": TitForTatPrimitive,
+            "pavlov": PavlovPrimitive,
+            "grudger": GrudgerPrimitive,
+            "always_cooperate": AlwaysCooperatePrimitive,
+            "always_defect": AlwaysDefectPrimitive,
+            "random": RandomPrimitive,
         }
 
-        strategy_weight_pairs = [
-            (primitive_map[name](), weight)
-            for name, weight in self.genes
-        ]
+        strategy_weight_pairs = [(primitive_map[name](), weight) for name, weight in self.genes]
 
         return composer.weighted(strategy_weight_pairs).build()
 
@@ -547,7 +538,7 @@ class StrategyGenome:
                 weight = max(0, min(1, weight + random.gauss(0, 0.2)))
                 self.genes[i] = (name, weight)
 
-    def crossover(self, other: 'StrategyGenome') -> 'StrategyGenome':
+    def crossover(self, other: "StrategyGenome") -> "StrategyGenome":
         """Create offspring via crossover."""
         # Single-point crossover
         point = random.randint(1, min(len(self.genes), len(other.genes)) - 1)

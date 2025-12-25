@@ -200,7 +200,7 @@ class ConfigLoader:
             return None
 
         try:
-            with open(path, encoding='utf-8') as f:
+            with open(path, encoding="utf-8") as f:
                 return json.load(f)
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON in {path}: {e}")
@@ -313,4 +313,3 @@ def get_config_loader(config_path: str = "config") -> ConfigLoader:
     if _loader is None:
         _loader = ConfigLoader(config_path)
     return _loader
-

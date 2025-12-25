@@ -30,4 +30,3 @@ __all__ = [
     "GameRoundResult",
     "register_default_games",
 ]
-

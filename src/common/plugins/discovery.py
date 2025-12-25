@@ -94,13 +94,9 @@ class PluginDiscovery:
                     path = Path(path_str).expanduser().resolve()
                     if path.exists():
                         pattern = dir_config.get("pattern", "*_plugin.py")
-                        dir_plugins = await PluginDiscovery.discover_from_directory(
-                            path, pattern
-                        )
+                        dir_plugins = await PluginDiscovery.discover_from_directory(path, pattern)
                         plugins.extend(dir_plugins)
-                        logger.info(
-                            f"Discovered {len(dir_plugins)} plugins from {path}"
-                        )
+                        logger.info(f"Discovered {len(dir_plugins)} plugins from {path}")
                     else:
                         logger.debug(f"Plugin directory not found: {path}")
                 except Exception as e:
@@ -159,9 +155,7 @@ class PluginDiscovery:
                         plugins.append(plugin)
                         logger.info(f"Loaded plugin from entry point: {ep.name}")
                     else:
-                        logger.warning(
-                            f"Entry point {ep.name} does not implement PluginInterface"
-                        )
+                        logger.warning(f"Entry point {ep.name} does not implement PluginInterface")
 
                 except Exception as e:
                     logger.error(f"Failed to load plugin from entry point {ep.name}: {e}")
@@ -219,9 +213,7 @@ class PluginDiscovery:
                             # Instantiate the plugin
                             plugin = attr()
                             plugins.append(plugin)
-                            logger.info(
-                                f"Loaded plugin from file: {file_path.name} ({attr_name})"
-                            )
+                            logger.info(f"Loaded plugin from file: {file_path.name} ({attr_name})")
 
                     except Exception as e:
                         logger.error(
@@ -267,9 +259,7 @@ class PluginDiscovery:
             raise PluginLoadError(f"Failed to load module from {file_path}: {e}") from e
 
     @staticmethod
-    async def load_and_register_plugins(
-        config: dict[str, Any], auto_enable: bool = True
-    ) -> int:
+    async def load_and_register_plugins(config: dict[str, Any], auto_enable: bool = True) -> int:
         """
         Discover, load, and register all plugins.
 
@@ -358,9 +348,7 @@ async def discover_plugins(config: dict[str, Any]) -> list[PluginInterface]:
     return await PluginDiscovery.discover_all(config)
 
 
-async def auto_discover_and_register(
-    config: dict[str, Any], auto_enable: bool = True
-) -> int:
+async def auto_discover_and_register(config: dict[str, Any], auto_enable: bool = True) -> int:
     """
     Auto-discover and register plugins.
 

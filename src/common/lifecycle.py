@@ -359,4 +359,3 @@ def get_lifecycle_registry() -> LifecycleRegistry:
     if _registry is None:
         _registry = LifecycleRegistry()
     return _registry
-

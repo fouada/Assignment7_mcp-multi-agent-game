@@ -2,7 +2,6 @@
 Tests for Agent Lifecycle Management.
 """
 
-
 import pytest
 
 from src.common.lifecycle import (
@@ -129,14 +128,16 @@ class TestAgentLifecycleManager:
 
     def test_get_next_state(self):
         """Test get_next_state returns correct state."""
-        assert self.lifecycle.get_next_state(LifecycleEvent.REGISTER_SUCCESS) == AgentState.REGISTERED
+        assert (
+            self.lifecycle.get_next_state(LifecycleEvent.REGISTER_SUCCESS) == AgentState.REGISTERED
+        )
         assert self.lifecycle.get_next_state(LifecycleEvent.LEAGUE_START) is None
 
     def test_failure_tracking(self):
         """Test failure count tracking."""
         assert self.lifecycle.record_failure() is False  # 1/3
         assert self.lifecycle.record_failure() is False  # 2/3
-        assert self.lifecycle.record_failure() is True   # 3/3 - max reached
+        assert self.lifecycle.record_failure() is True  # 3/3 - max reached
 
     def test_reset_failures(self):
         """Test failure count reset."""
@@ -296,4 +297,3 @@ class TestMaxFailsTransition:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

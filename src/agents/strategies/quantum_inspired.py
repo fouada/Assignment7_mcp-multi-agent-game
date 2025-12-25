@@ -53,15 +53,12 @@ class QuantumStrategyState:
         if not self.amplitudes:
             return {}
 
-        probs = {
-            strategy: abs(amp) ** 2
-            for strategy, amp in self.amplitudes.items()
-        }
+        probs = {strategy: abs(amp) ** 2 for strategy, amp in self.amplitudes.items()}
 
         # Normalize
         total = sum(probs.values())
         if total > 0:
-            probs = {k: v/total for k, v in probs.items()}
+            probs = {k: v / total for k, v in probs.items()}
 
         return probs
 
@@ -130,7 +127,7 @@ class QuantumStrategyEngine(Strategy):
         strategies: list[Strategy],
         config: StrategyConfig = None,
         exploration_temperature: float = 0.15,
-        decoherence_rate: float = 0.02
+        decoherence_rate: float = 0.02,
     ):
         super().__init__(config or StrategyConfig())
 
@@ -148,7 +145,7 @@ class QuantumStrategyEngine(Strategy):
         self.quantum_state = QuantumStrategyState(
             amplitudes=dict.fromkeys(self.strategy_names, initial_amplitude + 0j),
             phases=dict.fromkeys(self.strategy_names, 0.0),
-            coherence=1.0
+            coherence=1.0,
         )
 
         # Performance tracking (for interference)
@@ -166,7 +163,7 @@ class QuantumStrategyEngine(Strategy):
         parity_role: str,
         scores: dict,
         history: dict,
-        timeout: float | None = None
+        timeout: float | None = None,
     ) -> int:
         """
         Make decision using quantum superposition and measurement.
@@ -193,9 +190,7 @@ class QuantumStrategyEngine(Strategy):
 
         # Step 4: Measure (collapse superposition)
         chosen_strategy_name = self.quantum_state.measure()
-        chosen_strategy = self.strategies[
-            self.strategy_names.index(chosen_strategy_name)
-        ]
+        chosen_strategy = self.strategies[self.strategy_names.index(chosen_strategy_name)]
 
         # Step 5: Execute chosen strategy
         move = await chosen_strategy.decide_move(
@@ -284,7 +279,7 @@ class QuantumStrategyEngine(Strategy):
         Decoherence rate increases with measurements (experience).
         """
         # Decoherence effect
-        self.quantum_state.coherence *= (1 - self.decoherence_rate)
+        self.quantum_state.coherence *= 1 - self.decoherence_rate
 
         # Clamp to [0, 1]
         self.quantum_state.coherence = max(0.0, min(1.0, self.quantum_state.coherence))
@@ -312,10 +307,7 @@ class QuantumStrategyEngine(Strategy):
         """
         Ensure amplitudes satisfy quantum normalization: Σ|amplitude|² = 1
         """
-        total_prob = sum(
-            abs(amp) ** 2
-            for amp in self.quantum_state.amplitudes.values()
-        )
+        total_prob = sum(abs(amp) ** 2 for amp in self.quantum_state.amplitudes.values())
 
         if total_prob > 0:
             normalization = np.sqrt(total_prob)
@@ -343,16 +335,14 @@ class QuantumStrategyEngine(Strategy):
 
         This is the "measurement" that causes decoherence.
         """
-        if hasattr(self, '_last_chosen_strategy'):
+        if hasattr(self, "_last_chosen_strategy"):
             # Record performance
-            reward = outcome.get('reward', 0)
+            reward = outcome.get("reward", 0)
 
             # Normalize reward to [0, 1]
             normalized_reward = (reward + 1) / 2  # Assuming reward in [-1, 1]
 
-            self.performance_history[self._last_chosen_strategy].append(
-                normalized_reward
-            )
+            self.performance_history[self._last_chosen_strategy].append(normalized_reward)
 
     def get_quantum_metrics(self) -> dict[str, float]:
         """
@@ -367,12 +357,12 @@ class QuantumStrategyEngine(Strategy):
         probs = self.quantum_state.get_probabilities()
 
         return {
-            'von_neumann_entropy': self.quantum_state.get_von_neumann_entropy(),
-            'coherence': self.quantum_state.coherence,
-            'max_probability': max(probs.values()) if probs else 0.0,
-            'measurement_count': self.quantum_state.measurement_count,
-            'num_strategies_in_superposition': len(self.quantum_state.amplitudes),
-            'iteration': self.iteration
+            "von_neumann_entropy": self.quantum_state.get_von_neumann_entropy(),
+            "coherence": self.quantum_state.coherence,
+            "max_probability": max(probs.values()) if probs else 0.0,
+            "measurement_count": self.quantum_state.measurement_count,
+            "num_strategies_in_superposition": len(self.quantum_state.amplitudes),
+            "iteration": self.iteration,
         }
 
     def entangle_with_agent(self, other_agent_id: str, strength: float = 0.5):
@@ -445,7 +435,7 @@ def create_quantum_strategy(base_strategies: list[Strategy]) -> QuantumStrategyE
     return QuantumStrategyEngine(
         strategies=base_strategies,
         exploration_temperature=0.15,  # Higher = more tunneling
-        decoherence_rate=0.02  # Higher = faster collapse to classical
+        decoherence_rate=0.02,  # Higher = faster collapse to classical
     )
 
 
@@ -455,7 +445,7 @@ def register_quantum_strategy():
     from .factory import StrategyFactory, StrategyType
 
     # Add new strategy type
-    if not hasattr(StrategyType, 'QUANTUM_INSPIRED'):
+    if not hasattr(StrategyType, "QUANTUM_INSPIRED"):
         StrategyType.QUANTUM_INSPIRED = "quantum_inspired"
 
     # Register creator
@@ -472,10 +462,9 @@ def register_quantum_strategy():
             RandomStrategy(),
             NashEquilibriumStrategy(),
             BestResponseStrategy(),
-            AdaptiveBayesianStrategy()
+            AdaptiveBayesianStrategy(),
         ]
 
         return create_quantum_strategy(base_strategies)
 
     StrategyFactory.register(StrategyType.QUANTUM_INSPIRED, create_quantum)
-

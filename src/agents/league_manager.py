@@ -183,7 +183,7 @@ class LeagueManager(BaseGameServer):
                     "game_types": {"type": "array", "items": {"type": "string"}},
                 },
                 "required": ["display_name", "endpoint"],
-            }
+            },
         )
         async def register_player(params: dict) -> dict:
             return await self._handle_registration(params)
@@ -235,7 +235,7 @@ class LeagueManager(BaseGameServer):
                     "player2_score": {"type": "integer"},
                 },
                 "required": ["match_id"],
-            }
+            },
         )
         async def report_match_result(params: dict) -> dict:
             return await self._handle_match_result(params)
@@ -256,7 +256,7 @@ class LeagueManager(BaseGameServer):
                     "player_id": {"type": "string"},
                 },
                 "required": ["player_id"],
-            }
+            },
         )
         async def get_player_info(params: dict) -> dict:
             player_id = params.get("player_id")
@@ -278,8 +278,7 @@ class LeagueManager(BaseGameServer):
                 "rounds_completed": self.current_round - 1 if self.current_round > 0 else 0,
                 "current_round_matches": len(self._current_round_matches),
                 "matches_completed": sum(
-                    1 for m in self._current_round_matches
-                    if m.state == MatchState.COMPLETED
+                    1 for m in self._current_round_matches if m.state == MatchState.COMPLETED
                 ),
             }
 
@@ -294,7 +293,7 @@ class LeagueManager(BaseGameServer):
                     "version": {"type": "string"},
                 },
                 "required": ["referee_id", "endpoint"],
-            }
+            },
         )
         async def register_referee(params: dict) -> dict:
             return await self._handle_referee_registration(params)
@@ -315,7 +314,7 @@ class LeagueManager(BaseGameServer):
                     "endpoint": {"type": "string"},
                 },
                 "required": ["endpoint"],
-            }
+            },
         )
         async def set_referee(params: dict) -> dict:
             self._referee_endpoint = params.get("endpoint")
@@ -491,7 +490,7 @@ class LeagueManager(BaseGameServer):
                     agent_type="player",
                     agent_name=display_name,
                     source="league_manager",
-                )
+                ),
             )
         except Exception as e:
             logger.error(f"Failed to emit AgentRegisteredEvent: {e}")
@@ -561,7 +560,10 @@ class LeagueManager(BaseGameServer):
 
         # Check if we have registered referees
         if not self._referees:
-            return {"success": False, "error": "No referees registered. Register referees first (Step 1)."}
+            return {
+                "success": False,
+                "error": "No referees registered. Register referees first (Step 1).",
+            }
 
         self.state = LeagueState.IN_PROGRESS
 
@@ -593,18 +595,20 @@ class LeagueManager(BaseGameServer):
             self._matches[match.match_id] = match
 
             # Prepare match info for announcement
-            round_matches_info.append({
-                "match_id": match.match_id,
-                "game_type": "even_odd",
-                "player_A_id": match.player1.player_id,
-                "player_B_id": match.player2.player_id,
-                "referee_endpoint": referee_endpoint,
-                # Also include detailed info for internal use
-                "_player_A_endpoint": match.player1.endpoint,
-                "_player_B_endpoint": match.player2.endpoint,
-                "_player_A_name": match.player1.display_name,
-                "_player_B_name": match.player2.display_name,
-            })
+            round_matches_info.append(
+                {
+                    "match_id": match.match_id,
+                    "game_type": "even_odd",
+                    "player_A_id": match.player1.player_id,
+                    "player_B_id": match.player2.player_id,
+                    "referee_endpoint": referee_endpoint,
+                    # Also include detailed info for internal use
+                    "_player_A_endpoint": match.player1.endpoint,
+                    "_player_B_endpoint": match.player2.endpoint,
+                    "_player_A_name": match.player1.display_name,
+                    "_player_B_name": match.player2.display_name,
+                }
+            )
 
         logger.info(
             f"Round {self.current_round} announced",
@@ -622,7 +626,7 @@ class LeagueManager(BaseGameServer):
                     total_rounds=len(self._schedule),
                     matches=[m["match_id"] for m in round_matches_info],
                     source="league_manager",
-                )
+                ),
             )
         except Exception as e:
             logger.error(f"Failed to emit TournamentRoundStartedEvent: {e}")
@@ -635,6 +639,7 @@ class LeagueManager(BaseGameServer):
 
         # Execute matches through referee (Step 5: Game Management)
         import asyncio
+
         for match_info in round_matches_info:
             await self._send_match_to_referee(match_info)
 
@@ -685,10 +690,12 @@ class LeagueManager(BaseGameServer):
             await asyncio.sleep(2)
 
             rounds_completed += 1
-            results.append({
-                "round": round_result.get("round"),
-                "matches": len(matches),
-            })
+            results.append(
+                {
+                    "round": round_result.get("round"),
+                    "matches": len(matches),
+                }
+            )
 
         self.state = LeagueState.COMPLETED
 
@@ -699,11 +706,13 @@ class LeagueManager(BaseGameServer):
         champion = None
         simplified_standings = []
         for standing in final_standings["standings"]:
-            simplified_standings.append({
-                "rank": standing["rank"],
-                "player_id": standing["player_id"],
-                "points": standing["points"],
-            })
+            simplified_standings.append(
+                {
+                    "rank": standing["rank"],
+                    "player_id": standing["player_id"],
+                    "points": standing["points"],
+                }
+            )
             if standing["rank"] == 1:
                 champion = {
                     "player_id": standing["player_id"],
@@ -765,7 +774,7 @@ class LeagueManager(BaseGameServer):
                     "player2_id": player_b_id,
                     "player2_endpoint": self._players[player_b_id].endpoint,
                     "rounds": 5,
-                }
+                },
             )
 
             logger.info(
@@ -794,7 +803,11 @@ class LeagueManager(BaseGameServer):
                 self._players[winner_id].record_win()
 
             # Record loss for other player
-            loser_id = match.player1.player_id if winner_id == match.player2.player_id else match.player2.player_id
+            loser_id = (
+                match.player1.player_id
+                if winner_id == match.player2.player_id
+                else match.player2.player_id
+            )
             if loser_id in self._players:
                 self._players[loser_id].record_loss()
         else:
@@ -820,10 +833,7 @@ class LeagueManager(BaseGameServer):
         )
 
         # Check if round complete
-        round_complete = all(
-            m.state == MatchState.COMPLETED
-            for m in self._current_round_matches
-        )
+        round_complete = all(m.state == MatchState.COMPLETED for m in self._current_round_matches)
 
         # Step 6: If round complete, publish standings to all players
         standings = self._get_standings()
@@ -840,7 +850,7 @@ class LeagueManager(BaseGameServer):
                     standings=standings.get("standings", []),
                     round_number=self.current_round,
                     source="league_manager",
-                )
+                ),
             )
         except Exception as e:
             logger.error(f"Failed to emit StandingsUpdatedEvent: {e}")
@@ -899,24 +909,24 @@ class LeagueManager(BaseGameServer):
         """Get current standings."""
         # Sort by points, then wins, then goal difference
         sorted_players = sorted(
-            self._players.values(),
-            key=lambda p: (p.points, p.wins, -p.losses),
-            reverse=True
+            self._players.values(), key=lambda p: (p.points, p.wins, -p.losses), reverse=True
         )
 
         # Build standings
         standings = []
         for i, p in enumerate(sorted_players):
-            standings.append({
-                "rank": i + 1,
-                "player_id": p.player_id,
-                "display_name": p.display_name,
-                "played": p.played,
-                "wins": p.wins,
-                "draws": p.draws,
-                "losses": p.losses,
-                "points": p.points,
-            })
+            standings.append(
+                {
+                    "rank": i + 1,
+                    "player_id": p.player_id,
+                    "display_name": p.display_name,
+                    "played": p.played,
+                    "wins": p.wins,
+                    "draws": p.draws,
+                    "losses": p.losses,
+                    "points": p.points,
+                }
+            )
 
         return {
             "round_id": self.current_round,
@@ -933,16 +943,23 @@ class LeagueManager(BaseGameServer):
             for p1, p2 in pairings:
                 p1_name = self._players[p1].display_name if p1 in self._players else p1
                 p2_name = self._players[p2].display_name if p2 in self._players else p2
-                round_matches.append({
-                    "player1": {"id": p1, "name": p1_name},
-                    "player2": {"id": p2, "name": p2_name},
-                })
-            schedule.append({
-                "round": round_num,
-                "matches": round_matches,
-                "status": "completed" if round_num < self.current_round else
-                         "in_progress" if round_num == self.current_round else "scheduled",
-            })
+                round_matches.append(
+                    {
+                        "player1": {"id": p1, "name": p1_name},
+                        "player2": {"id": p2, "name": p2_name},
+                    }
+                )
+            schedule.append(
+                {
+                    "round": round_num,
+                    "matches": round_matches,
+                    "status": "completed"
+                    if round_num < self.current_round
+                    else "in_progress"
+                    if round_num == self.current_round
+                    else "scheduled",
+                }
+            )
 
         return {"schedule": schedule}
 
@@ -954,12 +971,14 @@ class LeagueManager(BaseGameServer):
         """Handle LEAGUE_REGISTER_REQUEST message."""
         player_meta = message.get("player_meta", {})
 
-        result = await self._handle_registration({
-            "display_name": player_meta.get("display_name", ""),
-            "endpoint": player_meta.get("contact_endpoint", ""),
-            "version": player_meta.get("version", "1.0.0"),
-            "game_types": player_meta.get("game_types", []),
-        })
+        result = await self._handle_registration(
+            {
+                "display_name": player_meta.get("display_name", ""),
+                "endpoint": player_meta.get("contact_endpoint", ""),
+                "version": player_meta.get("version", "1.0.0"),
+                "game_types": player_meta.get("game_types", []),
+            }
+        )
 
         return result
 
@@ -972,4 +991,3 @@ class LeagueManager(BaseGameServer):
     def is_registration_open(self) -> bool:
         """Check if registration is open."""
         return self.state == LeagueState.REGISTRATION
-

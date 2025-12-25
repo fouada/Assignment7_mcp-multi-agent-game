@@ -115,6 +115,7 @@ class CounterfactualReasoningEngine:
 
         # Opponent model for counterfactual estimation
         from .opponent_modeling import OpponentModelingEngine
+
         self.opponent_model = OpponentModelingEngine()
 
     def analyze_decision(
@@ -122,16 +123,16 @@ class CounterfactualReasoningEngine:
         game_state: GameState,
         chosen_move: Move,
         actual_outcome: dict,
-        available_moves: list[Move]
+        available_moves: list[Move],
     ) -> list[CounterfactualOutcome]:
         """
         Perform counterfactual analysis: what if we chose differently?
 
         Returns list of counterfactual outcomes for each alternative move.
         """
-        actual_reward = actual_outcome.get('reward', 0)
-        opponent_move = actual_outcome.get('opponent_move')
-        opponent_id = game_state.metadata.get('opponent_id')
+        actual_reward = actual_outcome.get("reward", 0)
+        opponent_move = actual_outcome.get("opponent_move")
+        opponent_id = game_state.metadata.get("opponent_id")
 
         counterfactuals = []
 
@@ -141,10 +142,7 @@ class CounterfactualReasoningEngine:
 
             # Estimate what would have happened
             estimated_reward, confidence = self._estimate_counterfactual_reward(
-                game_state,
-                alternative_move,
-                opponent_move,
-                opponent_id
+                game_state, alternative_move, opponent_move, opponent_id
             )
 
             # Compute regret
@@ -157,7 +155,7 @@ class CounterfactualReasoningEngine:
                 counterfactual_reward=estimated_reward,
                 regret=regret,
                 confidence=confidence,
-                round=game_state.round
+                round=game_state.round,
             )
 
             counterfactuals.append(cf)
@@ -166,9 +164,7 @@ class CounterfactualReasoningEngine:
         return counterfactuals
 
     def update_strategy(
-        self,
-        game_state: GameState,
-        counterfactuals: list[CounterfactualOutcome]
+        self, game_state: GameState, counterfactuals: list[CounterfactualOutcome]
     ) -> None:
         """
         Update strategy based on counterfactual regrets.
@@ -211,20 +207,14 @@ class CounterfactualReasoningEngine:
         regrets = self.regret_table.cumulative_regret[infoset]
 
         # Regret matching: prob ∝ max(0, regret)
-        positive_regrets = {
-            move: max(0, regrets.get(move, 0))
-            for move in moves
-        }
+        positive_regrets = {move: max(0, regrets.get(move, 0)) for move in moves}
 
         # Sum of positive regrets
         regret_sum = sum(positive_regrets.values())
 
         if regret_sum > 0:
             # Normalize to probability distribution
-            strategy = {
-                move: positive_regrets[move] / regret_sum
-                for move in moves
-            }
+            strategy = {move: positive_regrets[move] / regret_sum for move in moves}
         else:
             # No positive regret - uniform distribution
             strategy = {move: 1.0 / len(moves) for move in moves}
@@ -252,10 +242,7 @@ class CounterfactualReasoningEngine:
 
         if total_sum > 0:
             # Average strategy
-            avg_strategy = {
-                move: strategy_sums.get(move, 0) / total_sum
-                for move in moves
-            }
+            avg_strategy = {move: strategy_sums.get(move, 0) / total_sum for move in moves}
         else:
             # No data - uniform
             avg_strategy = {move: 1.0 / len(moves) for move in moves}
@@ -263,11 +250,7 @@ class CounterfactualReasoningEngine:
         return avg_strategy
 
     def _estimate_counterfactual_reward(
-        self,
-        game_state: GameState,
-        our_move: Move,
-        opponent_move: Move,
-        opponent_id: str
+        self, game_state: GameState, our_move: Move, opponent_move: Move, opponent_id: str
     ) -> tuple[float, float]:
         """
         Estimate what reward we would have gotten with alternative move.
@@ -280,10 +263,10 @@ class CounterfactualReasoningEngine:
 
         # Prisoner's Dilemma payoff matrix
         payoff_matrix = {
-            ('cooperate', 'cooperate'): 3,
-            ('cooperate', 'defect'): 0,
-            ('defect', 'cooperate'): 5,
-            ('defect', 'defect'): 1,
+            ("cooperate", "cooperate"): 3,
+            ("cooperate", "defect"): 0,
+            ("defect", "cooperate"): 5,
+            ("defect", "defect"): 1,
         }
 
         key = (our_move, opponent_move)
@@ -323,11 +306,7 @@ class CounterfactualReasoningEngine:
         avg_regret = total_regret / len(self.counterfactual_history)
 
         # Find most regretful decisions
-        sorted_cfs = sorted(
-            self.counterfactual_history,
-            key=lambda cf: cf.regret,
-            reverse=True
-        )
+        sorted_cfs = sorted(self.counterfactual_history, key=lambda cf: cf.regret, reverse=True)
 
         analysis = {
             "total_regret": total_regret,
@@ -343,7 +322,7 @@ class CounterfactualReasoningEngine:
                     "potential_reward": cf.counterfactual_reward,
                 }
                 for cf in sorted_cfs[:5]
-            ]
+            ],
         }
 
         return analysis
@@ -385,7 +364,7 @@ class CounterfactualRegretStrategy(Strategy):
         self.game_history = []
 
         # Training mode vs exploitation mode
-        self.training_mode = config.parameters.get('training', True) if config else True
+        self.training_mode = config.parameters.get("training", True) if config else True
 
     async def decide_move(self, game_state: GameState) -> Move:
         """
@@ -433,26 +412,19 @@ class CounterfactualRegretStrategy(Strategy):
         """
         # Perform counterfactual analysis
         counterfactuals = self.cfr_engine.analyze_decision(
-            game_state,
-            move,
-            outcome,
-            game_state.valid_moves
+            game_state, move, outcome, game_state.valid_moves
         )
 
         # Update strategy based on regrets
         self.cfr_engine.update_strategy(game_state, counterfactuals)
 
         # Update opponent model (for better counterfactual estimation)
-        opponent_id = game_state.metadata.get('opponent_id')
-        opponent_move = outcome.get('opponent_move')
+        opponent_id = game_state.metadata.get("opponent_id")
+        opponent_move = outcome.get("opponent_move")
 
         if opponent_id and opponent_move:
             self.cfr_engine.opponent_model.observe(
-                opponent_id,
-                game_state,
-                opponent_move,
-                {'our_move': move},
-                outcome
+                opponent_id, game_state, opponent_move, {"our_move": move}, outcome
             )
 
     def get_explanation(self, game_state: GameState) -> dict:
@@ -476,7 +448,7 @@ class CounterfactualRegretStrategy(Strategy):
             "total_regret": regret_analysis["total_regret"],
             "average_regret": regret_analysis["average_regret"],
             "most_regretful_decisions": regret_analysis.get("most_regretful", []),
-            "explanation": self._generate_explanation(strategy, regret_analysis)
+            "explanation": self._generate_explanation(strategy, regret_analysis),
         }
 
     def _generate_explanation(self, strategy: dict, regret_analysis: dict) -> str:
@@ -488,7 +460,9 @@ class CounterfactualRegretStrategy(Strategy):
         explanation = f"Choosing '{best_move}' with {best_prob:.1%} probability. "
 
         if regret_analysis["average_regret"] > 0:
-            explanation += f"Past decisions had average regret of {regret_analysis['average_regret']:.2f}, "
+            explanation += (
+                f"Past decisions had average regret of {regret_analysis['average_regret']:.2f}, "
+            )
             explanation += "so I'm adjusting strategy to avoid repeated mistakes. "
         else:
             explanation += "Strategy is performing well with minimal regret. "
@@ -507,9 +481,7 @@ class CounterfactualRegretStrategy(Strategy):
 # ============================================================================
 
 
-def visualize_counterfactual_tree(
-    counterfactuals: list[CounterfactualOutcome]
-) -> str:
+def visualize_counterfactual_tree(counterfactuals: list[CounterfactualOutcome]) -> str:
     """
     Visualize counterfactual analysis as decision tree.
 
@@ -529,7 +501,7 @@ def visualize_counterfactual_tree(
     lines.append(f"Actual: {actual.actual_move.upper()} → Reward: {actual.actual_reward}")
 
     for i, cf in enumerate(counterfactuals):
-        is_last = (i == len(counterfactuals) - 1)
+        is_last = i == len(counterfactuals) - 1
         prefix = "└─" if is_last else "├─"
 
         regret_sign = "+" if cf.regret > 0 else ""

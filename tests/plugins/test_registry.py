@@ -30,6 +30,7 @@ class MockPlugin(PluginInterface):
         await super().on_disable(context)
         self.disabled_called = True
 
+
 @pytest.fixture
 def registry():
     # Reset singleton if possible, or create new instance for testing if implementation allows
@@ -39,18 +40,16 @@ def registry():
     # Ideally, we'd add a method to reset it or mock it.
     # For now, let's use the provided 'clear' method.
     from src.common.plugins.registry import get_plugin_registry
+
     reg = get_plugin_registry()
     reg.clear()
     return reg
 
+
 @pytest.fixture
 def context(registry):
-    return PluginContext(
-        registry=registry,
-        config={},
-        logger=MagicMock(),
-        event_bus=EventBus()
-    )
+    return PluginContext(registry=registry, config={}, logger=MagicMock(), event_bus=EventBus())
+
 
 @pytest.mark.asyncio
 async def test_plugin_lifecycle(registry, context):
@@ -73,6 +72,7 @@ async def test_plugin_lifecycle(registry, context):
     assert not plugin.is_enabled
     assert plugin.disabled_called
 
+
 @pytest.mark.asyncio
 async def test_plugin_dependencies(registry, context):
     registry.set_context(context)
@@ -80,11 +80,7 @@ async def test_plugin_dependencies(registry, context):
     # Plugin A depends on Plugin B
     class DependentPlugin(MockPlugin):
         def get_metadata(self):
-            return PluginMetadata(
-                name="dep_plugin",
-                version="1.0.0",
-                dependencies=["base_plugin"]
-            )
+            return PluginMetadata(name="dep_plugin", version="1.0.0", dependencies=["base_plugin"])
 
     base = MockPlugin("base_plugin")
     dep = DependentPlugin("dep_plugin")
@@ -97,5 +93,3 @@ async def test_plugin_dependencies(registry, context):
 
     assert registry.is_registered("base_plugin")
     assert registry.is_registered("dep_plugin")
-
-
