@@ -458,8 +458,8 @@ class TestRealDataComplexScenarios:
 
         # Force draws by manipulating scores
         for _ in range(10):
-            move1 = await player1.make_move(match_id, "odd")
-            move2 = await player2.make_move(match_id, "even")
+            await player1.make_move(match_id, "odd")
+            await player2.make_move(match_id, "even")
 
             # Give both players a point (tie scenario)
             player1.update_score(match_id, 1)
@@ -510,14 +510,14 @@ class TestRealDataComplexScenarios:
         await referee.start_match(match_id, player1.player_id, player2.player_id, rounds=5)
 
         # Player 2 loses first 3 rounds
-        for i in range(3):
+        for _ in range(3):
             await player1.make_move(match_id, "odd")
             await player2.make_move(match_id, "even")
             player1.update_score(match_id, 1)
             player2.update_score(match_id, 0)
 
         # Player 2 wins last 2 rounds
-        for i in range(2):
+        for _ in range(2):
             await player1.make_move(match_id, "odd")
             await player2.make_move(match_id, "even")
             player1.update_score(match_id, 0)

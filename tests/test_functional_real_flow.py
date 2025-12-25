@@ -34,7 +34,6 @@ class TestCompleteLeagueFlow:
         """Test complete league season from start to finish."""
         # Phase 1: League Setup
         league = MockLeagueManager(max_players=20, league_id="test_season_2025")
-        loader = get_real_data_loader()
 
         # Use realistic player data
         player_subset = realistic_players[:8]
@@ -97,7 +96,7 @@ class TestCompleteLeagueFlow:
                 )
 
                 # Play rounds
-                for game_round in range(5):
+                for _ in range(5):
                     move1 = await player1.make_move(match["match_id"], "odd")
                     move2 = await player2.make_move(match["match_id"], "even")
 
@@ -281,7 +280,7 @@ class TestCompleteMatchFlow:
         print(f"  {player2.player_id} gets: {player2.role}")
 
         # Play match
-        for round_num in range(5):
+        for _ in range(5):
             move1 = await player1.make_move(match_id, player1.role)
             move2 = await player2.make_move(match_id, player2.role)
 

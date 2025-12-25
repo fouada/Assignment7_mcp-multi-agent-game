@@ -36,7 +36,6 @@ class TestRealDataLeagueIntegration:
         """Test complete league flow using real player data patterns."""
         # Arrange
         league = MockLeagueManager(max_players=20)
-        loader = get_real_data_loader()
 
         players = {}
         player_data = realistic_players
@@ -87,7 +86,7 @@ class TestRealDataLeagueIntegration:
             )
 
             # Simulate realistic game play
-            for round_num in range(5):
+            for _ in range(5):
                 # Players make moves based on their strategies
                 move1 = await player1.make_move(match["match_id"], "odd")
                 move2 = await player2.make_move(match["match_id"], "even")
@@ -128,7 +127,6 @@ class TestRealDataLeagueIntegration:
         """Test league with realistic match execution patterns."""
         # Arrange
         league = MockLeagueManager(max_players=20)
-        loader = get_real_data_loader()
 
         # Use subset of realistic players
         player_subset = realistic_players[:6]

@@ -486,9 +486,9 @@ class HealthMonitor:
         # Wait for all checks to complete in parallel
         try:
             check_results = await asyncio.gather(*tasks, return_exceptions=True)
-            
+
             results = {}
-            for name, result in zip(check_names, check_results):
+            for name, result in zip(check_names, check_results, strict=False):
                 if isinstance(result, Exception):
                     logger.error(f"Health check '{name}' failed: {result}")
                     results[name] = HealthCheckResult(
@@ -568,7 +568,7 @@ class HealthMonitor:
             )
         else:
             result = await self.run_check("liveness")
-        
+
         return {
             "status": result.status.value,
             "message": result.message,
