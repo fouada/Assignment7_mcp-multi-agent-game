@@ -27,7 +27,7 @@ ENHANCED_DASHBOARD_HTML = """
             color: #e0e0e0;
             overflow-x: hidden;
         }
-        
+
         /* Header */
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -58,7 +58,7 @@ ENHANCED_DASHBOARD_HTML = """
             margin: 0 auto;
             padding: 20px;
         }
-        
+
         /* Card Styles */
         .card {
             background: #1a1f3a;
@@ -77,7 +77,7 @@ ENHANCED_DASHBOARD_HTML = """
             align-items: center;
             gap: 10px;
         }
-        
+
         /* Enhanced Standings Table */
         .standings-table {
             width: 100%;
@@ -174,7 +174,7 @@ ENHANCED_DASHBOARD_HTML = """
         .winrate-cell {
             font-weight: 600;
         }
-        
+
         /* Round Progress */
         .round-progress {
             margin: 20px 0;
@@ -203,7 +203,7 @@ ENHANCED_DASHBOARD_HTML = """
             transition: width 0.5s ease;
             border-radius: 6px;
         }
-        
+
         /* Winner Modal Enhancement */
         .winner-modal {
             position: fixed;
@@ -329,7 +329,7 @@ ENHANCED_DASHBOARD_HTML = """
             transform: scale(1.1);
             box-shadow: 0 10px 30px rgba(102, 126, 234, 0.6);
         }
-        
+
         /* Controls */
         .controls {
             display: flex;
@@ -348,12 +348,12 @@ ENHANCED_DASHBOARD_HTML = """
             font-weight: 600;
             transition: all 0.2s;
         }
-        button:hover { 
+        button:hover {
             background: #5568d3;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
-        
+
         /* Event Log */
         .event-log {
             max-height: 400px;
@@ -373,7 +373,7 @@ ENHANCED_DASHBOARD_HTML = """
             margin-right: 10px;
             font-weight: 600;
         }
-        
+
         /* Grid Layout */
         .grid {
             display: grid;
@@ -475,12 +475,12 @@ ENHANCED_DASHBOARD_HTML = """
             <div class="winner-trophy">🏆</div>
             <h1 class="winner-title">Tournament Champion!</h1>
             <h2 class="winner-name" id="winner-name">Champion</h2>
-            
+
             <div class="winner-strategy-box">
                 <div class="winner-strategy-label">Winning Strategy</div>
                 <div class="winner-strategy-name" id="winner-strategy">Unknown</div>
             </div>
-            
+
             <div class="winner-stats-grid">
                 <div class="winner-stat-box">
                     <div class="stat-value" id="winner-score">0</div>
@@ -499,7 +499,7 @@ ENHANCED_DASHBOARD_HTML = """
                     <div class="stat-label">Win Rate</div>
                 </div>
             </div>
-            
+
             <button class="close-winner-btn" onclick="closeWinnerModal()">Close</button>
         </div>
     </div>
@@ -557,45 +557,45 @@ ENHANCED_DASHBOARD_HTML = """
 
         function handleTournamentUpdate(data) {
             tournamentData = data;
-            
+
             // Update round progress
             const currentRound = data.current_round || 0;
             const totalRounds = data.total_rounds || 1;
             const percentage = (currentRound / totalRounds * 100).toFixed(1);
-            
+
             document.getElementById('round-display').textContent = `Round ${currentRound} / ${totalRounds}`;
             document.getElementById('round-percentage').textContent = `${percentage}%`;
             document.getElementById('round-fill').style.width = `${percentage}%`;
-            
+
             // Update tournament info
             document.getElementById('game-type').textContent = data.game_type || 'Odd/Even';
             document.getElementById('active-players').textContent = data.players?.length || 0;
             document.getElementById('total-rounds').textContent = totalRounds;
             document.getElementById('matches-played').textContent = data.matches_played || 0;
-            
+
             // Update standings table
             updateStandingsTable(data.standings || []);
         }
 
         function updateStandingsTable(standings) {
             const tbody = document.getElementById('standings-tbody');
-            
+
             if (!standings || standings.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #a0aec0; padding: 40px;">No data yet</td></tr>';
                 return;
             }
-            
+
             tbody.innerHTML = standings.map((player, index) => {
                 const rank = index + 1;
                 let rankClass = 'rank-other';
                 if (rank === 1) rankClass = 'rank-1';
                 else if (rank === 2) rankClass = 'rank-2';
                 else if (rank === 3) rankClass = 'rank-3';
-                
-                const winRate = player.total_matches > 0 
+
+                const winRate = player.total_matches > 0
                     ? ((player.wins / player.total_matches) * 100).toFixed(1)
                     : 0;
-                
+
                 return `
                     <tr>
                         <td>
@@ -631,12 +631,12 @@ ENHANCED_DASHBOARD_HTML = """
                 document.getElementById('winner-score').textContent = winner.score?.toFixed(1) || '0';
                 document.getElementById('winner-wins').textContent = winner.wins || '0';
                 document.getElementById('winner-matches').textContent = winner.total_matches || '0';
-                
-                const winRate = winner.total_matches > 0 
+
+                const winRate = winner.total_matches > 0
                     ? ((winner.wins / winner.total_matches) * 100).toFixed(1)
                     : 0;
                 document.getElementById('winner-winrate').textContent = `${winRate}%`;
-                
+
                 showWinnerModal();
             }
         }
@@ -656,7 +656,7 @@ ENHANCED_DASHBOARD_HTML = """
             event.className = 'event';
             event.innerHTML = `<span class="timestamp">${timestamp}</span>${message}`;
             log.insertBefore(event, log.firstChild);
-            
+
             // Keep only last 50 events
             while (log.children.length > 50) {
                 log.removeChild(log.lastChild);
@@ -690,4 +690,3 @@ ENHANCED_DASHBOARD_HTML = """
 </body>
 </html>
 """
-

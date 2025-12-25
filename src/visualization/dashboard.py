@@ -34,11 +34,8 @@ from fastapi.responses import HTMLResponse
 from ..common.logger import get_logger
 
 # Import comprehensive dashboard HTML
-try:
-    from .comprehensive_dashboard import COMPREHENSIVE_DASHBOARD_HTML
-    USE_COMPREHENSIVE = True
-except ImportError:
-    USE_COMPREHENSIVE = False
+# Note: COMPREHENSIVE_DASHBOARD_HTML available in comprehensive_dashboard.py if needed
+USE_COMPREHENSIVE = False
 
 logger = get_logger(__name__)
 
@@ -424,7 +421,7 @@ class DashboardAPI:
             color: #e0e0e0;
             overflow-x: hidden;
         }
-        
+
         /* Header */
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -455,7 +452,7 @@ class DashboardAPI:
             margin: 0 auto;
             padding: 20px;
         }
-        
+
         /* Card Styles */
         .card {
             background: #1a1f3a;
@@ -474,7 +471,7 @@ class DashboardAPI:
             align-items: center;
             gap: 10px;
         }
-        
+
         /* Enhanced Standings Table */
         .standings-table {
             width: 100%;
@@ -1567,31 +1564,31 @@ class DashboardAPI:
             // Update enhanced standings table
             updateStandingsTable(data.standings || []);
         }
-        
+
         function updateStandingsTable(standings) {
             const tbody = document.getElementById('standings-tbody');
-            
+
             if (!standings || standings.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #a0aec0; padding: 40px;">No data yet</td></tr>';
                 return;
             }
-            
+
             tbody.innerHTML = standings.map((player, index) => {
                 const rank = index + 1;
                 let rankClass = 'rank-other';
                 if (rank === 1) rankClass = 'rank-1';
                 else if (rank === 2) rankClass = 'rank-2';
                 else if (rank === 3) rankClass = 'rank-3';
-                
+
                 const playerId = player.player_id || player.player || `Player ${rank}`;
                 const strategy = player.strategy || 'Unknown';
                 const score = (player.score || player.total_score || 0).toFixed(1);
                 const wins = player.wins || player.total_wins || 0;
                 const matches = player.total_matches || player.matches_played || 0;
-                const winRate = matches > 0 
+                const winRate = matches > 0
                     ? ((wins / matches) * 100).toFixed(1)
                     : '0.0';
-                
+
                 return `
                     <tr>
                         <td>

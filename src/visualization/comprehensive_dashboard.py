@@ -30,7 +30,7 @@ COMPREHENSIVE_DASHBOARD_HTML = """
             color: #e0e0e0;
             overflow-x: hidden;
         }
-        
+
         /* Header */
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -60,7 +60,7 @@ COMPREHENSIVE_DASHBOARD_HTML = """
             margin: 0 auto;
             padding: 20px;
         }
-        
+
         /* Round Progress Banner */
         .round-banner {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -110,7 +110,7 @@ COMPREHENSIVE_DASHBOARD_HTML = """
             color: rgba(255,255,255,0.9);
             font-weight: 600;
         }
-        
+
         /* Card Styles */
         .card {
             background: #1a1f3a;
@@ -129,7 +129,7 @@ COMPREHENSIVE_DASHBOARD_HTML = """
             align-items: center;
             gap: 10px;
         }
-        
+
         /* Standings Table */
         .standings-table {
             width: 100%;
@@ -222,7 +222,7 @@ COMPREHENSIVE_DASHBOARD_HTML = """
             color: #10b981;
             font-weight: 600;
         }
-        
+
         /* Live Matches */
         .matches-grid {
             display: grid;
@@ -320,7 +320,7 @@ COMPREHENSIVE_DASHBOARD_HTML = """
             font-weight: 700;
             color: #10b981;
         }
-        
+
         /* Match History */
         .history-list {
             max-height: 600px;
@@ -382,7 +382,7 @@ COMPREHENSIVE_DASHBOARD_HTML = """
             background: rgba(239, 68, 68, 0.2);
             color: #ef4444;
         }
-        
+
         /* Winner Modal */
         .winner-modal {
             position: fixed;
@@ -484,7 +484,7 @@ COMPREHENSIVE_DASHBOARD_HTML = """
         .close-winner-btn:hover {
             transform: scale(1.1);
         }
-        
+
         /* Controls */
         .controls {
             display: flex;
@@ -504,7 +504,7 @@ COMPREHENSIVE_DASHBOARD_HTML = """
         button:hover {
             background: #5568d3;
         }
-        
+
         /* Grid */
         .grid {
             display: grid;
@@ -601,12 +601,12 @@ COMPREHENSIVE_DASHBOARD_HTML = """
             <div class="winner-trophy">🏆</div>
             <h1 class="winner-title">Tournament Champion!</h1>
             <h2 class="winner-name" id="winner-name">Champion</h2>
-            
+
             <div class="winner-strategy-box">
                 <div style="font-size: 14px; color: #a0aec0; margin-bottom: 8px;">Winning Strategy</div>
                 <div class="winner-strategy-name" id="winner-strategy">Unknown</div>
             </div>
-            
+
             <div class="winner-stats-grid">
                 <div class="winner-stat-box">
                     <div class="stat-value" id="winner-score">0</div>
@@ -625,7 +625,7 @@ COMPREHENSIVE_DASHBOARD_HTML = """
                     <div class="stat-label">Win Rate</div>
                 </div>
             </div>
-            
+
             <button class="close-winner-btn" onclick="closeWinnerModal()">Close</button>
         </div>
     </div>
@@ -680,7 +680,7 @@ COMPREHENSIVE_DASHBOARD_HTML = """
             tournamentData.currentRound = data.current_round || 0;
             tournamentData.totalRounds = data.total_rounds || 0;
             tournamentData.standings = data.standings || [];
-            
+
             updateRoundProgress();
             updateStandingsTable();
         }
@@ -690,39 +690,39 @@ COMPREHENSIVE_DASHBOARD_HTML = """
             const total = tournamentData.totalRounds;
             const remaining = Math.max(0, total - current);
             const percentage = total > 0 ? (current / total * 100) : 0;
-            
+
             document.getElementById('current-round').textContent = current;
             document.getElementById('total-rounds').textContent = total;
             document.getElementById('rounds-played').textContent = current;
             document.getElementById('rounds-remaining').textContent = remaining;
             document.getElementById('round-progress-fill').style.width = percentage + '%';
-            document.getElementById('round-progress-text').textContent = 
+            document.getElementById('round-progress-text').textContent =
                 `${percentage.toFixed(1)}% Complete - Round ${current} of ${total}`;
         }
 
         function updateStandingsTable() {
             const tbody = document.getElementById('standings-tbody');
             const standings = tournamentData.standings;
-            
+
             if (!standings || standings.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #a0aec0; padding: 40px;">No data yet</td></tr>';
                 return;
             }
-            
+
             tbody.innerHTML = standings.map((player, index) => {
                 const rank = index + 1;
                 let rankClass = 'rank-other';
                 if (rank === 1) rankClass = 'rank-1';
                 else if (rank === 2) rankClass = 'rank-2';
                 else if (rank === 3) rankClass = 'rank-3';
-                
+
                 const playerId = player.player_id || player.player || `Player ${rank}`;
                 const strategy = player.strategy || 'Unknown';
                 const score = (player.score || player.total_score || 0).toFixed(1);
                 const wins = player.wins || player.total_wins || 0;
                 const matches = player.total_matches || player.matches_played || 0;
                 const winRate = matches > 0 ? ((wins / matches) * 100).toFixed(1) : '0.0';
-                
+
                 return `
                     <tr>
                         <td><div class="rank-badge ${rankClass}">${rank}</div></td>
@@ -748,9 +748,9 @@ COMPREHENSIVE_DASHBOARD_HTML = """
             // Handle both single match and array of matches
             const matches = Array.isArray(data) ? data : [data];
             tournamentData.activeMatches = matches;
-            
+
             updateLiveMatches(matches);
-            
+
             // Add completed matches to history
             matches.forEach(match => {
                 if (match.state === 'COMPLETE') {
@@ -761,16 +761,16 @@ COMPREHENSIVE_DASHBOARD_HTML = """
 
         function updateLiveMatches(matches) {
             const container = document.getElementById('active-matches');
-            
+
             if (!matches || matches.length === 0 || !matches[0].match_id) {
                 container.innerHTML = '<p style="color: #a0aec0; text-align: center; padding: 40px;">No active matches</p>';
                 return;
             }
-            
+
             container.innerHTML = matches.map(match => {
                 const player_a = match.player_a || {};
                 const player_b = match.player_b || {};
-                
+
                 return `
                     <div class="match-card">
                         <div class="match-header">
@@ -828,7 +828,7 @@ COMPREHENSIVE_DASHBOARD_HTML = """
             if (tournamentData.matchHistory.some(m => m.match_id === match.match_id && m.round === match.round)) {
                 return;
             }
-            
+
             tournamentData.matchHistory.unshift(match);
             updateMatchHistory();
         }
@@ -836,17 +836,17 @@ COMPREHENSIVE_DASHBOARD_HTML = """
         function updateMatchHistory() {
             const container = document.getElementById('match-history');
             const history = tournamentData.matchHistory;
-            
+
             if (!history || history.length === 0) {
                 container.innerHTML = '<p style="color: #a0aec0; text-align: center; padding: 40px;">No matches played yet</p>';
                 return;
             }
-            
+
             container.innerHTML = history.map(match => {
                 const player_a = match.player_a || {};
                 const player_b = match.player_b || {};
                 const winner = match.winner || player_a.id;
-                
+
                 return `
                     <div class="history-item">
                         <div class="history-header">
@@ -887,12 +887,12 @@ COMPREHENSIVE_DASHBOARD_HTML = """
                 document.getElementById('winner-score').textContent = winner.score?.toFixed(1) || '0';
                 document.getElementById('winner-wins').textContent = winner.wins || '0';
                 document.getElementById('winner-matches').textContent = winner.total_matches || '0';
-                
-                const winRate = winner.total_matches > 0 
+
+                const winRate = winner.total_matches > 0
                     ? ((winner.wins / winner.total_matches) * 100).toFixed(1)
                     : 0;
                 document.getElementById('winner-winrate').textContent = `${winRate}%`;
-                
+
                 showWinnerModal();
             }
         }
@@ -923,4 +923,3 @@ COMPREHENSIVE_DASHBOARD_HTML = """
 </body>
 </html>
 """
-
