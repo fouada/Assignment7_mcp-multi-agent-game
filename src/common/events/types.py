@@ -42,6 +42,7 @@ class BaseEvent(BaseModel):
         """Pydantic config."""
 
         json_encoders = {datetime: lambda v: v.isoformat()}
+        extra = "allow"  # Allow extra fields for flexible event data
 
 
 # ============================================================================

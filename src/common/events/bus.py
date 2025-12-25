@@ -459,6 +459,9 @@ class EventBus:
             "total_handlers": 0,
             "total_errors": 0,
         }
+        # Reset configuration to defaults
+        self._enabled = True
+        self._error_handling = "isolate"
         logger.debug("EventBus reset")
 
 
