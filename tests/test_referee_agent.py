@@ -332,7 +332,7 @@ class TestRoundExecution:
 
         # Verify round was played
         assert game.current_round == 2  # Advanced to next round
-        assert len(game.history) == 1
+        assert len(game.round_history) == 1
 
     @pytest.mark.asyncio
     async def test_run_round_with_move_collection(self):
@@ -376,8 +376,8 @@ class TestRoundExecution:
             await referee._run_round(session)
 
         # Verify moves were collected and round resolved
-        assert len(game.history) == 1
-        round_result = game.history[0]
+        assert len(game.round_history) == 1
+        round_result = game.round_history[0]
         assert round_result.player1_move in [5, 4]
         assert round_result.player2_move in [5, 4]
 
@@ -665,7 +665,7 @@ class TestRefereeTools:
         tool_func = None
         for tool_name, tool_def in referee._tools.items():
             if tool_name == "list_active_games":
-                tool_func = tool_def["handler"]
+                tool_func = tool_def.handler
                 break
 
         result = await tool_func({})

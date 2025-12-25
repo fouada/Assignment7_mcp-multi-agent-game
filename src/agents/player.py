@@ -222,16 +222,16 @@ class PlayerAgent(BaseGameServer):
                 "game_history": game_history,
             }
 
-        def _get_game_result(self, session: GameSession) -> str | None:
-            """Determine game result from session."""
-            if session.state not in ("complete", "finished"):
-                return None
-            if session.my_score > session.opponent_score:
-                return "win"
-            elif session.my_score < session.opponent_score:
-                return "loss"
-            else:
-                return "draw"
+    def _get_game_result(self, session: GameSession) -> str | None:
+        """Determine game result from session."""
+        if session.state not in ("complete", "finished"):
+            return None
+        if session.my_score > session.opponent_score:
+            return "win"
+        elif session.my_score < session.opponent_score:
+            return "loss"
+        else:
+            return "draw"
 
     async def on_start(self) -> None:
         """Initialize player."""

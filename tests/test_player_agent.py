@@ -493,7 +493,7 @@ class TestPlayerTools:
         tool_func = None
         for tool_name, tool_def in player._tools.items():
             if tool_name == "get_status":
-                tool_func = tool_def["handler"]
+                tool_func = tool_def.handler
                 break
 
         assert tool_func is not None
@@ -543,7 +543,7 @@ class TestPlayerTools:
         tool_func = None
         for tool_name, tool_def in player._tools.items():
             if tool_name == "get_player_state":
-                tool_func = tool_def["handler"]
+                tool_func = tool_def.handler
                 break
 
         result = await tool_func({})
