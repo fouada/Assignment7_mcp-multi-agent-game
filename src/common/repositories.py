@@ -85,7 +85,9 @@ class Repository(ABC, Generic[T]):
             finally:
                 if HAS_FCNTL:
                     fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-        temp_path.rename(path)
+        # Use replace() instead of rename() for cross-platform compatibility
+        # replace() overwrites the target file on both Unix and Windows
+        temp_path.replace(path)
 
 
 @dataclass
