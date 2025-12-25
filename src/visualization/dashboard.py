@@ -33,6 +33,13 @@ from fastapi.responses import HTMLResponse
 
 from ..common.logger import get_logger
 
+# Import comprehensive dashboard HTML
+try:
+    from .comprehensive_dashboard import COMPREHENSIVE_DASHBOARD_HTML
+    USE_COMPREHENSIVE = True
+except ImportError:
+    USE_COMPREHENSIVE = False
+
 logger = get_logger(__name__)
 
 
@@ -400,23 +407,25 @@ class DashboardAPI:
             logger.info("✓ Dashboard server stopped")
 
     def _get_dashboard_html(self) -> str:
-        """Generate dashboard HTML."""
+        """Generate enhanced dashboard HTML with player strategies."""
         return """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>MCP Game League - Real-Time Dashboard</title>
+    <title>MCP Game League - Enhanced Dashboard</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #0a0e27;
             color: #e0e0e0;
             overflow-x: hidden;
         }
+        
+        /* Header */
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 20px;
@@ -440,29 +449,127 @@ class DashboardAPI:
         .connected { background: #10b981; color: white; }
         .disconnected { background: #ef4444; color: white; }
 
+        /* Main Container */
         .container {
-            max-width: 1400px;
+            max-width: 1800px;
             margin: 0 auto;
             padding: 20px;
         }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
+        
+        /* Card Styles */
         .card {
             background: #1a1f3a;
             border-radius: 12px;
-            padding: 20px;
+            padding: 25px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
             border: 1px solid #2a2f4a;
+            margin-bottom: 20px;
         }
         .card h2 {
-            font-size: 18px;
-            margin-bottom: 15px;
+            font-size: 22px;
+            margin-bottom: 20px;
+            color: #667eea;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Enhanced Standings Table */
+        .standings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .standings-table thead {
+            background: rgba(102, 126, 234, 0.2);
+        }
+        .standings-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+        .standings-table td {
+            padding: 15px;
+            border-bottom: 1px solid #2a2f4a;
+        }
+        .standings-table tr:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .rank-1 {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #000;
+        }
+        .rank-2 {
+            background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+            color: #000;
+        }
+        .rank-3 {
+            background: linear-gradient(135deg, #cd7f32, #e89547);
+            color: #fff;
+        }
+        .rank-other {
+            background: rgba(255,255,255,0.1);
             color: #a0aec0;
+        }
+        .player-cell {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .player-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .player-details {
+            flex: 1;
+        }
+        .player-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+        .strategy-badge {
+            font-size: 11px;
+            color: #fff;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 3px 10px;
+            border-radius: 12px;
+            display: inline-block;
             font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .score-cell {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .wins-cell {
+            color: #10b981;
+            font-weight: 600;
+        }
+        .winrate-cell {
+            font-weight: 600;
         }
         .metric {
             display: flex;
@@ -1201,10 +1308,26 @@ class DashboardAPI:
             </div>
 
             <div class="card">
-                <h2>🏆 Live Standings</h2>
-                <div id="standings">
-                    <p style="color: #a0aec0;">Waiting for tournament data...</p>
-                </div>
+                <h2>🏆 Player Standings & Strategies</h2>
+                <table class="standings-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player & Strategy</th>
+                            <th>Score</th>
+                            <th>Wins</th>
+                            <th>Matches</th>
+                            <th>Win Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody id="standings-tbody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: #a0aec0; padding: 40px;">
+                                Waiting for tournament data...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -1441,14 +1564,55 @@ class DashboardAPI:
                 `${data.current_round} / ${data.total_rounds}`;
             document.getElementById('active-players').textContent = data.players.length;
 
-            // Update standings
-            const standingsDiv = document.getElementById('standings');
-            standingsDiv.innerHTML = data.standings.map((s, i) =>
-                `<div class="metric">
-                    <span class="metric-label">${i+1}. ${s.player}</span>
-                    <span class="metric-value">${s.score.toFixed(1)}</span>
-                </div>`
-            ).join('');
+            // Update enhanced standings table
+            updateStandingsTable(data.standings || []);
+        }
+        
+        function updateStandingsTable(standings) {
+            const tbody = document.getElementById('standings-tbody');
+            
+            if (!standings || standings.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #a0aec0; padding: 40px;">No data yet</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = standings.map((player, index) => {
+                const rank = index + 1;
+                let rankClass = 'rank-other';
+                if (rank === 1) rankClass = 'rank-1';
+                else if (rank === 2) rankClass = 'rank-2';
+                else if (rank === 3) rankClass = 'rank-3';
+                
+                const playerId = player.player_id || player.player || `Player ${rank}`;
+                const strategy = player.strategy || 'Unknown';
+                const score = (player.score || player.total_score || 0).toFixed(1);
+                const wins = player.wins || player.total_wins || 0;
+                const matches = player.total_matches || player.matches_played || 0;
+                const winRate = matches > 0 
+                    ? ((wins / matches) * 100).toFixed(1)
+                    : '0.0';
+                
+                return `
+                    <tr>
+                        <td>
+                            <div class="rank-badge ${rankClass}">${rank}</div>
+                        </td>
+                        <td>
+                            <div class="player-cell">
+                                <div class="player-avatar">${playerId.substring(0, 2)}</div>
+                                <div class="player-details">
+                                    <div class="player-name">${playerId}</div>
+                                    <span class="strategy-badge">${strategy}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="score-cell">${score}</td>
+                        <td class="wins-cell">${wins}</td>
+                        <td>${matches}</td>
+                        <td class="winrate-cell">${winRate}%</td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function handleStrategyPerformance(data) {

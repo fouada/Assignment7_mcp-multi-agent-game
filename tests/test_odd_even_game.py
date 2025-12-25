@@ -14,6 +14,7 @@ Tests cover:
 
 import pytest
 
+from src.common.exceptions import InvalidGameStateError, InvalidMoveError
 from src.game.odd_even import (
     GamePhase,
     GameResult,
@@ -178,7 +179,7 @@ class TestGameStart:
 
         game.start()
 
-        with pytest.raises(ValueError, match="already"):
+        with pytest.raises(InvalidGameStateError, match="already"):
             game.start()
 
 
@@ -231,7 +232,7 @@ class TestMoveSubmission:
         )
         game.start()
 
-        with pytest.raises(ValueError, match="between 1 and 10"):
+        with pytest.raises(InvalidMoveError, match="between 1 and 10"):
             game.submit_move("P01", 0)
 
     def test_submit_move_invalid_high(self):
@@ -243,7 +244,7 @@ class TestMoveSubmission:
         )
         game.start()
 
-        with pytest.raises(ValueError, match="between 1 and 10"):
+        with pytest.raises(InvalidMoveError, match="between 1 and 10"):
             game.submit_move("P01", 11)
 
     def test_submit_move_unknown_player(self):
@@ -255,7 +256,7 @@ class TestMoveSubmission:
         )
         game.start()
 
-        with pytest.raises(ValueError, match="Unknown player"):
+        with pytest.raises(InvalidMoveError, match="Unknown player"):
             game.submit_move("P99", 5)
 
     def test_submit_move_before_start(self):
@@ -266,7 +267,7 @@ class TestMoveSubmission:
             player2_id="P02",
         )
 
-        with pytest.raises(ValueError, match="not started"):
+        with pytest.raises(InvalidGameStateError, match="phase"):
             game.submit_move("P01", 5)
 
     def test_submit_move_twice(self):
@@ -280,7 +281,7 @@ class TestMoveSubmission:
 
         game.submit_move("P01", 5)
 
-        with pytest.raises(ValueError, match="already submitted"):
+        with pytest.raises(InvalidMoveError, match="already submitted"):
             game.submit_move("P01", 7)
 
 
@@ -372,7 +373,7 @@ class TestRoundResolution:
 
         game.submit_move("P01", 5)
 
-        with pytest.raises(ValueError, match="both players"):
+        with pytest.raises(InvalidGameStateError, match="phase"):
             game.resolve_round()
 
     def test_resolve_round_after_game_complete(self):
@@ -389,7 +390,7 @@ class TestRoundResolution:
         game.submit_move("P02", 4)
         game.resolve_round()
 
-        with pytest.raises(ValueError, match="complete"):
+        with pytest.raises(InvalidGameStateError, match="phase"):
             game.submit_move("P01", 3)
 
 
@@ -558,7 +559,7 @@ class TestGameCompletion:
         )
         game.start()
 
-        with pytest.raises(ValueError, match="not complete"):
+        with pytest.raises(InvalidGameStateError, match="not complete"):
             game.get_result()
 
 
@@ -579,7 +580,7 @@ class TestGameState:
         state = game.get_state()
 
         assert state["game_id"] == "game_001"
-        assert state["phase"] == GamePhase.PLAYING.value
+        assert state["phase"] == GamePhase.COLLECTING_CHOICES.value
         assert state["current_round"] == 1
         assert state["total_rounds"] == 5
         assert state["player1_id"] == "P01"
@@ -636,6 +637,7 @@ class TestRoundResult:
             player1_move=5,
             player2_move=4,
             sum_value=9,
+            sum_is_odd=True,
             winner_id="P01",
         )
 
@@ -652,6 +654,7 @@ class TestRoundResult:
             player1_move=7,
             player2_move=3,
             sum_value=10,
+            sum_is_odd=False,
             winner_id="P02",
         )
 
@@ -669,15 +672,14 @@ class TestGameResult:
 
     def test_game_result_creation(self):
         """Test creating game result."""
-        round1 = RoundResult(1, 5, 4, 9, "P01")
-        round2 = RoundResult(2, 3, 3, 6, "P02")
+        round1 = RoundResult(1, 5, 4, 9, True, "P01")
+        round2 = RoundResult(2, 3, 3, 6, False, "P02")
 
         result = GameResult(
             game_id="game_001",
-            player1_id="P01",
-            player2_id="P02",
             player1_score=1,
             player2_score=1,
+            total_rounds=2,
             winner_id=None,
             rounds=[round1, round2],
         )
@@ -690,14 +692,13 @@ class TestGameResult:
 
     def test_game_result_to_dict(self):
         """Test converting game result to dict."""
-        round1 = RoundResult(1, 5, 4, 9, "P01")
+        round1 = RoundResult(1, 5, 4, 9, True, "P01")
 
         result = GameResult(
             game_id="game_001",
-            player1_id="P01",
-            player2_id="P02",
             player1_score=1,
             player2_score=0,
+            total_rounds=1,
             winner_id="P01",
             rounds=[round1],
         )
@@ -805,12 +806,12 @@ class TestEdgeCases:
             game.submit_move("P02", p2_move)
             game.resolve_round()
 
-        assert len(game.history) == 3
+        assert len(game.round_history) == 3
 
         for i, (p1_move, p2_move) in enumerate(moves):
-            assert game.history[i].player1_move == p1_move
-            assert game.history[i].player2_move == p2_move
-            assert game.history[i].sum_value == p1_move + p2_move
+            assert game.round_history[i].player1_move == p1_move
+            assert game.round_history[i].player2_move == p2_move
+            assert game.round_history[i].sum_value == p1_move + p2_move
 
 
 # ============================================================================

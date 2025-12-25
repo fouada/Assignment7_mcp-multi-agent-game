@@ -48,6 +48,10 @@ class RandomStrategy(Strategy):
         """Pick a random number in the valid range."""
         return random.randint(self.config.min_value, self.config.max_value)
 
+    def reset(self) -> None:
+        """Reset strategy state (no-op for random strategy)."""
+        pass
+
     def get_stats(self) -> dict[str, Any]:
         stats = super().get_stats()
         stats.update(
