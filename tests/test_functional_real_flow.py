@@ -21,7 +21,6 @@ from tests.utils import (
     MockLeagueManager,
     MockPlayer,
     MockReferee,
-    get_real_data_loader,
 )
 
 

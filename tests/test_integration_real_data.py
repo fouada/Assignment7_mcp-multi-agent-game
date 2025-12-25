@@ -23,7 +23,6 @@ from tests.utils import (
     MockPlayer,
     MockReferee,
     PerformanceTimer,
-    get_real_data_loader,
 )
 
 
