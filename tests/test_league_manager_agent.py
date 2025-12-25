@@ -704,7 +704,7 @@ class TestLeagueManagerTools:
         tool_func = None
         for tool_name, tool_def in manager._tools.items():
             if tool_name == "get_players":
-                tool_func = tool_def["handler"]
+                tool_func = tool_def.handler
                 break
 
         result = await tool_func({})
@@ -732,7 +732,7 @@ class TestLeagueManagerTools:
         tool_func = None
         for tool_name, tool_def in manager._tools.items():
             if tool_name == "get_round_status":
-                tool_func = tool_def["handler"]
+                tool_func = tool_def.handler
                 break
 
         result = await tool_func({})

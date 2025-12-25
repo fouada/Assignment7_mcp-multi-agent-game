@@ -42,6 +42,7 @@ from tests.utils.mocking import (
     create_mock_event_bus,
     create_mock_transport,
 )
+from tests.utils.real_data_loader import RealDataLoader, get_real_data_loader
 
 __all__ = [
     # Mocking
@@ -72,4 +73,7 @@ __all__ = [
     "assert_valid_move",
     "assert_protocol_message",
     "assert_standings",
+    # Real Data
+    "RealDataLoader",
+    "get_real_data_loader",
 ]

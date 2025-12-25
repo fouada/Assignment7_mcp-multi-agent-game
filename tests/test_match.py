@@ -295,7 +295,7 @@ class TestMatchLifecycle:
         assert match.state == MatchState.IN_PROGRESS
         assert match.started_at is not None
         assert match.game is not None
-        assert match.game.phase.value == "playing"
+        assert match.game.phase.value == "collecting_choices"
 
     def test_start_match_wrong_state(self):
         """Test starting match in wrong state."""
@@ -566,14 +566,20 @@ class TestMatchEdgeCases:
         )
 
         # Create result
-        round_result = RoundResult(1, 5, 4, 9, "P01")
+        round_result = RoundResult(
+            round_number=1,
+            player1_move=5,
+            player2_move=4,
+            sum_value=9,
+            sum_is_odd=True,
+            winner_id="P01"
+        )
         game_result = GameResult(
             game_id="game_001",
-            player1_id="P01",
-            player2_id="P02",
+            winner_id="P01",
             player1_score=1,
             player2_score=0,
-            winner_id="P01",
+            total_rounds=1,
             rounds=[round_result],
         )
 
@@ -601,6 +607,9 @@ class TestMatchEdgeCases:
         )
         match.mark_player_ready("P01")
         match.mark_player_ready("P02")
+
+        # Create game with 1 round for faster test
+        match.create_game(total_rounds=1, player1_role=GameRole.ODD)
 
         # Started timestamp
         assert match.started_at is None

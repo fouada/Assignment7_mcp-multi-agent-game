@@ -164,16 +164,34 @@ class ReadinessCheck(HealthCheck):
             description="Service is ready to accept requests",
         )
         self.required_checks = required_checks or []
+        self._initialization_complete = True
+        self._dependencies_available = True
 
     async def check(self) -> HealthCheckResult:
         """Check if service is ready."""
-        # In a real implementation, this would check:
-        # - Database connection
-        # - Required services are up
-        # - Initialization completed
-        # - No critical errors
+        # Check initialization status
+        if not self._initialization_complete:
+            return HealthCheckResult(
+                status=HealthStatus.UNHEALTHY,
+                message="Service not initialized",
+                details={
+                    "initialization_complete": False,
+                    "dependencies_available": self._dependencies_available,
+                },
+            )
 
-        # For this example, always return healthy
+        # Check dependencies availability
+        if not self._dependencies_available:
+            return HealthCheckResult(
+                status=HealthStatus.UNHEALTHY,
+                message="Dependencies unavailable",
+                details={
+                    "initialization_complete": self._initialization_complete,
+                    "dependencies_available": False,
+                },
+            )
+
+        # All checks passed
         return HealthCheckResult(
             status=HealthStatus.HEALTHY,
             message="Service is ready",
@@ -354,10 +372,11 @@ class HealthMonitor:
         # Last check results cache
         self._last_results: dict[str, HealthCheckResult] = {}
         self._last_check_time: float | None = None
+        self._last_report: dict[str, Any] | None = None
 
         # Configuration
         self.enabled = True
-        self.cache_ttl_seconds = 5.0  # Cache results for 5 seconds
+        self._cache_ttl_seconds = 5.0  # Cache results for 5 seconds
 
         # Register default checks
         self._register_default_checks()
@@ -456,29 +475,31 @@ class HealthMonitor:
         if (
             use_cache
             and self._last_check_time
-            and (now - self._last_check_time) < self.cache_ttl_seconds
+            and (now - self._last_check_time) < self._cache_ttl_seconds
         ):
             return self._last_results.copy()
 
-        # Run all checks concurrently
-        results = {}
-        tasks = []
+        # Run all checks concurrently using asyncio.gather
+        check_names = list(self._checks.keys())
+        tasks = [self.run_check(name) for name in check_names]
 
-        for name in self._checks.keys():
-            task = self.run_check(name)
-            tasks.append((name, task))
-
-        # Wait for all checks
-        for name, task in tasks:
-            try:
-                result = await task
-                results[name] = result
-            except Exception as e:
-                logger.error(f"Health check '{name}' failed: {e}")
-                results[name] = HealthCheckResult(
-                    status=HealthStatus.UNHEALTHY,
-                    message=f"Check failed: {str(e)}",
-                )
+        # Wait for all checks to complete in parallel
+        try:
+            check_results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            results = {}
+            for name, result in zip(check_names, check_results):
+                if isinstance(result, Exception):
+                    logger.error(f"Health check '{name}' failed: {result}")
+                    results[name] = HealthCheckResult(
+                        status=HealthStatus.UNHEALTHY,
+                        message=f"Check failed: {str(result)}",
+                    )
+                else:
+                    results[name] = result
+        except Exception as e:
+            logger.error(f"Failed to run health checks: {e}")
+            results = {}
 
         # Update cache
         self._last_results = results
@@ -496,6 +517,16 @@ class HealthMonitor:
         Returns:
             Health report dictionary
         """
+        # Check if we can use cached report
+        now = time.time()
+        if (
+            not check_names  # Only cache when running all checks
+            and self._last_report
+            and self._last_check_time
+            and (now - self._last_check_time) < self._cache_ttl_seconds
+        ):
+            return self._last_report
+
         if check_names:
             # Run specific checks
             results = {}
@@ -503,16 +534,23 @@ class HealthMonitor:
                 results[name] = await self.run_check(name)
         else:
             # Run all checks
-            results = await self.run_all_checks()
+            results = await self.run_all_checks(use_cache=False)
 
         # Determine overall status
         overall_status = self._determine_overall_status(results)
 
-        return {
+        report = {
             "status": overall_status.value,
             "timestamp": datetime.utcnow().isoformat(),
             "checks": {name: result.to_dict() for name, result in results.items()},
         }
+
+        # Cache the report if running all checks
+        if not check_names:
+            self._last_report = report
+            self._last_check_time = now
+
+        return report
 
     async def get_liveness(self) -> dict[str, Any]:
         """
@@ -521,7 +559,16 @@ class HealthMonitor:
         Returns:
             Liveness report
         """
-        result = await self.run_check("liveness")
+        # If no liveness check is registered, return healthy (process is alive)
+        if "liveness" not in self._checks:
+            result = HealthCheckResult(
+                status=HealthStatus.HEALTHY,
+                message="Process is alive",
+                details={"uptime_seconds": 0, "pid": 0},
+            )
+        else:
+            result = await self.run_check("liveness")
+        
         return {
             "status": result.status.value,
             "message": result.message,
@@ -550,10 +597,11 @@ class HealthMonitor:
         - If any check is unhealthy -> overall is unhealthy
         - If any check is degraded -> overall is degraded
         - If all checks are healthy -> overall is healthy
-        - If no checks or all unknown -> overall is unknown
+        - If no checks -> overall is healthy (no checks means no issues)
+        - If all unknown -> overall is unknown
         """
         if not results:
-            return HealthStatus.UNKNOWN
+            return HealthStatus.HEALTHY
 
         statuses = [result.status for result in results.values()]
 
@@ -572,6 +620,7 @@ class HealthMonitor:
             self._checks.clear()
             self._last_results.clear()
             self._last_check_time = None
+            self._last_report = None
             self._register_default_checks()
 
         logger.info("Health monitor reset")

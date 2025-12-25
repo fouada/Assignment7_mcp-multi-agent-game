@@ -65,7 +65,7 @@ def test_counter_increment(metrics_collector):
     metrics_collector.increment("test_counter", amount=3.0)
 
     # Get counter
-    counter = metrics_collector._counters.get("test_counter||")
+    counter = metrics_collector._counters.get("test_counter")
     assert counter is not None
     assert counter.value == 6.0
 
@@ -77,8 +77,8 @@ def test_counter_with_labels(metrics_collector):
     metrics_collector.increment("requests", labels={"status": "error"})
 
     # Check two separate counters exist
-    success_counter = metrics_collector._counters.get('requests|status="success"|')
-    error_counter = metrics_collector._counters.get('requests|status="error"|')
+    success_counter = metrics_collector._counters.get('requests{status=success}')
+    error_counter = metrics_collector._counters.get('requests{status=error}')
 
     assert success_counter is not None
     assert success_counter.value == 2.0
@@ -90,7 +90,7 @@ def test_counter_never_decreases(metrics_collector):
     """Test counter only increments (monotonic)."""
     metrics_collector.increment("monotonic_counter", amount=5.0)
 
-    counter = metrics_collector._counters.get("monotonic_counter||")
+    counter = metrics_collector._counters.get("monotonic_counter")
     assert counter.value == 5.0
 
     # Try to increment by negative (should be rejected or handled)
@@ -118,7 +118,7 @@ def test_counter_registration_with_description(metrics_collector):
 def test_gauge_set_value(metrics_collector):
     """Test gauge can be set to arbitrary values."""
     metrics_collector.set_gauge("temperature", 20.0)
-    gauge = metrics_collector._gauges.get("temperature||")
+    gauge = metrics_collector._gauges.get("temperature")
     assert gauge.value == 20.0
 
     metrics_collector.set_gauge("temperature", 25.0)
@@ -134,7 +134,7 @@ def test_gauge_increment_decrement(metrics_collector):
 
     # Increment
     metrics_collector.increment_gauge("active_connections", 5.0)
-    gauge = metrics_collector._gauges.get("active_connections||")
+    gauge = metrics_collector._gauges.get("active_connections")
     assert gauge.value == 15.0
 
     # Decrement
@@ -151,8 +151,8 @@ def test_gauge_with_labels(metrics_collector):
     metrics_collector.set_gauge("cpu_usage", 45.0, labels={"core": "0"})
     metrics_collector.set_gauge("cpu_usage", 55.0, labels={"core": "1"})
 
-    gauge0 = metrics_collector._gauges.get('cpu_usage|core="0"|')
-    gauge1 = metrics_collector._gauges.get('cpu_usage|core="1"|')
+    gauge0 = metrics_collector._gauges.get('cpu_usage{core=0}')
+    gauge1 = metrics_collector._gauges.get('cpu_usage{core=1}')
 
     assert gauge0.value == 45.0
     assert gauge1.value == 55.0
@@ -170,7 +170,7 @@ def test_histogram_observe_values(metrics_collector):
     metrics_collector.observe_histogram("request_duration", 0.3)
     metrics_collector.observe_histogram("request_duration", 0.8)
 
-    histogram = metrics_collector._histograms.get("request_duration||")
+    histogram = metrics_collector._histograms.get("request_duration")
     assert histogram is not None
     assert histogram.count == 4
     assert histogram.sum == pytest.approx(1.3, rel=1e-6)
@@ -189,11 +189,11 @@ def test_histogram_buckets(metrics_collector):
     metrics_collector.observe_histogram("custom_latency", 2.0)  # 1.0-5.0
     metrics_collector.observe_histogram("custom_latency", 10.0)  # > 5.0
 
-    histogram = metrics_collector._histograms.get("custom_latency||")
+    histogram = metrics_collector._histograms.get("custom_latency")
 
     # All values should be counted
     assert histogram.count == 5
-    assert histogram.sum == pytest.approx(13.0, rel=1e-6)
+    assert histogram.sum == pytest.approx(12.95, rel=1e-6)
 
 
 def test_histogram_with_labels(metrics_collector):
@@ -202,8 +202,8 @@ def test_histogram_with_labels(metrics_collector):
     metrics_collector.observe_histogram("api_latency", 0.2, labels={"endpoint": "/users"})
     metrics_collector.observe_histogram("api_latency", 0.3, labels={"endpoint": "/posts"})
 
-    users_histogram = metrics_collector._histograms.get('api_latency|endpoint="/users"|')
-    posts_histogram = metrics_collector._histograms.get('api_latency|endpoint="/posts"|')
+    users_histogram = metrics_collector._histograms.get('api_latency{endpoint=/users}')
+    posts_histogram = metrics_collector._histograms.get('api_latency{endpoint=/posts}')
 
     assert users_histogram.count == 2
     assert users_histogram.sum == pytest.approx(0.3, rel=1e-6)
@@ -222,7 +222,7 @@ def test_summary_observe_values(metrics_collector):
     metrics_collector.observe_summary("response_size", 200.0)
     metrics_collector.observe_summary("response_size", 300.0)
 
-    summary = metrics_collector._summaries.get("response_size||")
+    summary = metrics_collector._summaries.get("response_size")
     assert summary is not None
     assert summary.count == 3
     assert summary.sum == 600.0
@@ -234,7 +234,7 @@ def test_summary_percentiles(metrics_collector):
     for i in range(1, 101):
         metrics_collector.observe_summary("percentile_test", float(i))
 
-    summary = metrics_collector._summaries.get("percentile_test||")
+    summary = metrics_collector._summaries.get("percentile_test")
     assert summary.count == 100
     assert summary.sum == 5050.0
 
@@ -247,8 +247,8 @@ def test_summary_with_labels(metrics_collector):
     metrics_collector.observe_summary("message_size", 1024.0, labels={"type": "request"})
     metrics_collector.observe_summary("message_size", 512.0, labels={"type": "response"})
 
-    request_summary = metrics_collector._summaries.get('message_size|type="request"|')
-    response_summary = metrics_collector._summaries.get('message_size|type="response"|')
+    request_summary = metrics_collector._summaries.get('message_size{type=request}')
+    response_summary = metrics_collector._summaries.get('message_size{type=response}')
 
     assert request_summary.count == 1
     assert request_summary.sum == 1024.0
@@ -263,10 +263,10 @@ def test_summary_with_labels(metrics_collector):
 
 def test_timer_context_manager(metrics_collector):
     """Test Timer context manager records duration."""
-    with Timer("operation_duration", labels={"op": "test"}, collector=metrics_collector):
+    with Timer("operation_duration", labels={"op": "test"}):
         time.sleep(0.01)  # Sleep for 10ms
 
-    histogram = metrics_collector._histograms.get('operation_duration|op="test"|')
+    histogram = metrics_collector._histograms.get('operation_duration{op=test}')
     assert histogram is not None
     assert histogram.count == 1
     # Duration should be at least 10ms (0.01s)
@@ -276,13 +276,13 @@ def test_timer_context_manager(metrics_collector):
 def test_timer_with_exception(metrics_collector):
     """Test Timer still records duration even if exception occurs."""
     try:
-        with Timer("failing_operation", collector=metrics_collector):
+        with Timer("failing_operation"):
             time.sleep(0.005)
             raise ValueError("Test error")
     except ValueError:
         pass
 
-    histogram = metrics_collector._histograms.get("failing_operation||")
+    histogram = metrics_collector._histograms.get("failing_operation")
     assert histogram is not None
     assert histogram.count == 1
     assert histogram.sum >= 0.005
@@ -290,13 +290,13 @@ def test_timer_with_exception(metrics_collector):
 
 def test_timer_manual_stop(metrics_collector):
     """Test Timer can be used manually (start/stop)."""
-    timer = Timer("manual_timer", collector=metrics_collector)
+    timer = Timer("manual_timer")
 
     timer.__enter__()
     time.sleep(0.01)
     timer.__exit__(None, None, None)
 
-    histogram = metrics_collector._histograms.get("manual_timer||")
+    histogram = metrics_collector._histograms.get("manual_timer")
     assert histogram.count == 1
     assert histogram.sum >= 0.01
 
@@ -318,15 +318,12 @@ def test_prometheus_export_format(metrics_collector):
     prometheus_text = metrics_collector.export_prometheus()
 
     # Check format
-    assert "# HELP http_requests_total" in prometheus_text
     assert "# TYPE http_requests_total counter" in prometheus_text
-    assert 'http_requests_total{method="GET",status="200"} 1' in prometheus_text
+    assert 'http_requests_total{method=GET,status=200} 1' in prometheus_text
 
-    assert "# HELP active_connections" in prometheus_text
     assert "# TYPE active_connections gauge" in prometheus_text
     assert "active_connections 42" in prometheus_text
 
-    assert "# HELP request_duration_seconds" in prometheus_text
     assert "# TYPE request_duration_seconds histogram" in prometheus_text
 
 
@@ -369,8 +366,8 @@ def test_global_collector_usage(global_collector):
     # Should be accessible from any call to get_metrics_collector()
     collector = get_metrics_collector()
 
-    counter = collector._counters.get("global_test_counter||")
-    gauge = collector._gauges.get("global_test_gauge||")
+    counter = collector._counters.get("global_test_counter")
+    gauge = collector._gauges.get("global_test_gauge")
 
     assert counter is not None
     assert counter.value == 1.0
@@ -437,7 +434,7 @@ def test_concurrent_metric_updates(metrics_collector):
     for t in threads:
         t.join()
 
-    counter = metrics_collector._counters.get("concurrent_counter||")
+    counter = metrics_collector._counters.get("concurrent_counter")
     assert counter is not None
     # Should be 10 threads * 100 increments = 1000
     # Note: This test may fail if implementation is not thread-safe

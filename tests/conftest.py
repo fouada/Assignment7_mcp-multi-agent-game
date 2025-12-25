@@ -250,6 +250,50 @@ def sample_game_history():
 
 
 # ====================
+# Real Data Fixtures (MIT-Level Testing)
+# ====================
+
+
+@pytest.fixture
+def real_data_loader():
+    """Provide real data loader for testing with actual game data."""
+    from tests.utils import get_real_data_loader
+
+    return get_real_data_loader()
+
+
+@pytest.fixture
+def real_league_data(real_data_loader):
+    """Provide real league data from the system."""
+    return real_data_loader.load_all_real_data()
+
+
+@pytest.fixture
+def real_player_data(real_data_loader):
+    """Provide real player data from the system."""
+    players = real_data_loader.get_all_players()
+    return {player_id: real_data_loader.load_player_history(player_id) for player_id in players}
+
+
+@pytest.fixture
+def realistic_players(real_data_loader):
+    """Provide realistic player data for testing (10 players by default)."""
+    return real_data_loader.create_realistic_player_data(count=10)
+
+
+@pytest.fixture
+def realistic_large_players(real_data_loader):
+    """Provide realistic player data for large-scale testing (50 players)."""
+    return real_data_loader.create_realistic_player_data(count=50)
+
+
+@pytest.fixture
+def realistic_match(real_data_loader):
+    """Provide realistic match data."""
+    return real_data_loader.create_realistic_match_data("P01", "P02", rounds=5)
+
+
+# ====================
 # Cleanup Fixtures
 # ====================
 

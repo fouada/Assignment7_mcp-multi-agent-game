@@ -293,6 +293,9 @@ async def test_get_health_overall_status_degraded(health_monitor):
 
     # Create a check that returns degraded
     class DegradedCheck(HealthCheck):
+        def __init__(self):
+            super().__init__(name="degraded", description="Test degraded check")
+
         async def check(self) -> HealthCheckResult:
             return HealthCheckResult(status=HealthStatus.DEGRADED, message="Service is degraded")
 
@@ -310,6 +313,9 @@ async def test_get_health_overall_status_unhealthy(health_monitor):
 
     # Create a check that returns unhealthy
     class UnhealthyCheck(HealthCheck):
+        def __init__(self):
+            super().__init__(name="unhealthy", description="Test unhealthy check")
+
         async def check(self) -> HealthCheckResult:
             return HealthCheckResult(status=HealthStatus.UNHEALTHY, message="Service is down")
 
@@ -447,6 +453,7 @@ async def test_custom_health_check():
 
     class DatabaseHealthCheck(HealthCheck):
         def __init__(self, db_connected: bool = True):
+            super().__init__(name="database", description="Database health check")
             self.db_connected = db_connected
 
         async def check(self) -> HealthCheckResult:
@@ -479,6 +486,9 @@ async def test_async_health_check():
     """Test health check with async operations."""
 
     class AsyncHealthCheck(HealthCheck):
+        def __init__(self):
+            super().__init__(name="async", description="Async health check")
+
         async def check(self) -> HealthCheckResult:
             # Simulate async operation (e.g., network call)
             await asyncio.sleep(0.01)
@@ -572,6 +582,9 @@ async def test_health_check_error_handling(health_monitor):
     """Test health monitor handles check failures gracefully."""
 
     class FailingCheck(HealthCheck):
+        def __init__(self):
+            super().__init__(name="failing", description="Failing health check")
+
         async def check(self) -> HealthCheckResult:
             raise RuntimeError("Check failed")
 
@@ -592,6 +605,7 @@ async def test_parallel_health_checks(health_monitor):
 
     class SlowCheck(HealthCheck):
         def __init__(self, delay: float):
+            super().__init__(name="slow", description="Slow health check")
             self.delay = delay
 
         async def check(self) -> HealthCheckResult:
