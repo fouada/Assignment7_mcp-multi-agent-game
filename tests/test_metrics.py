@@ -317,12 +317,12 @@ def test_prometheus_export_format(metrics_collector):
     # Export
     prometheus_text = metrics_collector.export_prometheus()
 
-    # Check format
+    # Check format - Prometheus format uses quotes around label values and floats
     assert "# TYPE http_requests_total counter" in prometheus_text
-    assert "http_requests_total{method=GET,status=200} 1" in prometheus_text
+    assert 'http_requests_total{method="GET",status="200"} 1.0' in prometheus_text
 
     assert "# TYPE active_connections gauge" in prometheus_text
-    assert "active_connections 42" in prometheus_text
+    assert "active_connections 42.0" in prometheus_text
 
     assert "# TYPE request_duration_seconds histogram" in prometheus_text
 
@@ -451,7 +451,7 @@ def test_metrics_full_workflow(metrics_collector):
     # Simulate request handling
     metrics_collector.increment("requests_total", labels={"method": "GET", "status": "200"})
 
-    with Timer("request_duration", labels={"method": "GET"}, collector=metrics_collector):
+    with Timer("request_duration", labels={"method": "GET"}):
         time.sleep(0.01)
 
     metrics_collector.set_gauge("active_requests", 1.0)

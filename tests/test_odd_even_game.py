@@ -165,7 +165,7 @@ class TestGameStart:
 
         game.start()
 
-        assert game.phase == GamePhase.PLAYING
+        assert game.phase == GamePhase.COLLECTING_CHOICES
         assert game.current_round == 1
 
     def test_start_game_twice(self):

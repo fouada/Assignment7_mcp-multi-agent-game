@@ -478,7 +478,7 @@ class OddEvenGame:
         elif player_id == self.player2_id:
             return self.player2_role
         else:
-            raise GameError(f"Unknown player: {player_id}")
+            raise ValueError(f"Unknown player: {player_id}")
 
     def get_opponent_id(self, player_id: str) -> str:
         """Get opponent's ID."""
@@ -487,7 +487,7 @@ class OddEvenGame:
         elif player_id == self.player2_id:
             return self.player1_id
         else:
-            raise GameError(f"Unknown player: {player_id}")
+            raise ValueError(f"Unknown player: {player_id}")
 
     @property
     def is_complete(self) -> bool:
