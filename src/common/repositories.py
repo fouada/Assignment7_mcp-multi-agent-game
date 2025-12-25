@@ -13,13 +13,21 @@ File access permissions:
 - logs/*: Write by each agent (own log only)
 """
 
-import fcntl
 import json
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Generic, TypeVar
+
+# Try to import fcntl (Unix/Linux only)
+# On Windows, we'll skip file locking for now
+try:
+    import fcntl
+
+    HAS_FCNTL = True
+except ImportError:
+    HAS_FCNTL = False
 
 from .logger import get_logger
 
@@ -50,29 +58,33 @@ class Repository(ABC, Generic[T]):
         pass
 
     def _read_json(self, path: Path) -> dict | None:
-        """Read JSON file with file locking."""
+        """Read JSON file with file locking (Unix/Linux only)."""
         if not path.exists():
             return None
 
         with open(path, encoding="utf-8") as f:
-            # Acquire shared lock for reading
-            fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+            # Acquire shared lock for reading (Unix/Linux only)
+            if HAS_FCNTL:
+                fcntl.flock(f.fileno(), fcntl.LOCK_SH)
             try:
                 return json.load(f)
             finally:
-                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                if HAS_FCNTL:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
     def _write_json(self, path: Path, data: dict) -> None:
-        """Write JSON file with file locking."""
+        """Write JSON file with file locking (Unix/Linux only)."""
         # Write to temp file first, then rename (atomic)
         temp_path = path.with_suffix(".tmp")
         with open(temp_path, "w", encoding="utf-8") as f:
-            # Acquire exclusive lock for writing
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            # Acquire exclusive lock for writing (Unix/Linux only)
+            if HAS_FCNTL:
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
             try:
                 json.dump(data, f, indent=2, ensure_ascii=False, default=str)
             finally:
-                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                if HAS_FCNTL:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
         temp_path.rename(path)
 
 
