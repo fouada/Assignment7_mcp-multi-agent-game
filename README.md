@@ -470,13 +470,13 @@ uv run pytest tests/ -v
 
 ```bash
 # Build and run tests
-docker-compose -f docker-compose.test.yml up
+docker compose -f docker-compose.test.yml up
 
 # Run specific test suite
-docker-compose -f docker-compose.test.yml run unit-tests
+docker compose -f docker-compose.test.yml run unit-tests
 
 # View coverage report
-docker-compose -f docker-compose.test.yml up coverage-server
+docker compose -f docker-compose.test.yml up coverage-server
 # Open http://localhost:8080
 ```
 
@@ -1111,7 +1111,7 @@ pytest tests/ -m integration
 pytest tests/ -m "slow or benchmark"
 
 # Using Docker
-docker-compose -f docker-compose.test.yml up unit-tests
+docker compose -f docker-compose.test.yml up unit-tests
 ```
 
 ### Testing Results & Data

@@ -80,19 +80,19 @@ docker run --env-file .env -p 8000:8000 -p 8001:8001 mcp-game-league
 
 ```bash
 # Start all services
-docker-compose up --build -d
+docker compose up --build -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Scale players
-docker-compose up --scale player1=1 --scale player2=1 --scale player3=1 --scale player4=1 -d
+docker compose up --scale player1=1 --scale player2=1 --scale player3=1 --scale player4=1 -d
 
 # Stop services
-docker-compose down
+docker compose down
 
 # Stop and remove volumes
-docker-compose down -v
+docker compose down -v
 ```
 
 ### Docker Compose Configuration
@@ -362,14 +362,14 @@ uv run python -m src.main --component league --port 9000
 
 1. Check if service is running:
 ```bash
-docker-compose ps
+docker compose ps
 # or
 curl http://localhost:8000/health
 ```
 
 2. Check logs:
 ```bash
-docker-compose logs league-manager
+docker compose logs league-manager
 ```
 
 3. Verify network connectivity:
@@ -402,7 +402,7 @@ export MATCH_TIMEOUT_SECONDS=600
 LOG_LEVEL=DEBUG uv run python -m src.main --run --players 4
 
 # Or in Docker
-docker-compose up -e LOG_LEVEL=DEBUG
+docker compose up -e LOG_LEVEL=DEBUG
 ```
 
 ### Log Locations
@@ -410,7 +410,7 @@ docker-compose up -e LOG_LEVEL=DEBUG
 | Deployment | Log Location |
 |------------|--------------|
 | Local | stdout/stderr |
-| Docker | `docker-compose logs` |
+| Docker | `docker compose logs` |
 | Systemd | `journalctl -u mcp-league` |
 
 ---
@@ -453,11 +453,11 @@ deploy:
 
 ```bash
 # Backup game state (if using persistent storage)
-docker-compose exec league-manager tar czf /backup/state.tar.gz /app/data
+docker compose exec league-manager tar czf /backup/state.tar.gz /app/data
 
 # Restore
 docker cp state.tar.gz league-manager:/backup/
-docker-compose exec league-manager tar xzf /backup/state.tar.gz -C /
+docker compose exec league-manager tar xzf /backup/state.tar.gz -C /
 ```
 
 ### Database Backup (if applicable)

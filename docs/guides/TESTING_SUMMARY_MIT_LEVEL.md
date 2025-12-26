@@ -365,13 +365,13 @@ open htmlcov/index.html
 
 ```bash
 # All tests
-docker-compose -f docker-compose.test.yml up
+docker compose -f docker-compose.test.yml up
 
 # Specific suite
-docker-compose -f docker-compose.test.yml run unit-tests
+docker compose -f docker-compose.test.yml run unit-tests
 
 # View coverage
-docker-compose -f docker-compose.test.yml up coverage-server
+docker compose -f docker-compose.test.yml up coverage-server
 # Open http://localhost:8080
 ```
 

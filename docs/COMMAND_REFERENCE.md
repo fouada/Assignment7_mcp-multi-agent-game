@@ -227,24 +227,24 @@ uv run python -m src.main --get-standings
 
 ```bash
 # Build and start all services
-docker-compose up --build
+docker compose up --build
 
 # Run in detached mode
-docker-compose up --build -d
+docker compose up --build -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # View specific service logs
-docker-compose logs -f league_manager
-docker-compose logs -f referee
-docker-compose logs -f player1
+docker compose logs -f league_manager
+docker compose logs -f referee
+docker compose logs -f player1
 
 # Stop all services
-docker-compose down
+docker compose down
 
 # Stop and remove volumes
-docker-compose down -v
+docker compose down -v
 ```
 
 ---
@@ -422,25 +422,25 @@ docker run -p 8101:8101 -e LOG_LEVEL=INFO mcp-game-league \
 
 ```bash
 # Start all services (build if needed)
-docker-compose up --build
+docker compose up --build
 
 # Start in background
-docker-compose up -d
+docker compose up -d
 
 # Scale players
-docker-compose up --scale player1=1 --scale player2=1 -d
+docker compose up --scale player1=1 --scale player2=1 -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop services
-docker-compose down
+docker compose down
 
 # Remove volumes
-docker-compose down -v
+docker compose down -v
 
 # Restart specific service
-docker-compose restart league_manager
+docker compose restart league_manager
 ```
 
 ---
@@ -679,7 +679,7 @@ curl http://localhost:8000/health
 2. **Check logs:**
 ```bash
 # Docker
-docker-compose logs league_manager
+docker compose logs league_manager
 
 # Local
 # Check terminal output
@@ -732,7 +732,7 @@ uv run python -m src.main --run --players 4 --debug
 LOG_LEVEL=DEBUG uv run python -m src.main --run --players 4
 
 # In Docker
-docker-compose up -e LOG_LEVEL=DEBUG
+docker compose up -e LOG_LEVEL=DEBUG
 ```
 
 ### Health Checks
@@ -755,7 +755,7 @@ curl http://localhost:8101/health
 | Deployment | Log Location |
 |------------|--------------|
 | Local | stdout/stderr |
-| Docker | `docker-compose logs` |
+| Docker | `docker compose logs` |
 | Systemd | `journalctl -u mcp-league` |
 
 ---

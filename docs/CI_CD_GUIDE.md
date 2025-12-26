@@ -65,15 +65,15 @@ pytest tests/ --cov=src --cov-report=html --cov-report=term-missing
 
 ```bash
 # Build and run all tests
-docker-compose -f docker-compose.test.yml up
+docker compose -f docker-compose.test.yml up
 
 # Run specific test suite
-docker-compose -f docker-compose.test.yml run unit-tests
-docker-compose -f docker-compose.test.yml run integration-tests
-docker-compose -f docker-compose.test.yml run performance-tests
+docker compose -f docker-compose.test.yml run unit-tests
+docker compose -f docker-compose.test.yml run integration-tests
+docker compose -f docker-compose.test.yml run performance-tests
 
 # View coverage report
-docker-compose -f docker-compose.test.yml up coverage-server
+docker compose -f docker-compose.test.yml up coverage-server
 # Open http://localhost:8080 in browser
 ```
 
@@ -336,25 +336,25 @@ pre-commit run --all-files
 #### Unit Tests
 
 ```bash
-docker-compose -f docker-compose.test.yml run unit-tests
+docker compose -f docker-compose.test.yml run unit-tests
 ```
 
 #### Integration Tests
 
 ```bash
-docker-compose -f docker-compose.test.yml run integration-tests
+docker compose -f docker-compose.test.yml run integration-tests
 ```
 
 #### Performance Tests
 
 ```bash
-docker-compose -f docker-compose.test.yml run performance-tests
+docker compose -f docker-compose.test.yml run performance-tests
 ```
 
 #### Quick Tests (CI)
 
 ```bash
-docker-compose -f docker-compose.test.yml run quick-tests
+docker compose -f docker-compose.test.yml run quick-tests
 ```
 
 ### Multi-Stage Builds
@@ -381,7 +381,7 @@ volumes:
 
 ```bash
 # Start coverage report server
-docker-compose -f docker-compose.test.yml up coverage-server
+docker compose -f docker-compose.test.yml up coverage-server
 
 # Access at http://localhost:8080
 ```
@@ -495,7 +495,7 @@ pre-commit install
 docker system prune -a
 
 # Rebuild without cache
-docker-compose -f docker-compose.test.yml build --no-cache
+docker compose -f docker-compose.test.yml build --no-cache
 ```
 
 #### 3. Coverage Below Threshold
@@ -531,10 +531,10 @@ pytest tests/ --durations=10
 **Solution**:
 ```bash
 # Check if services are running
-docker-compose ps
+docker compose ps
 
 # Start required services
-docker-compose up -d
+docker compose up -d
 
 # Run integration tests
 pytest tests/ -m integration

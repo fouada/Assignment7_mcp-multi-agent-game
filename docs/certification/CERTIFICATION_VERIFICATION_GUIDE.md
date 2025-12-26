@@ -247,8 +247,8 @@ cat .gitlab-ci.yml
 cat Jenkinsfile
 
 # Verify Docker setup
-docker-compose -f docker-compose.yml config
-docker-compose -f docker-compose.test.yml config
+docker compose -f docker-compose.yml config
+docker compose -f docker-compose.test.yml config
 ```
 
 **Expected CI/CD Files**:

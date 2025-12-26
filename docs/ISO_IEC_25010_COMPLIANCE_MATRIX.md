@@ -158,7 +158,7 @@ docker stats mcp-game-league
 ```bash
 # Load testing
 python experiments/load_test.py --concurrent-matches 50
-docker-compose up --scale referee=10
+docker compose up --scale referee=10
 ```
 
 ---
@@ -179,7 +179,7 @@ docker-compose up --scale referee=10
 **Verification**:
 ```bash
 # Test co-existence
-docker-compose up -d
+docker compose up -d
 docker ps --format "{{.Names}} {{.Ports}}" | grep mcp-game
 ```
 
@@ -676,7 +676,7 @@ python -m src.main --help  # Should work on Linux, macOS, Windows
 ```bash
 # Test installation
 time bash scripts/setup.sh  # Should complete in <3 minutes
-docker-compose up --build  # Should build cleanly
+docker compose up --build  # Should build cleanly
 ```
 
 **Evidence**:

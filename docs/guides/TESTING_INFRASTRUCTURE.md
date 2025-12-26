@@ -53,15 +53,15 @@ open htmlcov/index.html
 
 ```bash
 # All tests with coverage
-docker-compose -f docker-compose.test.yml up
+docker compose -f docker-compose.test.yml up
 
 # Specific test suites
-docker-compose -f docker-compose.test.yml run unit-tests
-docker-compose -f docker-compose.test.yml run integration-tests
-docker-compose -f docker-compose.test.yml run performance-tests
+docker compose -f docker-compose.test.yml run unit-tests
+docker compose -f docker-compose.test.yml run integration-tests
+docker compose -f docker-compose.test.yml run performance-tests
 
 # View coverage report
-docker-compose -f docker-compose.test.yml up coverage-server
+docker compose -f docker-compose.test.yml up coverage-server
 # Open http://localhost:8080
 ```
 
@@ -398,16 +398,16 @@ Runs before pushing:
 
 ```bash
 # Unit tests
-docker-compose -f docker-compose.test.yml run unit-tests
+docker compose -f docker-compose.test.yml run unit-tests
 
 # Integration tests
-docker-compose -f docker-compose.test.yml run integration-tests
+docker compose -f docker-compose.test.yml run integration-tests
 
 # Performance tests
-docker-compose -f docker-compose.test.yml run performance-tests
+docker compose -f docker-compose.test.yml run performance-tests
 
 # Quick tests (for CI)
-docker-compose -f docker-compose.test.yml run quick-tests
+docker compose -f docker-compose.test.yml run quick-tests
 ```
 
 ### Multi-Stage Dockerfile
@@ -427,7 +427,7 @@ docker-compose -f docker-compose.test.yml run quick-tests
 
 ```bash
 # Start server
-docker-compose -f docker-compose.test.yml up coverage-server
+docker compose -f docker-compose.test.yml up coverage-server
 
 # Access at http://localhost:8080
 ```
@@ -609,10 +609,10 @@ pytest tests/test_player_agent.py \
 
 ```bash
 # Rebuild containers
-docker-compose -f docker-compose.test.yml build --no-cache
+docker compose -f docker-compose.test.yml build --no-cache
 
 # Clean up
-docker-compose -f docker-compose.test.yml down -v
+docker compose -f docker-compose.test.yml down -v
 docker system prune -a
 ```
 

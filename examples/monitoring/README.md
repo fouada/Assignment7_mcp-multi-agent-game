@@ -17,7 +17,7 @@ Use Docker Compose to start Prometheus, Grafana, and Jaeger:
 
 ```bash
 cd examples/monitoring
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 2. Access Dashboards

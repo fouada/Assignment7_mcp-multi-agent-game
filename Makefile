@@ -105,13 +105,13 @@ docker-dev:
 	docker build --target development -t mcp-game-league:dev .
 
 docker-up:
-	docker-compose up --build -d
+	docker compose up --build -d
 
 docker-down:
-	docker-compose down
+	docker compose down
 
 docker-logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 # ============================================================================
 # CI/CD Targets

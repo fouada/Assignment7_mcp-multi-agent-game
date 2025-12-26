@@ -241,16 +241,16 @@ jobs:
 
       - name: Build Docker test image
         run: |
-          docker-compose -f docker-compose.test.yml build
+          docker compose -f docker-compose.test.yml build
 
       - name: Run tests in Docker
         run: |
-          docker-compose -f docker-compose.test.yml run --rm quick-tests
+          docker compose -f docker-compose.test.yml run --rm quick-tests
 
       - name: Cleanup
         if: always()
         run: |
-          docker-compose -f docker-compose.test.yml down -v
+          docker compose -f docker-compose.test.yml down -v
 
   status-check:
     name: ✅ All Checks Passed
