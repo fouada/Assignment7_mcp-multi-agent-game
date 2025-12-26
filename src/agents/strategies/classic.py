@@ -348,6 +348,11 @@ Think about:
 
 Choose a number from 1 to 10. Reply with ONLY the number:"""
 
+    def reset(self) -> None:
+        """Reset LLM strategy state."""
+        # LLM strategy is stateless, so nothing to reset
+        pass
+
     def get_stats(self) -> dict[str, Any]:
         stats = super().get_stats()
         stats.update(

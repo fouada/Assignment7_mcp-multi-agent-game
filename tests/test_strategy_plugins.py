@@ -40,6 +40,10 @@ class SimpleTestStrategy(Strategy):
     async def decide_move(self, game_id, round_number, my_role, my_score, opponent_score, history):
         return 5  # Always return 5
 
+    def reset(self) -> None:
+        """Reset strategy state."""
+        pass
+
 
 @strategy_plugin(
     name="decorated_strategy",
@@ -52,6 +56,10 @@ class DecoratedStrategy(Strategy):
     async def decide_move(self, game_id, round_number, my_role, my_score, opponent_score, history):
         return 7  # Always return 7
 
+    def reset(self) -> None:
+        """Reset strategy state."""
+        pass
+
 
 class ParameterizedStrategy(Strategy):
     """Strategy that uses configuration."""
@@ -63,6 +71,10 @@ class ParameterizedStrategy(Strategy):
     async def decide_move(self, game_id, round_number, my_role, my_score, opponent_score, history):
         base = self.config.min_value if self.config else 1
         return base * self.multiplier
+
+    def reset(self) -> None:
+        """Reset strategy state."""
+        pass
 
 
 # Fixtures

@@ -463,9 +463,14 @@ class TestLLMStrategy:
 
         strategy = LLMStrategy(llm_config=llm_config)
 
-        # Mock the LLM call
-        with patch.object(strategy, "_call_llm", new_callable=AsyncMock) as mock_llm:
-            mock_llm.return_value = 5
+        # Mock the client's messages.create method
+        mock_response = AsyncMock()
+        mock_response.content = [type('obj', (), {'text': '5'})]
+        
+        with patch.object(strategy, "_get_client", new_callable=AsyncMock) as mock_get_client:
+            mock_client = AsyncMock()
+            mock_client.messages.create.return_value = mock_response
+            mock_get_client.return_value = mock_client
 
             move = await strategy.decide_move(
                 game_id="game_001",
