@@ -120,9 +120,10 @@ jobs:
           files: ./coverage.xml
           flags: unittests
           name: codecov-umbrella
-          fail_ci_if_error: true
+          fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
+        continue-on-error: true
 
       - name: Check coverage threshold
         run: |
