@@ -151,7 +151,10 @@ class TestRealDataBoundaryConditions:
 
         # Start match with many rounds
         max_rounds = 100
-        await referee.start_match(match_id, player1.player_id, player2.player_id, rounds=max_rounds)
+        await referee.start_match(
+            match_id, player1.player_id, player2.player_id, rounds=max_rounds,
+            player1_obj=player1, player2_obj=player2
+        )
 
         # Play all rounds
         for _ in range(max_rounds):
@@ -160,6 +163,9 @@ class TestRealDataBoundaryConditions:
 
             assert 1 <= move1 <= 10
             assert 1 <= move2 <= 10
+            
+            # Resolve the round
+            await referee.resolve_round(match_id, move1, move2)
 
         # Should complete without errors
         assert player1.score + player2.score == max_rounds
@@ -296,7 +302,7 @@ class TestRealDataConcurrencyEdgeCases:
         results = await asyncio.gather(task1, task2)
 
         # Both should start (different match IDs)
-        assert all(r["status"] == "started" for r in results)
+        assert all(r["status"] == "in_progress" for r in results)
 
     @pytest.mark.asyncio
     async def test_concurrent_move_submissions(self, realistic_players):

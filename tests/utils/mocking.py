@@ -134,6 +134,7 @@ class MockReferee:
     - Match state management
     - Result reporting simulation
     - Error injection
+    - Round resolution and scoring
     """
 
     def __init__(self, referee_id: str, fail_on_report: bool = False):
@@ -142,9 +143,11 @@ class MockReferee:
         self.fail_on_report = fail_on_report
         self.matches: dict[str, dict[str, Any]] = {}
         self.reported_results: list[dict[str, Any]] = []
+        self.player_objects: dict[str, Any] = {}  # Store references to player objects
 
     async def start_match(
-        self, match_id: str, player1_id: str, player2_id: str, rounds: int = 5
+        self, match_id: str, player1_id: str, player2_id: str, rounds: int = 5, 
+        player1_obj: Any = None, player2_obj: Any = None
     ) -> dict[str, Any]:
         """Simulate starting a match."""
         self.matches[match_id] = {
@@ -152,8 +155,45 @@ class MockReferee:
             "rounds": rounds,
             "current_round": 0,
             "status": "in_progress",
+            "scores": {player1_id: 0, player2_id: 0},
+            "player1_obj": player1_obj,
+            "player2_obj": player2_obj,
         }
-        return {"match_id": match_id, "status": "started"}
+        return {"match_id": match_id, "status": "in_progress"}
+
+    async def resolve_round(self, match_id: str, move1: int, move2: int) -> dict[str, Any]:
+        """Resolve a round and update scores."""
+        if match_id not in self.matches:
+            raise ValueError(f"Unknown match: {match_id}")
+        
+        match = self.matches[match_id]
+        player1_id, player2_id = match["players"]
+        
+        # Odd/Even game logic
+        total = move1 + move2
+        is_odd = total % 2 == 1
+        winner_id = player1_id if is_odd else player2_id
+        
+        # Update scores
+        match["scores"][winner_id] += 1
+        match["current_round"] += 1
+        
+        # Update player objects if available
+        if match.get("player1_obj"):
+            match["player1_obj"].score = match["scores"][player1_id]
+        if match.get("player2_obj"):
+            match["player2_obj"].score = match["scores"][player2_id]
+        
+        # Check if match is complete
+        if match["current_round"] >= match["rounds"]:
+            match["status"] = "completed"
+        
+        return {
+            "round": match["current_round"],
+            "winner": winner_id,
+            "scores": dict(match["scores"]),
+            "completed": match["status"] == "completed",
+        }
 
     async def report_result(self, match_id: str, winner_id: str, loser_id: str) -> bool:
         """Simulate reporting match result."""
@@ -179,13 +219,16 @@ class MockLeagueManager:
     - Standings tracking
     """
 
-    def __init__(self, max_players: int = 10):
+    def __init__(self, max_players: int = 10, league_id: str | None = None):
         """Initialize mock league manager."""
         self.max_players = max_players
+        self.league_id = league_id or "test_league"
         self.players: dict[str, dict[str, Any]] = {}
         self.referees: dict[str, dict[str, Any]] = {}
         self.matches: list[dict[str, Any]] = []
         self.rounds_completed = 0
+        self.schedule: list[list[tuple[str, str]]] = []
+        self.state = "registration"
 
     async def register_player(
         self, player_id: str, endpoint: str, game_types: list[str]
@@ -196,6 +239,15 @@ class MockLeagueManager:
 
         if player_id in self.players:
             return {"success": False, "error": "Already registered"}
+        
+        # Validate game types
+        if not game_types or not all(isinstance(gt, str) for gt in game_types):
+            return {"success": False, "error": "Invalid game types"}
+        
+        # Check for valid game types (must include even_odd)
+        valid_game_types = ["even_odd", "odd_even"]
+        if not any(gt in valid_game_types for gt in game_types):
+            return {"success": False, "error": "Invalid game types. Must support even_odd"}
 
         self.players[player_id] = {
             "endpoint": endpoint,
@@ -211,6 +263,45 @@ class MockLeagueManager:
         """Simulate referee registration."""
         self.referees[referee_id] = {"endpoint": endpoint, "matches_handled": 0}
         return {"success": True, "referee_id": referee_id}
+
+    def generate_schedule(self) -> list[dict[str, Any]]:
+        """Generate round-robin schedule for all players."""
+        player_ids = list(self.players.keys())
+        n = len(player_ids)
+        
+        if n < 2:
+            return []
+        
+        # Round-robin algorithm
+        rounds = []
+        if n % 2 == 1:
+            # Add a "bye" player for odd number of players
+            player_ids.append(None)
+            n += 1
+        
+        for round_num in range(n - 1):
+            round_matches = []
+            for i in range(n // 2):
+                p1 = player_ids[i]
+                p2 = player_ids[n - 1 - i]
+                # Include matches even if one player is None (BYE)
+                if p1 is not None or p2 is not None:
+                    round_matches.append({
+                        "player1_id": p1 if p1 is not None else "BYE",
+                        "player2_id": p2 if p2 is not None else "BYE",
+                        "match_id": f"M{round_num}_{i}",
+                    })
+            rounds.append({
+                "round": round_num + 1,
+                "matches": round_matches,
+            })
+            
+            # Rotate players (keep first player fixed)
+            player_ids = [player_ids[0]] + [player_ids[-1]] + player_ids[1:-1]
+        
+        self.schedule = rounds
+        self.state = "scheduled"
+        return rounds
 
     def get_standings(self) -> list[dict[str, Any]]:
         """Get current league standings."""

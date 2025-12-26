@@ -94,7 +94,7 @@ class TestRealDataPerformanceBasics:
 
             results = await asyncio.gather(*tasks)
 
-        assert all(r["status"] == "started" for r in results)
+        assert all(r["status"] == "in_progress" for r in results)
 
 
 @pytest.mark.slow

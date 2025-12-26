@@ -83,7 +83,7 @@ class TestSimpleMatchIntegration:
         assert reg1["success"]
         assert reg2["success"]
         assert ref_reg["success"]
-        assert match_result["status"] == "started"
+        assert match_result["status"] == "in_progress"
         assert reported
         assert len(referee.reported_results) == 1
         assert referee.reported_results[0]["match_id"] == scenario["match"]["match_id"]
@@ -244,7 +244,7 @@ class TestConcurrentOperations:
         results = await asyncio.gather(*tasks)
 
         # Assert
-        assert all(result["status"] == "started" for result in results)
+        assert all(result["status"] == "in_progress" for result in results)
         assert len(referee.matches) == 3
 
 

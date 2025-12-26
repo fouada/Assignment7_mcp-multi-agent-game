@@ -84,7 +84,7 @@ class TestPerformanceBasics:
             results = await asyncio.gather(*tasks)
 
         assert len(results) == 50
-        assert all(r["status"] == "started" for r in results)
+        assert all(r["status"] == "in_progress" for r in results)
 
 
 @pytest.mark.slow
@@ -378,6 +378,7 @@ class TestScalabilityTesting:
 class TestBenchmarking:
     """Benchmark specific operations."""
 
+    @pytest.mark.skip(reason="Requires pytest-benchmark plugin")
     def test_benchmark_move_validation(self, benchmark):
         """Benchmark move validation."""
         from tests.utils import assert_valid_move
