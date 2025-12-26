@@ -66,9 +66,14 @@ class Span:
     start_time: float
     end_time: float | None = None
     attributes: dict[str, Any] = field(default_factory=dict)
-    events: list[SpanEvent] = field(default_factory=list)
+    events: list[dict[str, Any]] = field(default_factory=list)
     status: str = "ok"  # ok, error
     status_message: str = ""
+
+    @property
+    def error_message(self) -> str:
+        """Get error message (alias for status_message)."""
+        return self.status_message
 
     def set_attribute(self, key: str, value: Any) -> None:
         """Set span attribute."""
@@ -76,11 +81,11 @@ class Span:
 
     def add_event(self, name: str, attributes: dict[str, Any] | None = None) -> None:
         """Add event to span."""
-        event = SpanEvent(
-            name=name,
-            timestamp=time.time(),
-            attributes=attributes or {},
-        )
+        event = {
+            "name": name,
+            "timestamp": time.time(),
+            "attributes": attributes or {},
+        }
         self.events.append(event)
 
     def set_status(self, status: str, message: str = "") -> None:
@@ -93,6 +98,7 @@ class Span:
         if self.end_time is None:
             self.end_time = time.time()
 
+    @property
     def duration_ms(self) -> float:
         """Get span duration in milliseconds."""
         if self.end_time is None:
@@ -108,16 +114,9 @@ class Span:
             "name": self.name,
             "start_time": self.start_time,
             "end_time": self.end_time,
-            "duration_ms": self.duration_ms(),
+            "duration_ms": self.duration_ms,
             "attributes": self.attributes,
-            "events": [
-                {
-                    "name": e.name,
-                    "timestamp": e.timestamp,
-                    "attributes": e.attributes,
-                }
-                for e in self.events
-            ],
+            "events": self.events,
             "status": self.status,
             "status_message": self.status_message,
         }
@@ -133,7 +132,12 @@ class SpanContext:
 
     trace_id: str
     span_id: str
-    trace_flags: int = 1  # 1 = sampled
+    sampled: bool = True
+
+    @property
+    def trace_flags(self) -> int:
+        """Get trace flags (1 if sampled, 0 otherwise)."""
+        return 1 if self.sampled else 0
 
     def to_traceparent(self) -> str:
         """
@@ -142,7 +146,8 @@ class SpanContext:
         Format: version-trace_id-span_id-trace_flags
         Example: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
         """
-        return f"00-{self.trace_id}-{self.span_id}-{self.trace_flags:02x}"
+        flags = "01" if self.sampled else "00"
+        return f"00-{self.trace_id}-{self.span_id}-{flags}"
 
     @classmethod
     def from_traceparent(cls, traceparent: str) -> Optional["SpanContext"]:
@@ -165,10 +170,12 @@ class SpanContext:
             if version != "00":
                 return None
 
+            sampled = int(trace_flags, 16) == 1
+
             return cls(
                 trace_id=trace_id,
                 span_id=span_id,
-                trace_flags=int(trace_flags, 16),
+                sampled=sampled,
             )
         except Exception as e:
             logger.error(f"Failed to parse traceparent: {e}")
@@ -203,15 +210,16 @@ class TracingManager:
         if self._initialized:
             return
 
-        self.service_name = "mcp_game"
-        self.enabled = True
-        self.sample_rate = 1.0  # Sample all traces by default
+        self._service_name = "mcp_game"
+        self._enabled = True
+        self._sample_rate = 1.0  # Sample all traces by default
 
         # Thread-local storage for current span
         self._current_span = threading.local()
 
-        # Completed spans (for export)
-        self._completed_spans: list[Span] = []
+        # Active and completed spans tracking
+        self._active_spans: dict[str, Span] = {}
+        self._completed_spans: dict[str, Span] = {}
         self._span_lock = threading.Lock()
 
         # Statistics
@@ -223,6 +231,21 @@ class TracingManager:
 
         self._initialized = True
         logger.info("Tracing manager initialized")
+
+    @property
+    def enabled(self) -> bool:
+        """Whether tracing is enabled."""
+        return self._enabled
+
+    @property
+    def sample_rate(self) -> float:
+        """Current sampling rate."""
+        return self._sample_rate
+
+    @property
+    def service_name(self) -> str:
+        """Service name."""
+        return self._service_name
 
     def initialize(
         self,
@@ -238,9 +261,14 @@ class TracingManager:
             enabled: Whether tracing is enabled
             sample_rate: Sampling rate (0.0 to 1.0)
         """
-        self.service_name = service_name
-        self.enabled = enabled
-        self.sample_rate = max(0.0, min(1.0, sample_rate))
+        self._service_name = service_name
+        self._enabled = enabled
+        self._sample_rate = max(0.0, min(1.0, sample_rate))
+
+        # Reset state on initialization
+        with self._span_lock:
+            self._active_spans.clear()
+            self._completed_spans.clear()
 
         logger.info(
             f"Tracing initialized: service={service_name}, "
@@ -259,14 +287,14 @@ class TracingManager:
         """Determine if this trace should be sampled."""
         import random
 
-        return random.random() < self.sample_rate
+        return random.random() < self._sample_rate
 
     def start_span(
         self,
         name: str,
         parent_context: SpanContext | None = None,
         attributes: dict[str, Any] | None = None,
-    ) -> Span:
+    ) -> Span | None:
         """
         Start a new span.
 
@@ -276,24 +304,30 @@ class TracingManager:
             attributes: Initial span attributes
 
         Returns:
-            New span
+            New span or None if tracing is disabled or not sampled
         """
-        if not self.enabled:
-            # Return dummy span
-            return self._create_noop_span(name)
+        if not self._enabled:
+            # Return None for disabled tracing
+            return None
 
         # Check sampling
         if not self.should_sample():
             self._stats["dropped_spans"] += 1
-            return self._create_noop_span(name)
+            return None
 
-        # Get trace ID
+        # Get trace ID and parent info
         if parent_context:
             trace_id = parent_context.trace_id
             parent_span_id = parent_context.span_id
         else:
-            trace_id = self.generate_trace_id()
-            parent_span_id = None
+            # Check if there's a current span (for nested spans)
+            current = self.get_current_span()
+            if current and current.trace_id:
+                trace_id = current.trace_id
+                parent_span_id = current.span_id
+            else:
+                trace_id = self.generate_trace_id()
+                parent_span_id = None
 
         # Create span
         span = Span(
@@ -306,7 +340,11 @@ class TracingManager:
         )
 
         # Add service name
-        span.set_attribute("service.name", self.service_name)
+        span.set_attribute("service.name", self._service_name)
+
+        # Track active span
+        with self._span_lock:
+            self._active_spans[span.span_id] = span
 
         # Set as current span
         self._set_current_span(span)
@@ -318,29 +356,37 @@ class TracingManager:
 
         return span
 
-    def end_span(self, span: Span) -> None:
+    def end_span(self, span: Span | None) -> None:
         """
         End a span and store it.
 
         Args:
-            span: Span to end
+            span: Span to end (or None if not sampled)
         """
-        if not self.enabled or span is None:
+        if span is None or not span.trace_id:
             return
 
         # End span
         span.end()
 
-        # Store completed span
+        # Move from active to completed
         with self._span_lock:
-            self._completed_spans.append(span)
+            if span.span_id in self._active_spans:
+                del self._active_spans[span.span_id]
+            self._completed_spans[span.span_id] = span
 
-        # Clear current span
-        self._set_current_span(None)
+        # Clear current span if it matches
+        current = self.get_current_span()
+        if current and current.span_id == span.span_id:
+            # Restore parent span if any
+            if span.parent_span_id and span.parent_span_id in self._active_spans:
+                self._set_current_span(self._active_spans[span.parent_span_id])
+            else:
+                self._set_current_span(None)
 
         logger.debug(
             f"Ended span: {span.name} "
-            f"(duration={span.duration_ms():.2f}ms, "
+            f"(duration={span.duration_ms:.2f}ms, "
             f"trace_id={span.trace_id[:8]}...)"
         )
 
@@ -349,23 +395,32 @@ class TracingManager:
         self,
         name: str,
         attributes: dict[str, Any] | None = None,
+        parent_context: SpanContext | None = None,
     ):
         """
         Context manager for creating spans.
 
         Usage:
             with tracing.span("operation") as span:
-                span.set_attribute("key", "value")
+                if span:  # Check if span was created (sampling/enabled)
+                    span.set_attribute("key", "value")
                 # Your code here
+
+        Args:
+            name: Span name
+            attributes: Initial span attributes
+            parent_context: Parent span context (for distributed tracing)
         """
-        span = self.start_span(name, attributes=attributes)
+        span = self.start_span(name, parent_context=parent_context, attributes=attributes)
         try:
             yield span
         except Exception as e:
-            span.set_status("error", str(e))
+            if span:
+                span.set_status("error", str(e))
             raise
         finally:
-            self.end_span(span)
+            if span:
+                self.end_span(span)
 
     def get_current_span(self) -> Span | None:
         """Get the current span for this thread."""
@@ -451,7 +506,7 @@ class TracingManager:
             List of completed spans
         """
         with self._span_lock:
-            spans = self._completed_spans.copy()
+            spans = list(self._completed_spans.values())
             if clear:
                 self._completed_spans.clear()
             return spans
@@ -474,13 +529,14 @@ class TracingManager:
         return {
             **self._stats,
             "pending_spans": len(self._completed_spans),
-            "sample_rate": self.sample_rate,
-            "enabled": self.enabled,
+            "sample_rate": self._sample_rate,
+            "enabled": self._enabled,
         }
 
     def reset(self) -> None:
         """Reset tracing state (for testing)."""
         with self._span_lock:
+            self._active_spans.clear()
             self._completed_spans.clear()
 
         self._stats = {
