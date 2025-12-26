@@ -152,8 +152,12 @@ class TestRealDataBoundaryConditions:
         # Start match with many rounds
         max_rounds = 100
         await referee.start_match(
-            match_id, player1.player_id, player2.player_id, rounds=max_rounds,
-            player1_obj=player1, player2_obj=player2
+            match_id,
+            player1.player_id,
+            player2.player_id,
+            rounds=max_rounds,
+            player1_obj=player1,
+            player2_obj=player2,
         )
 
         # Play all rounds

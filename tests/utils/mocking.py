@@ -146,8 +146,13 @@ class MockReferee:
         self.player_objects: dict[str, Any] = {}  # Store references to player objects
 
     async def start_match(
-        self, match_id: str, player1_id: str, player2_id: str, rounds: int = 5,
-        player1_obj: Any = None, player2_obj: Any = None
+        self,
+        match_id: str,
+        player1_id: str,
+        player2_id: str,
+        rounds: int = 5,
+        player1_obj: Any = None,
+        player2_obj: Any = None,
     ) -> dict[str, Any]:
         """Simulate starting a match."""
         self.matches[match_id] = {
