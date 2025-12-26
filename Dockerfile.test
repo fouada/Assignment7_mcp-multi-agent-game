@@ -29,8 +29,8 @@ WORKDIR /app
 # ====================
 FROM base as dependencies
 
-# Copy dependency files
-COPY pyproject.toml uv.lock* ./
+# Copy dependency files and README (required by package metadata)
+COPY pyproject.toml uv.lock* README.md ./
 
 # Install Python dependencies
 RUN pip install --upgrade pip && \
