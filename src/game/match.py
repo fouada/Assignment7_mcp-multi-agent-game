@@ -163,8 +163,8 @@ class Match:
 
         if self.game:
             self.game.start()
-        self.state = MatchState.IN_PROGRESS
-        self.started_at = datetime.utcnow()
+            self.state = MatchState.IN_PROGRESS
+            self.started_at = datetime.utcnow()
 
         logger.info("Match started")
 
@@ -176,7 +176,7 @@ class Match:
             self.final_score = {
                 self.player1.player_id: result.player1_score,
                 self.player2.player_id: result.player2_score,
-            }
+        }
         self.state = MatchState.COMPLETED
         self.completed_at = datetime.utcnow()
 

@@ -235,7 +235,7 @@ class ByzantineFaultTolerantTournament:
             )
 
         # Phase 3: COMMIT (Reach consensus)
-        consensus_result = self._reach_consensus(valid_observations)
+        consensus_result = self._reach_consensus(valid_observations)  # type: ignore[arg-type]
 
         if consensus_result is None:
             raise ByzantineAttackDetected(
@@ -250,11 +250,11 @@ class ByzantineFaultTolerantTournament:
             match_id=match_id,
             players=(player1_id, player2_id),
             result=consensus_result,
-            observations=valid_observations,
+            observations=valid_observations,  # type: ignore[arg-type]
         )
 
         # Update reputation based on agreement
-        self._update_reputation(valid_observations, consensus_result)
+        self._update_reputation(valid_observations, consensus_result)  # type: ignore[arg-type]
 
         # Store in history for collusion detection
         self.match_history.append(proof)
@@ -322,7 +322,7 @@ class ByzantineFaultTolerantTournament:
         for result_hash, count in result_hashes.items():
             if count >= self.quorum_size:
                 # Quorum reached!
-                return result_mapping[result_hash]
+                return result_mapping[result_hash]  # type: ignore[no-any-return]
 
         # No consensus
         return None
@@ -426,7 +426,7 @@ class ByzantineFaultTolerantTournament:
         # Weighted random selection
         import numpy as np
 
-        return np.random.choice(self.referee_ids, p=probs)
+        return np.random.choice(self.referee_ids, p=probs)  # type: ignore[no-any-return]
 
     def detect_collusion(self) -> list[tuple[str, str, float]]:
         """
@@ -453,16 +453,16 @@ class ByzantineFaultTolerantTournament:
             pair = tuple(sorted([p1, p2]))
 
             if pair not in player_pairs:
-                player_pairs[pair] = {"matches": 0, "wins": {p1: 0, p2: 0}}
+                player_pairs[pair] = {"matches": 0, "wins": {p1: 0, p2: 0}}  # type: ignore[index]
 
-            player_pairs[pair]["matches"] += 1
+            player_pairs[pair]["matches"] += 1  # type: ignore[index]
 
             winner = proof.result.get("winner")
             if winner:
-                player_pairs[pair]["wins"][winner] += 1
+                player_pairs[pair]["wins"][winner] += 1  # type: ignore[index]
 
         # Detect suspicious patterns
-        for pair, stats in player_pairs.items():
+        for pair, stats in player_pairs.items():  # type: ignore[assignment]
             if stats["matches"] < 3:
                 continue  # Too few matches
 

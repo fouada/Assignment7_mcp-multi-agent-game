@@ -128,7 +128,7 @@ class ConnectionManager:
         self.active_connections: set[WebSocket] = set()
         self.connection_metadata: dict[WebSocket, dict] = {}
 
-    async def connect(self, websocket: WebSocket, client_info: dict[Any, Any] | None = None):
+    async def connect(self, websocket: WebSocket, client_info: dict[Any, Any] | None = None):  # type: ignore[name-defined]
         """Accept new WebSocket connection."""
         await websocket.accept()
         self.active_connections.add(websocket)

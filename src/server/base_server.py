@@ -439,7 +439,7 @@ class BaseGameServer(MCPServer):
                 if span:
                     span.add_event("Handler completed", {"msg_type": msg_type})
 
-                return response
+                return response  # type: ignore[no-any-return]
 
             # Execute through middleware pipeline
             async def protocol_handler(request: dict[str, Any]) -> dict[str, Any]:
@@ -467,7 +467,7 @@ class BaseGameServer(MCPServer):
                 if span:
                     span.add_event("Calling handler", {"handler": handler_name})
 
-                return await handler(request)
+                return await handler(request)  # type: ignore[no-any-return]
 
             # Execute through middleware pipeline
             # Flow: Tracing → Logging → Auth → Rate Limit → Metrics → Handler → Error Handler

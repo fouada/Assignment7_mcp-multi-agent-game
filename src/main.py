@@ -362,12 +362,12 @@ class GameOrchestrator:
                     if round_result.get("league_complete"):
                         break
                     logger.error(f"Round failed: {round_result.get('error')}")
-                continue
+                    continue
 
-            # Run matches
-            matches = round_result.get("matches", [])
-            for match_data in matches:
-                await self._run_match(match_data, round_num=round_num + 1)
+                # Run matches
+                matches = round_result.get("matches", [])
+                for match_data in matches:
+                    await self._run_match(match_data, round_num=round_num + 1)
 
                 # Wait for matches to complete
                 await asyncio.sleep(2)
