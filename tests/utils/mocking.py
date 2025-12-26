@@ -302,9 +302,7 @@ class MockLeagueManager:
                             "match_id": f"M{round_num}_{i}",
                         }
                     )
-            rounds.append(
-                {"round": round_num + 1, "matches": round_matches}
-            )
+            rounds.append({"round": round_num + 1, "matches": round_matches})
 
             # Rotate players (keep first player fixed)
             player_ids = [player_ids[0]] + [player_ids[-1]] + player_ids[1:-1]
