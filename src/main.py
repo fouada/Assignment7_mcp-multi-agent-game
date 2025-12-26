@@ -102,7 +102,9 @@ class GameOrchestrator:
             plugin_config = {}
 
         # Merge with main config for context
-        full_config: dict[str, Any] = self.config.__dict__ if hasattr(self.config, "__dict__") else {}
+        full_config: dict[str, Any] = (
+            self.config.__dict__ if hasattr(self.config, "__dict__") else {}
+        )
         full_config["plugins"] = plugin_config
 
         # Create plugin context
@@ -150,7 +152,9 @@ class GameOrchestrator:
 
         return self.league_manager
 
-    async def start_referee(self, referee_id: str = "REF01", port: int | None = None) -> RefereeAgent:
+    async def start_referee(
+        self, referee_id: str = "REF01", port: int | None = None
+    ) -> RefereeAgent:
         """Start a referee agent."""
         if port is None:
             port = self.config.referee.port + len(self.referees)
@@ -196,16 +200,15 @@ class GameOrchestrator:
         """Start a player agent."""
         # Create strategy
         from .agents.strategies import Strategy
-        
+        from .agents.strategies.base import StrategyConfig
+        from .agents.strategies.classic import LLMStrategy, PatternStrategy
+
         strategy: Strategy
         if strategy_type == "random":
             strategy = RandomStrategy()
         elif strategy_type == "pattern":
-            from .agents.strategies.classic import PatternStrategy
             strategy = PatternStrategy()
         elif strategy_type == "llm":
-            from .agents.strategies.classic import LLMStrategy
-            from .agents.strategies.base import StrategyConfig
             # Use default StrategyConfig for LLM
             llm_config = StrategyConfig()
             strategy = LLMStrategy(llm_config)
@@ -376,7 +379,9 @@ class GameOrchestrator:
                 standings = self.league_manager._get_standings()
                 logger.info("\nCurrent Standings:")
                 for entry in standings.get("standings", []):
-                    logger.info(f"  {entry['rank']}. {entry['display_name']}: {entry['points']} pts")
+                    logger.info(
+                        f"  {entry['rank']}. {entry['display_name']}: {entry['points']} pts"
+                    )
 
             # Final standings
             logger.info("\n" + "=" * 50)
@@ -466,7 +471,7 @@ async def run_component(component: str, args: argparse.Namespace) -> None:
         config.llm.model = args.llm_model
 
     from .agents.strategies import Strategy
-    
+
     server: LeagueManager | RefereeAgent | PlayerAgent
     if component == "league":
         server = LeagueManager(

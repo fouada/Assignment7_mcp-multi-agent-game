@@ -226,7 +226,7 @@ class AgentLifecycleManager:
         # This should not happen if can_transition returned True
         if new_state is None:
             logger.error(
-                f"Got None state after valid transition check",
+                "Got None state after valid transition check",
                 agent_id=self.agent_id,
                 event=event.value,
             )

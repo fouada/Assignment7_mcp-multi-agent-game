@@ -8,9 +8,9 @@ Supports both sync and async operations.
 
 import asyncio
 import json
+from collections.abc import Callable
 from importlib.util import find_spec
 from typing import Any
-from collections.abc import Callable
 
 from .base import Transport, TransportConfig, TransportError
 from .json_rpc import (

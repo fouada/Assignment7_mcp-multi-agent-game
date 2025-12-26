@@ -29,7 +29,7 @@ from abc import abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Union
+from typing import Any, Union
 
 import numpy as np
 
@@ -330,7 +330,9 @@ class StrategyComposer:
         self.components = []
         self.current_operator = None
 
-    def add(self, strategy: Strategy, name: str | None = None, weight: float = 1.0) -> "StrategyComposer":
+    def add(
+        self, strategy: Strategy, name: str | None = None, weight: float = 1.0
+    ) -> "StrategyComposer":
         """Add a strategy component."""
         if name is None:
             name = f"component_{len(self.components)}"
@@ -345,7 +347,9 @@ class StrategyComposer:
             self.add(strat, name=f"seq_{i}")
         return self
 
-    def parallel(self, *strategies: Strategy, weights: list[float] | None = None) -> "StrategyComposer":
+    def parallel(
+        self, *strategies: Strategy, weights: list[float] | None = None
+    ) -> "StrategyComposer":
         """Execute strategies in parallel with voting."""
         self.current_operator = CompositionOperator.PARALLEL
         if weights is None:

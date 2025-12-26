@@ -14,7 +14,6 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
-from collections.abc import Callable
 
 from aiohttp import web
 

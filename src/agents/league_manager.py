@@ -765,7 +765,7 @@ class LeagueManager(BaseGameServer):
             if self._client is None:
                 logger.error("MCP client not initialized")
                 return
-            
+
             # Use MCP client to call referee's start_match tool
             await self._client.connect("referee", referee_endpoint)
 
@@ -814,11 +814,7 @@ class LeagueManager(BaseGameServer):
             # Record loss for other player
             player1_id = match.player1.player_id if match.player1 else ""
             player2_id = match.player2.player_id if match.player2 else ""
-            loser_id = (
-                player1_id
-                if winner_id == player2_id
-                else player2_id
-            )
+            loser_id = player1_id if winner_id == player2_id else player2_id
             if loser_id in self._players:
                 self._players[loser_id].record_loss()
         else:

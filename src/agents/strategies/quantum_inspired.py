@@ -194,7 +194,12 @@ class QuantumStrategyEngine(Strategy):
 
         # Step 5: Execute chosen strategy
         move = await chosen_strategy.decide_move(
-            game_id, round_number, parity_role, scores, history, timeout  # type: ignore[arg-type,arg-type,arg-type,arg-type]
+            game_id,
+            round_number,
+            parity_role,
+            scores,
+            history,
+            timeout,  # type: ignore[arg-type,arg-type,arg-type,arg-type]
         )
 
         # Store for next iteration

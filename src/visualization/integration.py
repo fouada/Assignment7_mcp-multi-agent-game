@@ -281,7 +281,7 @@ class DashboardIntegration:
         # Update player states
         if self.tournament_state is None:
             return
-            
+
         for player_id in [player1_id, player2_id]:
             if player_id in self.tournament_state.players:
                 state = self.tournament_state.players[player_id]
@@ -336,14 +336,14 @@ class DashboardIntegration:
         # Create visualization data
         # Convert move_distribution keys from int to str
         move_dist_str = {str(k): v for k, v in model.move_distribution.items()}
-        
+
         viz = OpponentModelVisualization(  # type: ignore[call-arg]
             opponent_id=opponent_id,
             predicted_strategy=model.strategy_type,
             confidence=model.confidence,
             move_distribution=move_dist_str,
         )
-        
+
         # Store additional metadata separately
         viz.metadata = {  # type: ignore[attr-defined]
             "determinism": model.determinism,
@@ -356,7 +356,7 @@ class DashboardIntegration:
         # Update player state
         if self.tournament_state is None:
             return
-            
+
         state = self.tournament_state.players[player_id]
         state.opponent_models[opponent_id] = model
 
@@ -425,7 +425,7 @@ class DashboardIntegration:
             ],
             cumulative_regret={},  # Will populate from regret table
         )
-        
+
         # Store metadata separately
         viz.metadata = {"round": round_num}  # type: ignore[attr-defined]
 
@@ -437,7 +437,7 @@ class DashboardIntegration:
         # Update player state
         if self.tournament_state is None:
             return
-            
+
         state = self.tournament_state.players[player_id]
         state.recent_regrets.append(
             {
@@ -562,7 +562,9 @@ class DashboardIntegration:
             )
 
         # Sort by win rate (descending)
-        standings.sort(key=lambda x: float(x["win_rate"]) if x["win_rate"] is not None else 0.0, reverse=True)  # type: ignore[arg-type]
+        standings.sort(
+            key=lambda x: float(x["win_rate"]) if x["win_rate"] is not None else 0.0, reverse=True
+        )  # type: ignore[arg-type]
 
         return standings
 

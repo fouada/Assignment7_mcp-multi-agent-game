@@ -183,7 +183,7 @@ class PluginDiscovery:
         Returns:
             List of plugin instances found in directory
         """
-        plugins: list[Plugin] = []  # type: ignore[name-defined]
+        plugins: list[PluginInterface] = []
 
         if not path.is_dir():
             logger.warning(f"Plugin directory not found: {path}")

@@ -184,7 +184,11 @@ class ByzantineFaultTolerantTournament:
         self.reputation[referee_id] = 1.0
 
     async def execute_match_with_bft(
-        self, player1_id: str, player2_id: str, match_id: str, referee_execute_func: Callable[..., Any]
+        self,
+        player1_id: str,
+        player2_id: str,
+        match_id: str,
+        referee_execute_func: Callable[..., Any],
     ) -> tuple[dict, ByzantineProof]:
         """
         Execute match with Byzantine fault tolerance.

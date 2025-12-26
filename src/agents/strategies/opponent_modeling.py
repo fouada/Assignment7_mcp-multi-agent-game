@@ -23,6 +23,7 @@ in multi-agent systems.
 
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 from scipy.stats import entropy

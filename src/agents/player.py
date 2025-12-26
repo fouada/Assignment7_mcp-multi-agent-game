@@ -253,7 +253,7 @@ class PlayerAgent(BaseGameServer):
             if self._client is None:
                 logger.error("MCP client not initialized")
                 return False
-            
+
             # Connect to league manager
             await self._client.connect("league_manager", self.league_manager_url)
 
@@ -438,7 +438,7 @@ class PlayerAgent(BaseGameServer):
         game_id_str = str(game_id) if game_id is not None else ""
         opponent_id_str = str(opponent_id) if opponent_id is not None else ""
         match_id_str = str(match_id) if match_id is not None else ""
-        
+
         session = GameSession(
             game_id=game_id_str,
             opponent_id=opponent_id_str,

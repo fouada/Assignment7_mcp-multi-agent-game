@@ -261,7 +261,9 @@ class ConfigLoader:
         path = self.config_path / "games" / "games_registry.json"
         data = self._load_json(path)
 
-        config: GamesRegistryConfig = GamesRegistryConfig.from_dict(data) if data else GamesRegistryConfig()
+        config: GamesRegistryConfig = (
+            GamesRegistryConfig.from_dict(data) if data else GamesRegistryConfig()
+        )
         self._cache["games"] = config
         return config
 

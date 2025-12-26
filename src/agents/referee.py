@@ -254,7 +254,7 @@ class RefereeAgent(BaseGameServer):
             if self._client is None:
                 logger.error("MCP client not initialized")
                 return False
-            
+
             # Connect to league manager
             await self._client.connect("league_manager", self.league_manager_url)
 
@@ -435,7 +435,7 @@ class RefereeAgent(BaseGameServer):
                 if self._client is None:
                     logger.error("MCP client not initialized")
                     continue
-                
+
                 # Connect to player if not already connected
                 if player_id not in self._client.connected_servers:
                     await self._client.connect(player_id, endpoint)
@@ -745,11 +745,11 @@ class RefereeAgent(BaseGameServer):
         """
         game = session.game
         match = session.match
-        
+
         if game is None:
             logger.error("Game not found in session")
             return
-        
+
         game_result = game.get_result()
 
         session.state = "complete"
@@ -846,7 +846,7 @@ class RefereeAgent(BaseGameServer):
             if self._client is None:
                 logger.error("MCP client not initialized")
                 return
-            
+
             # Connect to league manager if not connected
             if "league_manager" not in self._client.connected_servers:
                 await self._client.connect("league_manager", self.league_manager_url)

@@ -146,7 +146,9 @@ class Match:
             raise ValueError(f"Unknown player: {player_id}")
 
         # Check if both ready
-        both_ready: bool = bool(self.player1 and self.player1.ready and self.player2 and self.player2.ready)
+        both_ready: bool = bool(
+            self.player1 and self.player1.ready and self.player2 and self.player2.ready
+        )
 
         if both_ready:
             self.state = MatchState.PLAYERS_READY
@@ -176,7 +178,7 @@ class Match:
             self.final_score = {
                 self.player1.player_id: result.player1_score,
                 self.player2.player_id: result.player2_score,
-        }
+            }
         self.state = MatchState.COMPLETED
         self.completed_at = datetime.utcnow()
 

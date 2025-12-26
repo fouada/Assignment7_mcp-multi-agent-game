@@ -142,7 +142,10 @@ class CounterfactualReasoningEngine:
 
             # Estimate what would have happened
             estimated_reward, confidence = self._estimate_counterfactual_reward(
-                game_state, alternative_move, opponent_move, opponent_id  # type: ignore[arg-type]
+                game_state,
+                alternative_move,
+                opponent_move,
+                opponent_id,  # type: ignore[arg-type]
             )
 
             # Compute regret
@@ -412,7 +415,10 @@ class CounterfactualRegretStrategy(Strategy):
         """
         # Perform counterfactual analysis
         counterfactuals = self.cfr_engine.analyze_decision(
-            game_state, move, outcome, game_state.valid_moves  # type: ignore[attr-defined]
+            game_state,
+            move,
+            outcome,
+            game_state.valid_moves,  # type: ignore[attr-defined]
         )
 
         # Update strategy based on regrets
