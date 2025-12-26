@@ -295,15 +295,16 @@ class MockLeagueManager:
                 p2 = player_ids[n - 1 - i]
                 # Include matches even if one player is None (BYE)
                 if p1 is not None or p2 is not None:
-                    round_matches.append({
-                        "player1_id": p1 if p1 is not None else "BYE",
-                        "player2_id": p2 if p2 is not None else "BYE",
-                        "match_id": f"M{round_num}_{i}",
-                    })
-            rounds.append({
-                "round": round_num + 1,
-                "matches": round_matches,
-            })
+                    round_matches.append(
+                        {
+                            "player1_id": p1 if p1 is not None else "BYE",
+                            "player2_id": p2 if p2 is not None else "BYE",
+                            "match_id": f"M{round_num}_{i}",
+                        }
+                    )
+            rounds.append(
+                {"round": round_num + 1, "matches": round_matches}
+            )
 
             # Rotate players (keep first player fixed)
             player_ids = [player_ids[0]] + [player_ids[-1]] + player_ids[1:-1]
