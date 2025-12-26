@@ -521,12 +521,12 @@ async def test_rate_limit_middleware(clean_pipeline, sample_request, sample_hand
 async def test_metrics_middleware(clean_pipeline, sample_request, sample_handler):
     """Test MetricsMiddleware."""
     import asyncio
-    
+
     # Create handler with small delay to ensure measurable timing
     async def delayed_handler(req):
         await asyncio.sleep(0.001)  # 1ms delay
         return {"success": True}
-    
+
     metrics_middleware = MetricsMiddleware(name="metrics")
 
     clean_pipeline.add_middleware(metrics_middleware, priority=50)
