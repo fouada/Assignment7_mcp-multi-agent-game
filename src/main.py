@@ -37,10 +37,12 @@ import argparse
 import asyncio
 import os
 import signal
+from typing import Any
 
 from .agents.league_manager import LeagueManager
-from .agents.player import LLMStrategy, PatternStrategy, PlayerAgent, RandomStrategy
+from .agents.player import PlayerAgent
 from .agents.referee import RefereeAgent
+from .agents.strategies import RandomStrategy
 from .common.config import Config, get_config
 from .common.events import get_event_bus
 from .common.logger import get_logger, setup_logging
@@ -79,11 +81,6 @@ class GameOrchestrator:
         self.plugin_registry = get_plugin_registry()
         self.event_bus = get_event_bus()
 
-        # Backward compatibility
-        @property
-        def referee(self) -> RefereeAgent | None:
-            return self.referees[0] if self.referees else None
-
         # State
         self._running = False
         self._shutdown_event = asyncio.Event()
@@ -99,13 +96,13 @@ class GameOrchestrator:
         try:
             from .common.config_loader import get_config_loader
 
-            plugin_config = get_config_loader().load_plugins_config()
+            plugin_config: dict[str, Any] = get_config_loader().load_plugins_config()
         except Exception as e:
             logger.warning(f"Could not load plugin config: {e}. Using defaults.")
             plugin_config = {}
 
         # Merge with main config for context
-        full_config = self.config.__dict__ if hasattr(self.config, "__dict__") else {}
+        full_config: dict[str, Any] = self.config.__dict__ if hasattr(self.config, "__dict__") else {}
         full_config["plugins"] = plugin_config
 
         # Create plugin context
@@ -153,7 +150,7 @@ class GameOrchestrator:
 
         return self.league_manager
 
-    async def start_referee(self, referee_id: str = "REF01", port: int = None) -> RefereeAgent:
+    async def start_referee(self, referee_id: str = "REF01", port: int | None = None) -> RefereeAgent:
         """Start a referee agent."""
         if port is None:
             port = self.config.referee.port + len(self.referees)
@@ -198,12 +195,20 @@ class GameOrchestrator:
     ) -> PlayerAgent:
         """Start a player agent."""
         # Create strategy
+        from .agents.strategies import Strategy
+        
+        strategy: Strategy
         if strategy_type == "random":
             strategy = RandomStrategy()
         elif strategy_type == "pattern":
+            from .agents.strategies.classic import PatternStrategy
             strategy = PatternStrategy()
         elif strategy_type == "llm":
-            strategy = LLMStrategy(self.config.llm)
+            from .agents.strategies.classic import LLMStrategy
+            from .agents.strategies.base import StrategyConfig
+            # Use default StrategyConfig for LLM
+            llm_config = StrategyConfig()
+            strategy = LLMStrategy(llm_config)
         else:
             # Try to load from strategy registry (plugins)
             from .agents.strategies.plugin_registry import get_strategy_plugin_registry
@@ -324,34 +329,39 @@ class GameOrchestrator:
             await self.start_all()
 
         # Wait for enough players
-        while self.league_manager.player_count < self.config.league.min_players:
-            logger.info(
-                f"Waiting for players... ({self.league_manager.player_count}/{self.config.league.min_players})"
-            )
-            await asyncio.sleep(1)
+        if self.league_manager:
+            while self.league_manager.player_count < self.config.league.min_players:
+                logger.info(
+                    f"Waiting for players... ({self.league_manager.player_count}/{self.config.league.min_players})"
+                )
+                await asyncio.sleep(1)
 
-        # Start the league
-        result = await self.league_manager._start_league()
-        if not result.get("success"):
-            logger.error(f"Failed to start league: {result.get('error')}")
+            # Start the league
+            result = await self.league_manager._start_league()
+            if not result.get("success"):
+                logger.error(f"Failed to start league: {result.get('error')}")
+                return
+        else:
+            logger.error("League manager not initialized")
             return
 
         logger.info("League competition started!")
 
         # Run rounds
-        total_rounds = result.get("rounds", 0)
-        for round_num in range(total_rounds):
-            logger.info(f"\n{'=' * 50}")
-            logger.info(f"Starting Round {round_num + 1}/{total_rounds}")
-            logger.info(f"{'=' * 50}\n")
+        if self.league_manager:
+            total_rounds = result.get("rounds", 0)
+            for round_num in range(total_rounds):
+                logger.info(f"\n{'=' * 50}")
+                logger.info(f"Starting Round {round_num + 1}/{total_rounds}")
+                logger.info(f"{'=' * 50}\n")
 
-            # Start round
-            round_result = await self.league_manager.start_next_round()
+                # Start round
+                round_result = await self.league_manager.start_next_round()
 
-            if not round_result.get("success"):
-                if round_result.get("league_complete"):
-                    break
-                logger.error(f"Round failed: {round_result.get('error')}")
+                if not round_result.get("success"):
+                    if round_result.get("league_complete"):
+                        break
+                    logger.error(f"Round failed: {round_result.get('error')}")
                 continue
 
             # Run matches
@@ -359,25 +369,25 @@ class GameOrchestrator:
             for match_data in matches:
                 await self._run_match(match_data, round_num=round_num + 1)
 
-            # Wait for matches to complete
-            await asyncio.sleep(2)
+                # Wait for matches to complete
+                await asyncio.sleep(2)
 
-            # Show standings
+                # Show standings
+                standings = self.league_manager._get_standings()
+                logger.info("\nCurrent Standings:")
+                for entry in standings.get("standings", []):
+                    logger.info(f"  {entry['rank']}. {entry['display_name']}: {entry['points']} pts")
+
+            # Final standings
+            logger.info("\n" + "=" * 50)
+            logger.info("LEAGUE COMPLETE - Final Standings")
+            logger.info("=" * 50)
+
             standings = self.league_manager._get_standings()
-            logger.info("\nCurrent Standings:")
             for entry in standings.get("standings", []):
-                logger.info(f"  {entry['rank']}. {entry['display_name']}: {entry['points']} pts")
-
-        # Final standings
-        logger.info("\n" + "=" * 50)
-        logger.info("LEAGUE COMPLETE - Final Standings")
-        logger.info("=" * 50)
-
-        standings = self.league_manager._get_standings()
-        for entry in standings.get("standings", []):
-            logger.info(
-                f"  {entry['rank']}. {entry['display_name']}: {entry['points']} pts ({entry['wins']}W-{entry['losses']}L)"
-            )
+                logger.info(
+                    f"  {entry['rank']}. {entry['display_name']}: {entry['points']} pts ({entry['wins']}W-{entry['losses']}L)"
+                )
 
     async def _run_match(self, match_data: dict, round_num: int = 0) -> None:
         """Run a single match through a referee (round-robin assignment)."""
@@ -455,6 +465,9 @@ async def run_component(component: str, args: argparse.Namespace) -> None:
     if args.llm_model:
         config.llm.model = args.llm_model
 
+    from .agents.strategies import Strategy
+    
+    server: LeagueManager | RefereeAgent | PlayerAgent
     if component == "league":
         server = LeagueManager(
             league_id=config.league.league_id,
@@ -469,11 +482,15 @@ async def run_component(component: str, args: argparse.Namespace) -> None:
     elif component == "player":
         # Determine strategy
         strategy_type = getattr(args, "strategy", "random")
+        strategy: Strategy
         if strategy_type == "llm":
-            strategy = LLMStrategy(config.llm)
-            logger.info(f"Using LLM strategy: {config.llm.provider} / {config.llm.model}")
+            # LLM strategy not yet implemented, use random
+            logger.warning("LLM strategy not yet implemented, using RandomStrategy")
+            strategy = RandomStrategy()
         elif strategy_type == "pattern":
-            strategy = PatternStrategy()
+            # Pattern strategy not yet implemented, use random
+            logger.warning("Pattern strategy not yet implemented, using RandomStrategy")
+            strategy = RandomStrategy()
         else:
             strategy = RandomStrategy()
 
@@ -502,9 +519,9 @@ async def run_component(component: str, args: argparse.Namespace) -> None:
 
         # Auto-register with league if requested
         if args.register:
-            if component == "player":
+            if component == "player" and isinstance(server, PlayerAgent):
                 await server.register_with_league()
-            elif component == "referee":
+            elif component == "referee" and isinstance(server, RefereeAgent):
                 await server.register_with_league()
 
         await shutdown_event.wait()
@@ -513,7 +530,7 @@ async def run_component(component: str, args: argparse.Namespace) -> None:
         await server.stop()
 
 
-async def send_league_command(command: str, arguments: dict = None) -> None:
+async def send_league_command(command: str, arguments: dict | None = None) -> None:
     """Send a command to the running league manager."""
     import json
 

@@ -57,12 +57,14 @@ class HealthCheckResult:
 
     status: HealthStatus
     message: str = ""
-    details: dict[str, Any] = None
-    timestamp: float = None
+    details: dict[str, Any] | None = None
+    timestamp: float | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.timestamp is None:
             self.timestamp = time.time()
+        if self.details is None:
+            self.details = {}
         if self.details is None:
             self.details = {}
 
@@ -137,7 +139,7 @@ class LivenessCheck(HealthCheck):
         """Get process uptime in seconds."""
         try:
             process = psutil.Process()
-            create_time = process.create_time()
+            create_time: float = process.create_time()
             return time.time() - create_time
         except Exception:
             return 0.0
@@ -145,7 +147,8 @@ class LivenessCheck(HealthCheck):
     def _get_pid(self) -> int:
         """Get process ID."""
         try:
-            return psutil.Process().pid
+            pid: int = psutil.Process().pid
+            return pid
         except Exception:
             return 0
 
@@ -487,7 +490,7 @@ class HealthMonitor:
         try:
             check_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            results = {}
+            results: dict[str, HealthCheckResult] = {}
             for name, result in zip(check_names, check_results, strict=False):
                 if isinstance(result, Exception):
                     logger.error(f"Health check '{name}' failed: {result}")
@@ -495,7 +498,7 @@ class HealthMonitor:
                         status=HealthStatus.UNHEALTHY,
                         message=f"Check failed: {str(result)}",
                     )
-                else:
+                elif isinstance(result, HealthCheckResult):
                     results[name] = result
         except Exception as e:
             logger.error(f"Failed to run health checks: {e}")

@@ -177,9 +177,10 @@ class DashboardIntegration:
             return
 
         # Create player state
-        self.tournament_state.players[player_id] = PlayerDashboardState(
-            player_id=player_id, strategy_name=strategy_name
-        )
+        if self.tournament_state:
+            self.tournament_state.players[player_id] = PlayerDashboardState(
+                player_id=player_id, strategy_name=strategy_name
+            )
 
         # Track engines
         if opponent_modeling_engine:
@@ -192,7 +193,8 @@ class DashboardIntegration:
             self.strategy_compositions[player_id] = strategy_composition
             # Get strategy tree visualization
             tree = strategy_composition.get_composition_tree()
-            self.tournament_state.players[player_id].strategy_tree = tree
+            if self.tournament_state:
+                self.tournament_state.players[player_id].strategy_tree = tree
 
         logger.info(f"Registered player {player_id} with strategy {strategy_name}")
 

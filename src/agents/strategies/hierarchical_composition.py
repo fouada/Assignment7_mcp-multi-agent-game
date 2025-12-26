@@ -104,7 +104,7 @@ class RandomPrimitive(PrimitiveStrategy):
 class TitForTatPrimitive(PrimitiveStrategy):
     """Copy opponent's last move."""
 
-    def __init__(self, config: StrategyConfig = None):
+    def __init__(self, config: StrategyConfig | None = None):
         super().__init__(config)
         self.opponent_last_move = None
 
@@ -120,7 +120,7 @@ class TitForTatPrimitive(PrimitiveStrategy):
 class GrudgerPrimitive(PrimitiveStrategy):
     """Cooperate until opponent defects, then always defect."""
 
-    def __init__(self, config: StrategyConfig = None):
+    def __init__(self, config: StrategyConfig | None = None):
         super().__init__(config)
         self.grudge = False
 
@@ -137,7 +137,7 @@ class GrudgerPrimitive(PrimitiveStrategy):
 class PavlovPrimitive(PrimitiveStrategy):
     """Win-stay, lose-shift."""
 
-    def __init__(self, config: StrategyConfig = None):
+    def __init__(self, config: StrategyConfig | None = None):
         super().__init__(config)
         self.last_move = None
         self.last_outcome_good = True
@@ -174,7 +174,7 @@ class CompositeStrategy(Strategy):
         self,
         components: list[StrategyNode],
         operator: CompositionOperator,
-        config: StrategyConfig = None,
+        config: StrategyConfig | None = None,
     ):
         super().__init__(config)
         self.components = components
@@ -227,7 +227,7 @@ class CompositeStrategy(Strategy):
             weights.append(node.weight)
 
         # Weighted voting
-        move_votes = {}
+        move_votes: dict[str, Any] = {}
         for move, weight in zip(moves, weights, strict=False):
             move_votes[move] = move_votes.get(move, 0) + weight
 
@@ -330,7 +330,7 @@ class StrategyComposer:
         self.components = []
         self.current_operator = None
 
-    def add(self, strategy: Strategy, name: str = None, weight: float = 1.0) -> "StrategyComposer":
+    def add(self, strategy: Strategy, name: str | None = None, weight: float = 1.0) -> "StrategyComposer":
         """Add a strategy component."""
         if name is None:
             name = f"component_{len(self.components)}"
@@ -345,7 +345,7 @@ class StrategyComposer:
             self.add(strat, name=f"seq_{i}")
         return self
 
-    def parallel(self, *strategies: Strategy, weights: list[float] = None) -> "StrategyComposer":
+    def parallel(self, *strategies: Strategy, weights: list[float] | None = None) -> "StrategyComposer":
         """Execute strategies in parallel with voting."""
         self.current_operator = CompositionOperator.PARALLEL
         if weights is None:
@@ -493,7 +493,7 @@ class StrategyGenome:
     Can be evolved via genetic algorithms to discover novel compositions.
     """
 
-    def __init__(self, genes: list[tuple[str, float]] = None):
+    def __init__(self, genes: list[tuple[str, float]] | None = None):
         if genes is None:
             # Random initialization
             primitives = [

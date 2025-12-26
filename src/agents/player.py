@@ -149,7 +149,8 @@ class PlayerAgent(BaseGameServer):
         async def accept_game(params: dict) -> dict:
             game_id = params.get("game_id")
             accept = params.get("accept", True)
-            return await self._respond_to_invitation(game_id, accept)
+            game_id_str = str(game_id) if game_id is not None else ""
+            return await self._respond_to_invitation(game_id_str, accept)
 
         @self.tool(
             "get_game_state",
@@ -164,7 +165,8 @@ class PlayerAgent(BaseGameServer):
         )
         async def get_game_state(params: dict) -> dict:
             game_id = params.get("game_id")
-            session = self._games.get(game_id)
+            game_id_str = str(game_id) if game_id is not None else ""
+            session = self._games.get(game_id_str)
             if not session:
                 return {"error": "Unknown game"}
             return {
@@ -248,6 +250,10 @@ class PlayerAgent(BaseGameServer):
     async def register_with_league(self) -> bool:
         """Register with the league manager."""
         try:
+            if self._client is None:
+                logger.error("MCP client not initialized")
+                return False
+            
             # Connect to league manager
             await self._client.connect("league_manager", self.league_manager_url)
 
@@ -311,14 +317,15 @@ class PlayerAgent(BaseGameServer):
         # Send GAME_JOIN_ACK to referee
         # Use match_id if available, otherwise fallback to game_id
         match_id = session.match_id if session.match_id else game_id
+        player_id_str = self.player_id if self.player_id is not None else ""
         response_msg = self.message_factory.game_join_ack(
             match_id=match_id,
-            player_id=self.player_id,
+            player_id=player_id_str,
             accept=accept,
         )
 
         try:
-            if "referee" in self._client.connected_servers:
+            if self._client is not None and "referee" in self._client.connected_servers:
                 await self._client.send_protocol_message("referee", response_msg)
         except Exception as e:
             logger.error(f"Failed to send GAME_JOIN_ACK: {e}")
@@ -428,15 +435,19 @@ class PlayerAgent(BaseGameServer):
             role = "even"
 
         # Create game session
+        game_id_str = str(game_id) if game_id is not None else ""
+        opponent_id_str = str(opponent_id) if opponent_id is not None else ""
+        match_id_str = str(match_id) if match_id is not None else ""
+        
         session = GameSession(
-            game_id=game_id,
-            opponent_id=opponent_id,
+            game_id=game_id_str,
+            opponent_id=opponent_id_str,
             my_role=GameRole(role),
             total_rounds=rounds,
-            match_id=match_id,
+            match_id=match_id_str,
             state="invited",
         )
-        self._games[game_id] = session
+        self._games[game_id_str] = session
 
         logger.info(
             "Received game invitation",
@@ -453,7 +464,7 @@ class PlayerAgent(BaseGameServer):
                 "player.game.invited",
                 PlayerGameInvitedEvent(
                     player_id=self.player_name,
-                    game_id=game_id,
+                    game_id=game_id_str,
                     game_type="even_odd",
                     referee_id=message.get("referee_id", ""),
                     source=f"player:{self.player_name}",
@@ -463,14 +474,16 @@ class PlayerAgent(BaseGameServer):
             logger.error(f"Failed to emit PlayerGameInvitedEvent: {e}")
 
         # Auto-accept within 5 second timeout
-        return await self._respond_to_invitation(game_id, True)
+        game_id_str = str(game_id) if game_id is not None else ""
+        return await self._respond_to_invitation(game_id_str, True)
 
     async def _handle_move_request(self, message: dict) -> dict:
         """Handle MOVE_REQUEST message."""
         game_id = message.get("game_id")
+        game_id_str = str(game_id) if game_id is not None else ""
         round_number = message.get("round_number", 1)
 
-        session = self._games.get(game_id)
+        session = self._games.get(game_id_str)
         if not session:
             return {"error": "Unknown game"}
 
@@ -478,17 +491,17 @@ class PlayerAgent(BaseGameServer):
         session.state = "making_move"
 
         # Decide move
-        move = await self.make_move(game_id)
+        move = await self.make_move(game_id_str)
 
         # Send move response
         move_msg = self.message_factory.move_response(
-            game_id=game_id,
+            game_id=game_id_str,
             round_number=round_number,
             move=move,
         )
 
         try:
-            if "referee" in self._client.connected_servers:
+            if self._client is not None and "referee" in self._client.connected_servers:
                 await self._client.send_protocol_message("referee", move_msg)
         except Exception as e:
             logger.error(f"Failed to send move: {e}")
@@ -536,16 +549,18 @@ class PlayerAgent(BaseGameServer):
         parity_choice = session.my_role.value  # "odd" or "even"
 
         # Send CHOOSE_PARITY_RESPONSE
+        match_id_str = str(match_id) if match_id is not None else ""
+        player_id_str = self.player_id if self.player_id is not None else ""
         response_msg = self.message_factory.choose_parity_response(
-            match_id=match_id,
-            player_id=self.player_id,
+            match_id=match_id_str,
+            player_id=player_id_str,
             parity_choice=parity_choice,  # Role: "even" or "odd"
         )
         # Also include move in the response for the referee
         response_msg["move"] = move
 
         try:
-            if "referee" in self._client.connected_servers:
+            if self._client is not None and "referee" in self._client.connected_servers:
                 await self._client.send_protocol_message("referee", response_msg)
         except Exception as e:
             logger.error(f"Failed to send CHOOSE_PARITY_RESPONSE: {e}")
@@ -557,8 +572,9 @@ class PlayerAgent(BaseGameServer):
     async def _handle_move_result(self, message: dict) -> dict:
         """Handle MOVE_RESULT message."""
         game_id = message.get("game_id")
+        game_id_str = str(game_id) if game_id is not None else ""
 
-        session = self._games.get(game_id)
+        session = self._games.get(game_id_str)
         if not session:
             return {"error": "Unknown game"}
 
@@ -589,9 +605,10 @@ class PlayerAgent(BaseGameServer):
     async def _handle_game_end(self, message: dict) -> dict:
         """Handle GAME_END message."""
         game_id = message.get("game_id")
+        game_id_str = str(game_id) if game_id is not None else ""
         winner_id = message.get("winner_id")
 
-        session = self._games.get(game_id)
+        session = self._games.get(game_id_str)
         if session:
             session.state = "completed"
 

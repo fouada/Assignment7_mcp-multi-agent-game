@@ -436,7 +436,8 @@ class EventBus:
         Returns:
             Dictionary with stats (total_events, total_handlers, total_errors)
         """
-        return self._stats.copy()
+        stats: dict[str, int] = self._stats.copy()
+        return stats
 
     def clear_history(self):
         """Clear event history."""

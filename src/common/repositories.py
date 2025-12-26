@@ -67,7 +67,8 @@ class Repository(ABC, Generic[T]):
             if HAS_FCNTL:
                 fcntl.flock(f.fileno(), fcntl.LOCK_SH)
             try:
-                return json.load(f)
+                data = json.load(f)
+                return data if isinstance(data, dict) else None
             finally:
                 if HAS_FCNTL:
                     fcntl.flock(f.fileno(), fcntl.LOCK_UN)

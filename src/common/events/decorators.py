@@ -144,7 +144,7 @@ def before(
                 bound_args.apply_defaults()
 
                 # Build event data
-                event_data = {}
+                event_data: dict[str, Any] = {}
                 for name, value in bound_args.arguments.items():
                     # Skip 'self' if not included
                     if not include_self and name == "self":
@@ -179,7 +179,7 @@ def before(
                 bound_args.apply_defaults()
 
                 # Build event data
-                event_data = {}
+                event_data: dict[str, Any] = {}
                 for name, value in bound_args.arguments.items():
                     if not include_self and name == "self":
                         continue
@@ -251,7 +251,7 @@ def after(
                 result = await func(*args, **kwargs)
 
                 # Build event data
-                event_data = {}
+                event_data: dict[str, Any] = {}
 
                 if include_result:
                     # Only include serializable results
@@ -295,7 +295,7 @@ def after(
                 result = func(*args, **kwargs)
 
                 # Build event data
-                event_data = {}
+                event_data: dict[str, Any] = {}
 
                 if include_result:
                     if isinstance(result, (str, int, float, bool, list, dict, type(None))):

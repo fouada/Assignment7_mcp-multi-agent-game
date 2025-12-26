@@ -128,7 +128,7 @@ class ConnectionManager:
         self.active_connections: set[WebSocket] = set()
         self.connection_metadata: dict[WebSocket, dict] = {}
 
-    async def connect(self, websocket: WebSocket, client_info: dict = None):
+    async def connect(self, websocket: WebSocket, client_info: dict[Any, Any] | None = None):
         """Accept new WebSocket connection."""
         await websocket.accept()
         self.active_connections.add(websocket)
@@ -2591,9 +2591,9 @@ Round Difference: ${snap2.round - snap1.round}
         }
 
         function clearData() {
-            performanceData = {};
-            opponentModelData = {};
-            regretData = {};
+            performanceData: dict[str, Any] = {};
+            opponentModelData: dict[str, Any] = {};
+            regretData: dict[str, Any] = {};
             events = [];
             document.getElementById('event-log').innerHTML = '';
             addLog('Data cleared');

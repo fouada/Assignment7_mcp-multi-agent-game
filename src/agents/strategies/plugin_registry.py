@@ -165,7 +165,8 @@ class StrategyPluginRegistry:
         # Use custom factory if available
         if name in self._factories:
             factory = self._factories[name]
-            return factory(config=config, **kwargs)
+            strategy: Strategy = factory(config=config, **kwargs)
+            return strategy
 
         # Default instantiation
         strategy_class = self._strategies[name]
@@ -310,8 +311,8 @@ def strategy_plugin(
         )
 
         # Add metadata to class for introspection
-        cls._plugin_metadata = metadata
-        cls._plugin_name = name
+        cls._plugin_metadata = metadata  # type: ignore[attr-defined]
+        cls._plugin_name = name  # type: ignore[attr-defined]
 
         logger.debug(f"Strategy plugin decorated: {name} ({cls.__name__})")
 

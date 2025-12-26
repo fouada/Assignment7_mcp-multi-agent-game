@@ -57,11 +57,11 @@ class JsonRpcError:
         )
 
     @classmethod
-    def parse_error(cls, data: Any = None) -> "JsonRpcError":
+    def parse_error(cls, data: Any | None = None) -> "JsonRpcError":
         return cls(PARSE_ERROR, ERROR_MESSAGES[PARSE_ERROR], data)
 
     @classmethod
-    def invalid_request(cls, data: Any = None) -> "JsonRpcError":
+    def invalid_request(cls, data: Any | None = None) -> "JsonRpcError":
         return cls(INVALID_REQUEST, ERROR_MESSAGES[INVALID_REQUEST], data)
 
     @classmethod
@@ -69,21 +69,21 @@ class JsonRpcError:
         return cls(METHOD_NOT_FOUND, f"Method not found: {method}")
 
     @classmethod
-    def invalid_params(cls, details: str = None) -> "JsonRpcError":
+    def invalid_params(cls, details: str | None = None) -> "JsonRpcError":
         msg = ERROR_MESSAGES[INVALID_PARAMS]
         if details:
             msg = f"{msg}: {details}"
         return cls(INVALID_PARAMS, msg)
 
     @classmethod
-    def internal_error(cls, details: str = None) -> "JsonRpcError":
+    def internal_error(cls, details: str | None = None) -> "JsonRpcError":
         msg = ERROR_MESSAGES[INTERNAL_ERROR]
         if details:
             msg = f"{msg}: {details}"
         return cls(INTERNAL_ERROR, msg)
 
     @classmethod
-    def server_error(cls, code: int, message: str, data: Any = None) -> "JsonRpcError":
+    def server_error(cls, code: int, message: str, data: Any | None = None) -> "JsonRpcError":
         if not (SERVER_ERROR_START <= code <= SERVER_ERROR_END):
             raise ValueError(
                 f"Server error code must be between {SERVER_ERROR_START} and {SERVER_ERROR_END}"
@@ -106,7 +106,7 @@ class JsonRpcRequest:
         return self.id is None
 
     def to_dict(self) -> dict[str, Any]:
-        result = {"jsonrpc": self.jsonrpc, "method": self.method}
+        result: dict[str, Any] = {"jsonrpc": self.jsonrpc, "method": self.method}
         if self.params is not None:
             result["params"] = self.params
         if self.id is not None:
@@ -150,7 +150,7 @@ class JsonRpcResponse:
         return self.error is not None
 
     def to_dict(self) -> dict[str, Any]:
-        result = {"jsonrpc": self.jsonrpc, "id": self.id}
+        result: dict[str, Any] = {"jsonrpc": self.jsonrpc, "id": self.id}
         if self.error is not None:
             result["error"] = self.error.to_dict()
         else:
@@ -191,7 +191,7 @@ class JsonRpcBatch:
 
     @classmethod
     def from_list(cls, data: list[dict[str, Any]]) -> "JsonRpcBatch":
-        items = []
+        items: list[JsonRpcRequest | JsonRpcResponse] = []
         for item in data:
             if "method" in item:
                 items.append(JsonRpcRequest.from_dict(item))
@@ -234,7 +234,7 @@ def create_request(
 
 def create_response(
     request_id: str | int,
-    result: Any = None,
+    result: Any | None = None,
 ) -> JsonRpcResponse:
     """
     Create a successful JSON-RPC response.

@@ -654,6 +654,8 @@ class TracingMiddleware(Middleware):
 
     async def after(self, context: ResponseContext) -> ResponseContext:
         """Complete trace span."""
+        if context.request is None:
+            return context
         trace_id = context.request.metadata.get("trace_id")
         span_start = context.request.metadata.get("span_start")
 

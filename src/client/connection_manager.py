@@ -246,7 +246,9 @@ class RetryPolicy:
                 logger.warning(f"Retry {attempt + 1}/{self.max_retries} after {delay:.2f}s: {e}")
                 await asyncio.sleep(delay)
 
-        raise last_error
+        if last_error:
+            raise last_error
+        raise Exception("Retry failed with no error captured")
 
 
 class ConnectionManager:

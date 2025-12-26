@@ -260,7 +260,8 @@ class LeagueManager(BaseGameServer):
         )
         async def get_player_info(params: dict) -> dict:
             player_id = params.get("player_id")
-            player = self._players.get(player_id)
+            player_id_str = str(player_id) if player_id is not None else ""
+            player = self._players.get(player_id_str)
             if not player:
                 return {"error": f"Player {player_id} not found"}
             return {"player": player.to_dict()}
@@ -599,14 +600,14 @@ class LeagueManager(BaseGameServer):
                 {
                     "match_id": match.match_id,
                     "game_type": "even_odd",
-                    "player_A_id": match.player1.player_id,
-                    "player_B_id": match.player2.player_id,
+                    "player_A_id": match.player1.player_id if match.player1 else "",
+                    "player_B_id": match.player2.player_id if match.player2 else "",
                     "referee_endpoint": referee_endpoint,
                     # Also include detailed info for internal use
-                    "_player_A_endpoint": match.player1.endpoint,
-                    "_player_B_endpoint": match.player2.endpoint,
-                    "_player_A_name": match.player1.display_name,
-                    "_player_B_name": match.player2.display_name,
+                    "_player_A_endpoint": match.player1.endpoint if match.player1 else "",
+                    "_player_B_endpoint": match.player2.endpoint if match.player2 else "",
+                    "_player_A_name": match.player1.display_name if match.player1 else "",
+                    "_player_B_name": match.player2.display_name if match.player2 else "",
                 }
             )
 
@@ -624,7 +625,7 @@ class LeagueManager(BaseGameServer):
                 TournamentRoundStartedEvent(
                     round_number=self.current_round,
                     total_rounds=len(self._schedule),
-                    matches=[m["match_id"] for m in round_matches_info],
+                    matches=[str(m["match_id"]) for m in round_matches_info if m.get("match_id")],
                     source="league_manager",
                 ),
             )
@@ -761,18 +762,25 @@ class LeagueManager(BaseGameServer):
         player_b_id = match_info.get("player_B_id")
 
         try:
+            if self._client is None:
+                logger.error("MCP client not initialized")
+                return
+            
             # Use MCP client to call referee's start_match tool
             await self._client.connect("referee", referee_endpoint)
+
+            player_a_id_str = str(player_a_id) if player_a_id is not None else ""
+            player_b_id_str = str(player_b_id) if player_b_id is not None else ""
 
             await self._client.call_tool(
                 "referee",
                 "start_match",
                 {
                     "match_id": match_info.get("match_id"),
-                    "player1_id": player_a_id,
-                    "player1_endpoint": self._players[player_a_id].endpoint,
-                    "player2_id": player_b_id,
-                    "player2_endpoint": self._players[player_b_id].endpoint,
+                    "player1_id": player_a_id_str,
+                    "player1_endpoint": self._players[player_a_id_str].endpoint,
+                    "player2_id": player_b_id_str,
+                    "player2_endpoint": self._players[player_b_id_str].endpoint,
                     "rounds": 5,
                 },
             )
@@ -789,11 +797,12 @@ class LeagueManager(BaseGameServer):
     async def _handle_match_result(self, params: dict) -> dict[str, Any]:
         """Handle match result from referee."""
         match_id = params.get("match_id")
+        match_id_str = str(match_id) if match_id is not None else ""
         winner_id = params.get("winner_id")
         player1_score = params.get("player1_score", 0)
         player2_score = params.get("player2_score", 0)
 
-        match = self._matches.get(match_id)
+        match = self._matches.get(match_id_str)
         if not match:
             return {"success": False, "error": f"Unknown match: {match_id}"}
 
@@ -803,26 +812,32 @@ class LeagueManager(BaseGameServer):
                 self._players[winner_id].record_win()
 
             # Record loss for other player
+            player1_id = match.player1.player_id if match.player1 else ""
+            player2_id = match.player2.player_id if match.player2 else ""
             loser_id = (
-                match.player1.player_id
-                if winner_id == match.player2.player_id
-                else match.player2.player_id
+                player1_id
+                if winner_id == player2_id
+                else player2_id
             )
             if loser_id in self._players:
                 self._players[loser_id].record_loss()
         else:
             # Draw
-            if match.player1.player_id in self._players:
-                self._players[match.player1.player_id].record_draw()
-            if match.player2.player_id in self._players:
-                self._players[match.player2.player_id].record_draw()
+            player1_id = match.player1.player_id if match.player1 else ""
+            player2_id = match.player2.player_id if match.player2 else ""
+            if player1_id in self._players:
+                self._players[player1_id].record_draw()
+            if player2_id in self._players:
+                self._players[player2_id].record_draw()
 
         # Update match state
         match.state = MatchState.COMPLETED
         match.winner_id = winner_id
+        player1_id = match.player1.player_id if match.player1 else ""
+        player2_id = match.player2.player_id if match.player2 else ""
         match.final_score = {
-            match.player1.player_id: player1_score,
-            match.player2.player_id: player2_score,
+            player1_id: player1_score,
+            player2_id: player2_score,
         }
 
         logger.info(

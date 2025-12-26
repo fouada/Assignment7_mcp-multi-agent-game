@@ -18,7 +18,9 @@ import hashlib
 import json
 import secrets
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -182,7 +184,7 @@ class ByzantineFaultTolerantTournament:
         self.reputation[referee_id] = 1.0
 
     async def execute_match_with_bft(
-        self, player1_id: str, player2_id: str, match_id: str, referee_execute_func: callable
+        self, player1_id: str, player2_id: str, match_id: str, referee_execute_func: Callable[..., Any]
     ) -> tuple[dict, ByzantineProof]:
         """
         Execute match with Byzantine fault tolerance.
@@ -266,7 +268,7 @@ class ByzantineFaultTolerantTournament:
         player1_id: str,
         player2_id: str,
         match_id: str,
-        execute_func: callable,
+        execute_func: Callable[..., Any],
     ) -> dict:
         """
         Execute match as witnessed by one referee.
@@ -303,8 +305,8 @@ class ByzantineFaultTolerantTournament:
             Consensus result if quorum reached, None otherwise
         """
         # Hash each result for comparison
-        result_hashes = {}
-        result_mapping = {}
+        result_hashes: dict[str, Any] = {}
+        result_mapping: dict[str, Any] = {}
 
         for obs in observations:
             result = obs["result"]
@@ -338,7 +340,7 @@ class ByzantineFaultTolerantTournament:
         - Timestamp and nonce
         """
         # Extract moves from consensus observations
-        moves = {}
+        moves: dict[str, Any] = {}
         for obs in observations:
             if self._hash_result(obs["result"]) == self._hash_result(result):
                 moves.update(obs.get("moves", {}))
@@ -444,7 +446,7 @@ class ByzantineFaultTolerantTournament:
         collusion_suspects = []
 
         # Analyze pairwise statistics
-        player_pairs = {}
+        player_pairs: dict[str, Any] = {}
 
         for proof in self.match_history:
             p1, p2 = proof.players
@@ -486,7 +488,7 @@ class ByzantineFaultTolerantTournament:
         Returns:
             Dictionary mapping referee_id to reputation metrics
         """
-        report = {}
+        report: dict[str, Any] = {}
 
         for ref_id, rep in self.reputation.items():
             # Compute agreement rate

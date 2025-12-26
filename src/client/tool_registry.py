@@ -352,9 +352,10 @@ class ToolExecutor:
             if server_name:
                 namespaced = f"{server_name}.{tool_name}"
             else:
-                namespaced = await self.registry.resolve_tool_name(tool_name)
-                if not namespaced:
+                resolved = await self.registry.resolve_tool_name(tool_name)
+                if not resolved:
                     raise ValueError(f"Cannot resolve tool: {tool_name}")
+                namespaced = resolved
 
         # Get tool info
         tool_info = await self.registry.get_tool(namespaced)

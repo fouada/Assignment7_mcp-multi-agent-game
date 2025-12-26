@@ -135,7 +135,8 @@ class PluginDiscovery:
                 group_eps = entry_points.select(group=group)
             else:
                 # Python 3.9
-                group_eps = entry_points.get(group, [])
+                # Type ignore for compatibility with older Python versions
+                group_eps = entry_points.get(group, [])  # type: ignore[arg-type]
 
             # Load each entry point
             for ep in group_eps:
@@ -182,7 +183,7 @@ class PluginDiscovery:
         Returns:
             List of plugin instances found in directory
         """
-        plugins = []
+        plugins: list[Plugin] = []
 
         if not path.is_dir():
             logger.warning(f"Plugin directory not found: {path}")

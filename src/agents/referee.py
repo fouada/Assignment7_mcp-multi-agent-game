@@ -154,7 +154,9 @@ class RefereeAgent(BaseGameServer):
             },
         )
         async def get_game_state(params: dict) -> dict:
-            return self._get_game_state(params.get("game_id"))
+            game_id = params.get("game_id")
+            game_id_str = str(game_id) if game_id is not None else ""
+            return self._get_game_state(game_id_str)
 
         @self.tool(
             "list_active_games",
@@ -232,7 +234,8 @@ class RefereeAgent(BaseGameServer):
         )
         async def game_state_resource(params: dict) -> dict:
             game_id = params.get("game_id")
-            return self._get_game_state(game_id)
+            game_id_str = str(game_id) if game_id is not None else ""
+            return self._get_game_state(game_id_str)
 
     async def on_start(self) -> None:
         """Initialize referee."""
@@ -248,6 +251,10 @@ class RefereeAgent(BaseGameServer):
             True if registration successful, False otherwise
         """
         try:
+            if self._client is None:
+                logger.error("MCP client not initialized")
+                return False
+            
             # Connect to league manager
             await self._client.connect("league_manager", self.league_manager_url)
 
@@ -308,16 +315,23 @@ class RefereeAgent(BaseGameServer):
         player2_endpoint = params.get("player2_endpoint")
         rounds = params.get("rounds", 5)
 
+        # Convert to strings
+        match_id_str = str(match_id) if match_id is not None else ""
+        player1_id_str = str(player1_id) if player1_id is not None else ""
+        player1_endpoint_str = str(player1_endpoint) if player1_endpoint is not None else ""
+        player2_id_str = str(player2_id) if player2_id is not None else ""
+        player2_endpoint_str = str(player2_endpoint) if player2_endpoint is not None else ""
+
         # Create match
         match = Match(
-            match_id=match_id,
+            match_id=match_id_str,
             league_id=self.league_id,
         )
         match.set_players(
-            player1_id=player1_id,
-            player1_endpoint=player1_endpoint,
-            player2_id=player2_id,
-            player2_endpoint=player2_endpoint,
+            player1_id=player1_id_str,
+            player1_endpoint=player1_endpoint_str,
+            player2_id=player2_id_str,
+            player2_endpoint=player2_endpoint_str,
         )
 
         # Create game
@@ -335,8 +349,8 @@ class RefereeAgent(BaseGameServer):
         self._sessions[game.game_id] = session
 
         # Store player connections
-        self._player_connections[player1_id] = player1_endpoint
-        self._player_connections[player2_id] = player2_endpoint
+        self._player_connections[player1_id_str] = player1_endpoint_str
+        self._player_connections[player2_id_str] = player2_endpoint_str
 
         logger.info(
             "Match created",
@@ -354,9 +368,7 @@ class RefereeAgent(BaseGameServer):
             "match_id": match_id,
             "game_id": game.game_id,
             "state": "complete",
-            "result": session.match.get_result()
-            if session.match.state.value == "complete"
-            else None,
+            "result": session.match.result.to_dict() if session.match.result else None,
         }
 
     async def _run_full_game(self, session: GameSession) -> None:
@@ -420,6 +432,10 @@ class RefereeAgent(BaseGameServer):
             )
 
             try:
+                if self._client is None:
+                    logger.error("MCP client not initialized")
+                    continue
+                
                 # Connect to player if not already connected
                 if player_id not in self._client.connected_servers:
                     await self._client.connect(player_id, endpoint)
@@ -489,7 +505,7 @@ class RefereeAgent(BaseGameServer):
             )
 
             try:
-                if player_id in self._client.connected_servers:
+                if self._client is not None and player_id in self._client.connected_servers:
                     response = await self._client.send_protocol_message(player_id, parity_call)
                     # CHOOSE_PARITY_RESPONSE contains:
                     # - parity_choice: "odd" or "even" (player's role)
@@ -581,7 +597,7 @@ class RefereeAgent(BaseGameServer):
             )
 
             try:
-                if player_id in self._client.connected_servers:
+                if self._client is not None and player_id in self._client.connected_servers:
                     await self._client.send_protocol_message(player_id, move_request)
                     logger.debug(f"Requested move from {player_id}")
             except Exception as e:
@@ -593,7 +609,11 @@ class RefereeAgent(BaseGameServer):
         player_id = params.get("player_id")
         move_value = params.get("move")
 
-        session = self._sessions.get(game_id)
+        game_id_str = str(game_id) if game_id is not None else ""
+        player_id_str = str(player_id) if player_id is not None else ""
+        move_int = int(move_value) if move_value is not None else 0
+
+        session = self._sessions.get(game_id_str)
         if not session:
             return {"success": False, "error": "Unknown game"}
 
@@ -601,10 +621,12 @@ class RefereeAgent(BaseGameServer):
             return {"success": False, "error": f"Invalid state: {session.state}"}
 
         game = session.game
+        if game is None:
+            return {"success": False, "error": "Game not initialized"}
 
         try:
             # Submit move to game
-            both_received = game.submit_move(player_id, move_value)
+            both_received = game.submit_move(player_id_str, move_int)
 
             logger.debug(f"Move received from {player_id}: {move_value}")
 
@@ -620,7 +642,7 @@ class RefereeAgent(BaseGameServer):
             return {
                 "success": True,
                 "round_resolved": False,
-                "waiting_for": game.get_opponent_id(player_id),
+                "waiting_for": game.get_opponent_id(player_id_str),
             }
 
         except Exception as e:
@@ -709,7 +731,7 @@ class RefereeAgent(BaseGameServer):
             )
 
             try:
-                if player_id in self._client.connected_servers:
+                if self._client is not None and player_id in self._client.connected_servers:
                     await self._client.send_protocol_message(player_id, result_msg)
             except Exception as e:
                 logger.error(f"Failed to send result to {player_id}: {e}")
@@ -723,6 +745,11 @@ class RefereeAgent(BaseGameServer):
         """
         game = session.game
         match = session.match
+        
+        if game is None:
+            logger.error("Game not found in session")
+            return
+        
         game_result = game.get_result()
 
         session.state = "complete"
@@ -791,7 +818,7 @@ class RefereeAgent(BaseGameServer):
             )
 
             try:
-                if player_id in self._client.connected_servers:
+                if self._client is not None and player_id in self._client.connected_servers:
                     await self._client.send_protocol_message(player_id, game_over_msg)
             except Exception as e:
                 logger.error(f"Failed to send GAME_OVER to {player_id}: {e}")
@@ -804,7 +831,7 @@ class RefereeAgent(BaseGameServer):
         session: GameSession,
         result: GameResult,
         drawn_number: int = 0,
-        choices: dict[str, str] = None,
+        choices: dict[str, str] | None = None,
     ) -> None:
         """
         Report game result to league manager.
@@ -816,6 +843,10 @@ class RefereeAgent(BaseGameServer):
             choices: Map of player_id to their parity choice
         """
         try:
+            if self._client is None:
+                logger.error("MCP client not initialized")
+                return
+            
             # Connect to league manager if not connected
             if "league_manager" not in self._client.connected_servers:
                 await self._client.connect("league_manager", self.league_manager_url)
@@ -869,10 +900,11 @@ class RefereeAgent(BaseGameServer):
     async def _handle_game_invite_response(self, message: dict) -> dict:
         """Handle GAME_INVITE_RESPONSE message."""
         game_id = message.get("game_id")
+        game_id_str = str(game_id) if game_id is not None else ""
         player_id = message.get("sender", "").replace("player:", "")
         accepted = message.get("accepted", False)
 
-        return await self.handle_game_acceptance(game_id, player_id, accepted)
+        return await self.handle_game_acceptance(game_id_str, player_id, accepted)
 
     async def _handle_move_response(self, message: dict) -> dict:
         """Handle MOVE_RESPONSE message."""
@@ -922,7 +954,7 @@ class RefereeAgent(BaseGameServer):
         else:
             # Fallback: try parsing parity_choice as number (backward compat)
             try:
-                move_value = int(parity_choice)
+                move_value = int(parity_choice) if parity_choice is not None else 3
             except (TypeError, ValueError):
                 move_value = 3  # Default
 

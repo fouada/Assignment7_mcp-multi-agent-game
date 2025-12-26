@@ -193,6 +193,8 @@ class MCPClient:
     async def _discover_tools(self, session: Session) -> None:
         """Discover tools from server."""
         transport = self._transports.get(session.server_name)
+        if not transport:
+            raise ValueError(f"No transport for server: {session.server_name}")
 
         request = create_request(MCPMethods.TOOLS_LIST)
         response = await transport.request(request.to_dict())
@@ -207,6 +209,8 @@ class MCPClient:
     async def _discover_resources(self, session: Session) -> None:
         """Discover resources from server."""
         transport = self._transports.get(session.server_name)
+        if not transport:
+            raise ValueError(f"No transport for server: {session.server_name}")
 
         request = create_request(MCPMethods.RESOURCES_LIST)
         response = await transport.request(request.to_dict())
@@ -223,7 +227,7 @@ class MCPClient:
         parsed = parse_message(response)
 
         if isinstance(parsed, JsonRpcResponse):
-            if parsed.is_error:
+            if parsed.is_error and parsed.error:
                 raise ProtocolError(
                     f"RPC error: {parsed.error.message}", details={"code": parsed.error.code}
                 )
@@ -422,7 +426,8 @@ class MCPClient:
         request = create_request("protocol/message", {"message": message})
 
         response = await transport.request(request.to_dict(), timeout=timeout)
-        return self._parse_response(response)
+        result: dict[str, Any] = self._parse_response(response)
+        return result
 
     # ========================================================================
     # Lifecycle

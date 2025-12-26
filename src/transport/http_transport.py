@@ -10,6 +10,7 @@ import asyncio
 import json
 from importlib.util import find_spec
 from typing import Any
+from collections.abc import Callable
 
 from .base import Transport, TransportConfig, TransportError
 from .json_rpc import (
@@ -96,7 +97,7 @@ class HTTPTransport(Transport):
         Note: For HTTP, send is typically combined with receive in request().
         This method is provided for interface compatibility.
         """
-        if not self._connected or not self._client:
+        if not self._connected or not self._client or not self._url:
             raise TransportError("Not connected")
 
         await self._client.post(
@@ -129,7 +130,7 @@ class HTTPTransport(Transport):
         Returns:
             The JSON-RPC response data
         """
-        if not self._connected or not self._client:
+        if not self._connected or not self._client or not self._url:
             raise TransportError("Not connected")
 
         try:
@@ -147,7 +148,8 @@ class HTTPTransport(Transport):
             response.raise_for_status()
 
             # Parse response
-            return response.json()
+            result: dict[str, Any] = response.json()
+            return result
 
         except httpx.TimeoutException as e:
             raise TransportError(f"Request timed out: {e}", cause=e) from e
@@ -173,7 +175,12 @@ class HTTPTransport(Transport):
         Returns:
             List of JSON-RPC response data
         """
-        return await self.request(requests, timeout)
+        # Note: request() accepts list internally but type hints show dict
+        result = await self.request(requests, timeout)  # type: ignore[arg-type]
+        # The result will be a list when a list is passed
+        if isinstance(result, list):
+            return result
+        return [result]
 
 
 class HTTPServerTransport:
@@ -186,10 +193,10 @@ class HTTPServerTransport:
     def __init__(self, host: str = "localhost", port: int = 8000):
         self.host = host
         self.port = port
-        self._handlers: dict[str, callable] = {}
+        self._handlers: dict[str, Callable[..., Any]] = {}
         self._running = False
 
-    def register_handler(self, method: str, handler: callable) -> None:
+    def register_handler(self, method: str, handler: Callable[..., Any]) -> None:
         """Register a handler for a JSON-RPC method."""
         self._handlers[method] = handler
 
@@ -271,8 +278,8 @@ class RetryableHTTPTransport(HTTPTransport):
         """Calculate delay with exponential backoff and jitter."""
         import random
 
-        delay = min(self.base_delay * (2**attempt), self.max_delay)
-        jitter = delay * self.jitter_factor * random.random()
+        delay: float = min(self.base_delay * (2**attempt), self.max_delay)
+        jitter: float = delay * self.jitter_factor * random.random()
         return delay + jitter
 
     async def request(

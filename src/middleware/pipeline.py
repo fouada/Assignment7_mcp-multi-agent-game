@@ -336,6 +336,10 @@ class MiddlewarePipeline:
 
                 return self._create_error_response(e, "handler")
 
+        # Ensure we have a valid response
+        if response_data is None:
+            response_data = {}
+
         # Create response context
         response_context = ResponseContext(
             response=response_data,

@@ -108,7 +108,7 @@ class PluginContext:
     event_bus: Any | None = None
     strategy_registry: Any | None = None
 
-    def get_config(self, key: str, default: Any = None) -> Any:
+    def get_config(self, key: str, default: Any | None = None) -> Any:
         """Get configuration value by key."""
         return self.config.get(key, default)
 
@@ -144,8 +144,8 @@ class PluginInterface(ABC):
 
     def __init__(self):
         """Initialize plugin."""
-        self._enabled = False
-        self._loaded = False
+        self._enabled: bool = False
+        self._loaded: bool = False
         self._context: PluginContext | None = None
 
     @abstractmethod

@@ -235,17 +235,17 @@ class TracingManager:
     @property
     def enabled(self) -> bool:
         """Whether tracing is enabled."""
-        return self._enabled
+        return bool(self._enabled)
 
     @property
     def sample_rate(self) -> float:
         """Current sampling rate."""
-        return self._sample_rate
+        return float(self._sample_rate)
 
     @property
     def service_name(self) -> str:
         """Service name."""
-        return self._service_name
+        return str(self._service_name)
 
     def initialize(
         self,
@@ -287,7 +287,7 @@ class TracingManager:
         """Determine if this trace should be sampled."""
         import random
 
-        return random.random() < self._sample_rate
+        return bool(random.random() < self._sample_rate)
 
     def start_span(
         self,

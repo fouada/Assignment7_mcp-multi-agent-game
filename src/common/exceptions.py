@@ -321,7 +321,7 @@ class CircuitBreakerError(MCPError):
 
     def __init__(self, server: str, cooldown_remaining: float | None = None, **kwargs):
         message = f"Circuit breaker open for server '{server}'"
-        details = {"server": server}
+        details: dict[str, Any] = {"server": server}
         if cooldown_remaining:
             details["cooldown_remaining_seconds"] = cooldown_remaining
             message += f", retry in {cooldown_remaining:.1f}s"

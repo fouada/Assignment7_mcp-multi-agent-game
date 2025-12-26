@@ -14,6 +14,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
+from collections.abc import Callable
 
 from aiohttp import web
 
@@ -470,7 +471,8 @@ class MCPServer:
         try:
             # Execute handler
             result = await handler(params)
-            return create_response(request.id, result)
+            request_id = request.id if request.id is not None else ""
+            return create_response(request_id, result)
 
         except ValidationError as e:
             error = JsonRpcError.invalid_params(str(e))

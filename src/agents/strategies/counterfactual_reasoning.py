@@ -354,7 +354,7 @@ class CounterfactualRegretStrategy(Strategy):
     - Adapts to opponent strategy changes
     """
 
-    def __init__(self, config: StrategyConfig = None):
+    def __init__(self, config: StrategyConfig | None = None):
         super().__init__(config)
 
         # Counterfactual reasoning engine

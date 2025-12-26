@@ -326,7 +326,7 @@ def register_default_games() -> None:
             description="Two players choose numbers 1-5. Sum determines winner based on odd/even role.",
             min_players=2,
             max_players=2,
-            factory=OddEvenGame,
+            factory=lambda: OddEvenGame(),  # type: ignore[return-value]
             version="1.0.0",
         )
 

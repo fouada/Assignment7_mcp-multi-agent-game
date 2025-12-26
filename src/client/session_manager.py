@@ -62,7 +62,7 @@ class Session:
     error_count: int = 0
 
     # Internal
-    _transport: Any = None
+    _transport: Any | None = None
 
     @property
     def is_ready(self) -> bool:

@@ -146,7 +146,7 @@ class Match:
             raise ValueError(f"Unknown player: {player_id}")
 
         # Check if both ready
-        both_ready = self.player1 and self.player1.ready and self.player2 and self.player2.ready
+        both_ready: bool = bool(self.player1 and self.player1.ready and self.player2 and self.player2.ready)
 
         if both_ready:
             self.state = MatchState.PLAYERS_READY
@@ -161,7 +161,8 @@ class Match:
         if not self.game:
             self.create_game()
 
-        self.game.start()
+        if self.game:
+            self.game.start()
         self.state = MatchState.IN_PROGRESS
         self.started_at = datetime.utcnow()
 
@@ -171,10 +172,11 @@ class Match:
         """Complete the match with result."""
         self.result = result
         self.winner_id = result.winner_id
-        self.final_score = {
-            self.player1.player_id: result.player1_score,
-            self.player2.player_id: result.player2_score,
-        }
+        if self.player1 and self.player2:
+            self.final_score = {
+                self.player1.player_id: result.player1_score,
+                self.player2.player_id: result.player2_score,
+            }
         self.state = MatchState.COMPLETED
         self.completed_at = datetime.utcnow()
 
@@ -203,8 +205,12 @@ class Match:
     def get_opponent(self, player_id: str) -> MatchPlayer:
         """Get opponent player."""
         if self.player1 and self.player1.player_id == player_id:
+            if self.player2 is None:
+                raise ValueError("Player 2 not set")
             return self.player2
         elif self.player2 and self.player2.player_id == player_id:
+            if self.player1 is None:
+                raise ValueError("Player 1 not set")
             return self.player1
         else:
             raise ValueError(f"Unknown player: {player_id}")
@@ -269,7 +275,7 @@ class MatchScheduler:
             return []
 
         # If odd number, add a "bye" player
-        players = list(player_ids)
+        players: list[str | None] = list(player_ids)
         if n % 2 == 1:
             players.append(None)  # Bye
             n += 1
@@ -301,7 +307,7 @@ class MatchScheduler:
         round_id: int,
         pairings: list[tuple],
         player_endpoints: dict[str, str],
-        player_names: dict[str, str] = None,
+        player_names: dict[str, str] | None = None,
     ) -> list[Match]:
         """
         Create Match objects for a round.

@@ -394,7 +394,7 @@ class OpponentModelingEngine:
             context_counts[context] += 1
 
         # Convert to probabilities
-        conditional_probs = {}
+        conditional_probs: dict[str, Any] = {}
         for context, move_counts in conditional_counts.items():
             total = context_counts[context]
             for move, count in move_counts.items():
@@ -415,7 +415,7 @@ class OpponentModelingEngine:
         )
 
         # Get conditional probabilities from model
-        move_probs = {}
+        move_probs: dict[str, Any] = {}
         for move in game_state.valid_moves:
             key = current_context + (move,)
             prob = model.conditional_move_probs.get(key, None)
@@ -555,7 +555,7 @@ class OpponentModelingStrategy(Strategy):
     - Robust to strategy changes (drift detection)
     """
 
-    def __init__(self, config: StrategyConfig = None):
+    def __init__(self, config: StrategyConfig | None = None):
         super().__init__(config)
 
         # Opponent modeling engine

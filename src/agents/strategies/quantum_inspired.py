@@ -125,7 +125,7 @@ class QuantumStrategyEngine(Strategy):
     def __init__(
         self,
         strategies: list[Strategy],
-        config: StrategyConfig = None,
+        config: StrategyConfig | None = None,
         exploration_temperature: float = 0.15,
         decoherence_rate: float = 0.02,
     ):

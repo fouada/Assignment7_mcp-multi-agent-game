@@ -310,7 +310,10 @@ class MessageDispatcher:
                     continue
 
                 # Process message
-                async with self._semaphore:
+                if self._semaphore:
+                    async with self._semaphore:
+                        await self._process_message(message)
+                else:
                     await self._process_message(message)
 
             except asyncio.CancelledError:

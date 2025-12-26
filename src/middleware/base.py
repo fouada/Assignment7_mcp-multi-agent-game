@@ -102,7 +102,7 @@ class ResponseContext:
     state: dict[str, Any] = field(default_factory=dict)
 
     # Original request for reference
-    request: RequestContext = None
+    request: RequestContext | None = None
 
     # Response timing
     completed_at: datetime = field(default_factory=datetime.utcnow)

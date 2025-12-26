@@ -83,7 +83,7 @@ class BaseGameServer(MCPServer):
             self._initialize_observability()
 
         # Initialize middleware pipeline
-        self.middleware_pipeline = None
+        self.middleware_pipeline: MiddlewarePipeline | None = None
         if enable_middleware:
             self._initialize_middleware()
 
@@ -362,7 +362,7 @@ class BaseGameServer(MCPServer):
         # Execute with tracing and metrics
         try:
             if tracing_context:
-                async with tracing_context as span:
+                async with tracing_context as span:  # type: ignore[attr-defined]
                     return await self._execute_protocol_message(message, span)
             else:
                 return await self._execute_protocol_message(message, None)
@@ -421,13 +421,13 @@ class BaseGameServer(MCPServer):
                 # Validate protocol
                 is_valid, error = validate_message(message)
                 if not is_valid:
-                    raise ProtocolError(error)
+                    raise ProtocolError(error or "Invalid message")
 
                 # Get message type
                 msg_type = message.get("message_type")
 
                 # Dispatch to specific handler
-                handler_name = f"_handle_{msg_type.lower()}"
+                handler_name = f"_handle_{msg_type.lower()}" if msg_type else "_handle_unknown"
                 handler = getattr(self, handler_name, None)
 
                 if handler is None:
@@ -451,13 +451,13 @@ class BaseGameServer(MCPServer):
                 # Validate protocol
                 is_valid, error = validate_message(request)
                 if not is_valid:
-                    raise ProtocolError(error)
+                    raise ProtocolError(error or "Protocol error")
 
                 # Get message type
                 msg_type = request.get("message_type")
 
                 # Dispatch to specific handler
-                handler_name = f"_handle_{msg_type.lower()}"
+                handler_name = f"_handle_{msg_type.lower()}" if msg_type else "_handle_unknown"
                 handler = getattr(self, handler_name, None)
 
                 if handler is None:

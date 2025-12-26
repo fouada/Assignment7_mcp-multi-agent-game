@@ -87,7 +87,8 @@ class ColorFormatter(logging.Formatter):
 
         # Add exception if present
         if record.exc_info:
-            message += f"\n{color}{self.format_exception(record.exc_info)}{self.RESET}"
+            exc_text = "".join(traceback.format_exception(*record.exc_info))
+            message += f"\n{color}{exc_text}{self.RESET}"
 
         return message
 
@@ -110,35 +111,51 @@ class GameLogger(logging.Logger):
             self._context.pop(key, None)
         return self
 
-    def _log_with_context(self, level: int, msg: str, args, exc_info=None, extra=None, **kwargs):
+    def _log_with_context(self, level: int, msg: object, args, exc_info=None, extra=None, **kwargs):
         """Log with context data."""
         if extra is None:
             extra = {}
 
         # Merge context with extra data
-        extra_data = {**self._context, **kwargs}
+        # Extract context-specific kwargs (not standard logging kwargs)
+        standard_kwargs = {'stack_info', 'stacklevel'}
+        context_kwargs = {k: v for k, v in kwargs.items() if k not in standard_kwargs}
+        logging_kwargs = {k: v for k, v in kwargs.items() if k in standard_kwargs}
+        
+        extra_data = {**self._context, **context_kwargs}
         extra["extra_data"] = extra_data
 
-        super()._log(level, msg, args, exc_info=exc_info, extra=extra)
+        super()._log(level, msg, args, exc_info=exc_info, extra=extra, **logging_kwargs)
 
-    def debug(self, msg: str, *args, **kwargs):
-        self._log_with_context(logging.DEBUG, msg, args, **kwargs)
+    def debug(self, msg: object, *args: object, exc_info=None, stack_info: bool = False, 
+              stacklevel: int = 1, extra=None, **kwargs) -> None:
+        self._log_with_context(logging.DEBUG, msg, args, exc_info=exc_info, extra=extra, 
+                               stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
-    def info(self, msg: str, *args, **kwargs):
-        self._log_with_context(logging.INFO, msg, args, **kwargs)
+    def info(self, msg: object, *args: object, exc_info=None, stack_info: bool = False, 
+             stacklevel: int = 1, extra=None, **kwargs) -> None:
+        self._log_with_context(logging.INFO, msg, args, exc_info=exc_info, extra=extra, 
+                               stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
-    def warning(self, msg: str, *args, **kwargs):
-        self._log_with_context(logging.WARNING, msg, args, **kwargs)
+    def warning(self, msg: object, *args: object, exc_info=None, stack_info: bool = False, 
+                stacklevel: int = 1, extra=None, **kwargs) -> None:
+        self._log_with_context(logging.WARNING, msg, args, exc_info=exc_info, extra=extra, 
+                               stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
-    def error(self, msg: str, *args, exc_info=False, **kwargs):
-        self._log_with_context(logging.ERROR, msg, args, exc_info=exc_info, **kwargs)
+    def error(self, msg: object, *args: object, exc_info=None, stack_info: bool = False, 
+              stacklevel: int = 1, extra=None, **kwargs) -> None:
+        self._log_with_context(logging.ERROR, msg, args, exc_info=exc_info, extra=extra, 
+                               stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
-    def critical(self, msg: str, *args, exc_info=True, **kwargs):
-        self._log_with_context(logging.CRITICAL, msg, args, exc_info=exc_info, **kwargs)
+    def critical(self, msg: object, *args: object, exc_info=None, stack_info: bool = False, 
+                 stacklevel: int = 1, extra=None, **kwargs) -> None:
+        self._log_with_context(logging.CRITICAL, msg, args, exc_info=exc_info, extra=extra, 
+                               stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
-    def exception(self, msg: str, *args, **kwargs):
-        kwargs["exc_info"] = True
-        self.error(msg, *args, **kwargs)
+    def exception(self, msg: object, *args: object, exc_info=True, stack_info: bool = False, 
+                  stacklevel: int = 1, extra=None, **kwargs) -> None:
+        self._log_with_context(logging.ERROR, msg, args, exc_info=exc_info, extra=extra, 
+                               stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
 
 # Register custom logger class
@@ -189,7 +206,12 @@ def setup_logging(
 def get_logger(name: str = "mcp_game") -> GameLogger:
     """Get a logger instance."""
     if name not in _loggers:
-        _loggers[name] = logging.getLogger(name)
+        logger = logging.getLogger(name)
+        # Ensure it's a GameLogger instance
+        if not isinstance(logger, GameLogger):
+            # This should not happen if setLoggerClass was called correctly
+            logger = GameLogger(name)
+        _loggers[name] = logger
     return _loggers[name]
 
 

@@ -201,7 +201,8 @@ class ConfigLoader:
 
         try:
             with open(path, encoding="utf-8") as f:
-                return json.load(f)
+                data: dict[Any, Any] = json.load(f)
+                return data
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON in {path}: {e}")
             return None
@@ -209,7 +210,8 @@ class ConfigLoader:
     def load_system(self) -> SystemConfig:
         """Load system configuration."""
         if "system" in self._cache:
-            return self._cache["system"]
+            cached: SystemConfig = self._cache["system"]
+            return cached
 
         path = self.config_path / "system.json"
         data = self._load_json(path)
@@ -221,23 +223,27 @@ class ConfigLoader:
     def load_agents(self) -> dict[str, Any]:
         """Load agents configuration."""
         if "agents" in self._cache:
-            return self._cache["agents"]
+            cached: dict[str, Any] = self._cache["agents"]
+            return cached
 
         path = self.config_path / "agents" / "agents_config.json"
         data = self._load_json(path)
 
-        self._cache["agents"] = data or {}
-        return self._cache["agents"]
+        result: dict[str, Any] = data or {}
+        self._cache["agents"] = result
+        return result
 
     def load_league(self, league_id: str) -> LeagueConfigFile:
         """Load league configuration."""
         cache_key = f"league_{league_id}"
         if cache_key in self._cache:
-            return self._cache[cache_key]
+            cached: LeagueConfigFile = self._cache[cache_key]
+            return cached
 
         path = self.config_path / "leagues" / f"{league_id}.json"
         data = self._load_json(path)
 
+        config: LeagueConfigFile
         if data:
             config = LeagueConfigFile.from_dict(data)
         else:
@@ -249,49 +255,54 @@ class ConfigLoader:
     def load_games_registry(self) -> GamesRegistryConfig:
         """Load games registry configuration."""
         if "games" in self._cache:
-            return self._cache["games"]
+            cached: GamesRegistryConfig = self._cache["games"]
+            return cached
 
         path = self.config_path / "games" / "games_registry.json"
         data = self._load_json(path)
 
-        config = GamesRegistryConfig.from_dict(data) if data else GamesRegistryConfig()
+        config: GamesRegistryConfig = GamesRegistryConfig.from_dict(data) if data else GamesRegistryConfig()
         self._cache["games"] = config
         return config
 
     def load_referee_defaults(self) -> RefereeDefaults:
         """Load default referee configuration."""
         if "referee_defaults" in self._cache:
-            return self._cache["referee_defaults"]
+            cached: RefereeDefaults = self._cache["referee_defaults"]
+            return cached
 
         path = self.config_path / "defaults" / "referee.json"
         data = self._load_json(path)
 
-        config = RefereeDefaults.from_dict(data) if data else RefereeDefaults()
+        config: RefereeDefaults = RefereeDefaults.from_dict(data) if data else RefereeDefaults()
         self._cache["referee_defaults"] = config
         return config
 
     def load_player_defaults(self) -> PlayerDefaults:
         """Load default player configuration."""
         if "player_defaults" in self._cache:
-            return self._cache["player_defaults"]
+            cached: PlayerDefaults = self._cache["player_defaults"]
+            return cached
 
         path = self.config_path / "defaults" / "player.json"
         data = self._load_json(path)
 
-        config = PlayerDefaults.from_dict(data) if data else PlayerDefaults()
+        config: PlayerDefaults = PlayerDefaults.from_dict(data) if data else PlayerDefaults()
         self._cache["player_defaults"] = config
         return config
 
     def load_plugins_config(self) -> dict[str, Any]:
         """Load plugins configuration."""
         if "plugins" in self._cache:
-            return self._cache["plugins"]
+            cached: dict[str, Any] = self._cache["plugins"]
+            return cached
 
         path = self.config_path / "plugins" / "plugins_config.json"
         data = self._load_json(path)
 
-        self._cache["plugins"] = data or {}
-        return self._cache["plugins"]
+        result: dict[str, Any] = data or {}
+        self._cache["plugins"] = result
+        return result
 
     def clear_cache(self) -> None:
         """Clear configuration cache."""

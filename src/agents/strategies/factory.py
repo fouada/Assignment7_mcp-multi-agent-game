@@ -246,17 +246,17 @@ class StrategyFactory:
 
         # Create strategy
         if strategy_type == StrategyType.LLM:
-            return strategy_class(config=config, llm_config=llm_config)
+            return strategy_class(config=config, llm_config=llm_config)  # type: ignore[call-arg]
         elif strategy_type == StrategyType.NASH:
             # Nash has extra parameter
             odd_probability = kwargs.get("odd_probability", 0.5)
-            return strategy_class(config=config, odd_probability=odd_probability)
+            return strategy_class(config=config, odd_probability=odd_probability)  # type: ignore[call-arg]
         elif strategy_type == StrategyType.BEST_RESPONSE:
             deterministic = kwargs.get("deterministic", False)
-            return strategy_class(config=config, deterministic=deterministic)
+            return strategy_class(config=config, deterministic=deterministic)  # type: ignore[call-arg]
         elif strategy_type == StrategyType.FICTITIOUS_PLAY:
             smoothing = kwargs.get("smoothing", 0.0)
-            return strategy_class(config=config, smoothing=smoothing)
+            return strategy_class(config=config, smoothing=smoothing)  # type: ignore[call-arg]
         else:
             return strategy_class(config=config)
 

@@ -269,7 +269,7 @@ class BaseMessage:
     """Base class for all protocol messages."""
 
     protocol: str = PROTOCOL_VERSION
-    message_type: MessageType = None
+    message_type: MessageType | None = None
     league_id: str = ""
     conversation_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     sender: str = ""
@@ -742,7 +742,7 @@ class MessageFactory:
         status: str,
         player_id: str,
         reason: str | None = None,
-        conversation_id: str = None,
+        conversation_id: str | None = None,
         auth_token: str | None = None,
     ) -> dict[str, Any]:
         """Create a registration response message."""
@@ -765,7 +765,7 @@ class MessageFactory:
         opponent_id: str,
         role: str,
         rounds: int = 5,
-        match_id: str = None,
+        match_id: str | None = None,
     ) -> dict[str, Any]:
         """Create a game invitation message."""
         msg = {
