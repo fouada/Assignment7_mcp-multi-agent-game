@@ -146,7 +146,7 @@ class MockReferee:
         self.player_objects: dict[str, Any] = {}  # Store references to player objects
 
     async def start_match(
-        self, match_id: str, player1_id: str, player2_id: str, rounds: int = 5, 
+        self, match_id: str, player1_id: str, player2_id: str, rounds: int = 5,
         player1_obj: Any = None, player2_obj: Any = None
     ) -> dict[str, Any]:
         """Simulate starting a match."""
@@ -165,29 +165,29 @@ class MockReferee:
         """Resolve a round and update scores."""
         if match_id not in self.matches:
             raise ValueError(f"Unknown match: {match_id}")
-        
+
         match = self.matches[match_id]
         player1_id, player2_id = match["players"]
-        
+
         # Odd/Even game logic
         total = move1 + move2
         is_odd = total % 2 == 1
         winner_id = player1_id if is_odd else player2_id
-        
+
         # Update scores
         match["scores"][winner_id] += 1
         match["current_round"] += 1
-        
+
         # Update player objects if available
         if match.get("player1_obj"):
             match["player1_obj"].score = match["scores"][player1_id]
         if match.get("player2_obj"):
             match["player2_obj"].score = match["scores"][player2_id]
-        
+
         # Check if match is complete
         if match["current_round"] >= match["rounds"]:
             match["status"] = "completed"
-        
+
         return {
             "round": match["current_round"],
             "winner": winner_id,
@@ -239,11 +239,11 @@ class MockLeagueManager:
 
         if player_id in self.players:
             return {"success": False, "error": "Already registered"}
-        
+
         # Validate game types
         if not game_types or not all(isinstance(gt, str) for gt in game_types):
             return {"success": False, "error": "Invalid game types"}
-        
+
         # Check for valid game types (must include even_odd)
         valid_game_types = ["even_odd", "odd_even"]
         if not any(gt in valid_game_types for gt in game_types):
@@ -268,17 +268,17 @@ class MockLeagueManager:
         """Generate round-robin schedule for all players."""
         player_ids = list(self.players.keys())
         n = len(player_ids)
-        
+
         if n < 2:
             return []
-        
+
         # Round-robin algorithm
         rounds = []
         if n % 2 == 1:
             # Add a "bye" player for odd number of players
             player_ids.append(None)
             n += 1
-        
+
         for round_num in range(n - 1):
             round_matches = []
             for i in range(n // 2):
@@ -295,10 +295,10 @@ class MockLeagueManager:
                 "round": round_num + 1,
                 "matches": round_matches,
             })
-            
+
             # Rotate players (keep first player fixed)
             player_ids = [player_ids[0]] + [player_ids[-1]] + player_ids[1:-1]
-        
+
         self.schedule = rounds
         self.state = "scheduled"
         return rounds

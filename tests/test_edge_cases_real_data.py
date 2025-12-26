@@ -163,7 +163,7 @@ class TestRealDataBoundaryConditions:
 
             assert 1 <= move1 <= 10
             assert 1 <= move2 <= 10
-            
+
             # Resolve the round
             await referee.resolve_round(match_id, move1, move2)
 
