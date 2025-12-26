@@ -41,7 +41,11 @@ class MockMCPClient:
         """Simulate tool call with configurable behavior."""
         # Record call
         self.call_history.append(
-            {"tool": tool_name, "kwargs": kwargs, "timestamp": asyncio.get_event_loop().time()}
+            {
+                "tool": tool_name,
+                "kwargs": kwargs,
+                "timestamp": asyncio.get_event_loop().time(),
+            }
         )
 
         # Simulate delay
