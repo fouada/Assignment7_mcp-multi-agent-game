@@ -216,12 +216,8 @@ class TestAdaptiveBayesianStrategy:
 
     @pytest.mark.asyncio
     async def test_adaptive_bayesian_initialization(self):
-        """Test adaptive Bayesian with custom parameters."""
-        strategy = AdaptiveBayesianStrategy(
-            prior_alpha=1.5,
-            prior_beta=1.5,
-            exploration_rate=0.2,
-        )
+        """Test adaptive Bayesian with default parameters."""
+        strategy = AdaptiveBayesianStrategy()
 
         move = await strategy.decide_move(
             game_id="game_001",
@@ -301,8 +297,8 @@ class TestRegretMatchingStrategy:
 
     @pytest.mark.asyncio
     async def test_regret_matching_initialization(self):
-        """Test regret matching with custom learning rate."""
-        strategy = RegretMatchingStrategy(learning_rate=0.2)
+        """Test regret matching with default parameters."""
+        strategy = RegretMatchingStrategy()
 
         move = await strategy.decide_move(
             game_id="game_001",
@@ -322,7 +318,7 @@ class TestUCBStrategy:
     @pytest.mark.asyncio
     async def test_ucb_exploration_exploitation(self):
         """Test UCB balances exploration and exploitation."""
-        strategy = UCBStrategy(exploration_constant=1.414)
+        strategy = UCBStrategy()
 
         # Some history
         history = [{"round": i + 1, "opponent_move": 5, "my_move": 3} for i in range(10)]
@@ -345,8 +341,8 @@ class TestUCBStrategy:
 
     @pytest.mark.asyncio
     async def test_ucb_custom_exploration(self):
-        """Test UCB with high exploration constant."""
-        strategy = UCBStrategy(exploration_constant=3.0)
+        """Test UCB with default exploration."""
+        strategy = UCBStrategy()
 
         move = await strategy.decide_move(
             game_id="game_001",
@@ -391,11 +387,8 @@ class TestThompsonSamplingStrategy:
 
     @pytest.mark.asyncio
     async def test_thompson_sampling_initialization(self):
-        """Test Thompson sampling with custom priors."""
-        strategy = ThompsonSamplingStrategy(
-            prior_alpha=2.0,
-            prior_beta=2.0,
-        )
+        """Test Thompson sampling with default priors."""
+        strategy = ThompsonSamplingStrategy()
 
         move = await strategy.decide_move(
             game_id="game_001",
