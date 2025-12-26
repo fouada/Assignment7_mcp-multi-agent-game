@@ -141,11 +141,15 @@ class CounterfactualReasoningEngine:
                 continue  # Skip the move we actually made
 
             # Estimate what would have happened
+            # Skip if we don't have opponent move info
+            if opponent_move is None or opponent_id is None:
+                continue
+
             estimated_reward, confidence = self._estimate_counterfactual_reward(
                 game_state,
                 alternative_move,
                 opponent_move,
-                opponent_id,  # type: ignore[arg-type]
+                opponent_id,
             )
 
             # Compute regret

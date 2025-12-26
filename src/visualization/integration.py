@@ -562,9 +562,13 @@ class DashboardIntegration:
             )
 
         # Sort by win rate (descending)
-        standings.sort(
-            key=lambda x: float(x["win_rate"]) if x["win_rate"] is not None else 0.0, reverse=True
-        )  # type: ignore[arg-type]
+        def get_sort_key(x: dict) -> float:
+            win_rate = x.get("win_rate")
+            if win_rate is None:
+                return 0.0
+            return float(win_rate)
+
+        standings.sort(key=get_sort_key, reverse=True)
 
         return standings
 

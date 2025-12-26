@@ -193,13 +193,21 @@ class QuantumStrategyEngine(Strategy):
         chosen_strategy = self.strategies[self.strategy_names.index(chosen_strategy_name)]
 
         # Step 5: Execute chosen strategy
+        # Convert parameters to match base Strategy signature
+        from ..player import GameRole
+
+        my_role = GameRole(parity_role)
+        my_score = scores.get("my_score", 0)
+        opponent_score = scores.get("opponent_score", 0)
+        history_list = history.get("history", []) if isinstance(history, dict) else []
+
         move = await chosen_strategy.decide_move(
             game_id,
             round_number,
-            parity_role,
-            scores,
-            history,
-            timeout,  # type: ignore[arg-type,arg-type,arg-type,arg-type]
+            my_role,
+            my_score,
+            opponent_score,
+            history_list,
         )
 
         # Store for next iteration
