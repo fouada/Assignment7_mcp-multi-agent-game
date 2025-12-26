@@ -348,7 +348,7 @@ class DashboardAPI:
         await self.connection_manager.broadcast(message)
         logger.info(f"Tournament complete! Winner: {winner_data.get('player_id', 'unknown')}")
 
-    async def start_server(self, host: str = "0.0.0.0", port: int = 8050):
+    async def start_server(self, host: str = "127.0.0.1", port: int = 8050):
         """
         Start the dashboard server with Uvicorn.
 
@@ -356,8 +356,12 @@ class DashboardAPI:
         Use start_server_background() for non-blocking operation.
 
         Args:
-            host: Host to bind to (default: 0.0.0.0 for all interfaces)
+            host: Host to bind to (default: 127.0.0.1 for localhost only)
             port: Port to listen on (default: 8050)
+
+        Note:
+            For security, defaults to localhost. Use "0.0.0.0" to bind to all
+            interfaces if needed for remote access (not recommended for production).
         """
         import uvicorn
 
@@ -367,11 +371,19 @@ class DashboardAPI:
         self._server = server
         await server.serve()
 
-    async def start_server_background(self, host: str = "0.0.0.0", port: int = 8050):
+    async def start_server_background(self, host: str = "127.0.0.1", port: int = 8050):
         """
         Start server in background task (non-blocking).
 
         This allows the dashboard to run alongside other components.
+
+        Args:
+            host: Host to bind to (default: 127.0.0.1 for localhost only)
+            port: Port to listen on (default: 8050)
+
+        Note:
+            For security, defaults to localhost. Use "0.0.0.0" to bind to all
+            interfaces if needed for remote access (not recommended for production).
 
         Args:
             host: Host to bind to (default: 0.0.0.0 for all interfaces)

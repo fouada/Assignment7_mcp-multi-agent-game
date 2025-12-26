@@ -545,7 +545,8 @@ class CachingMiddleware(Middleware):
             "params": request.get("params"),
         }
         key_str = json.dumps(key_data, sort_keys=True)
-        return hashlib.md5(key_str.encode()).hexdigest()
+        # MD5 is used here only for cache key generation, not for security
+        return hashlib.md5(key_str.encode(), usedforsecurity=False).hexdigest()
 
     def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""

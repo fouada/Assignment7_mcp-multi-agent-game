@@ -274,7 +274,9 @@ class GameOrchestrator:
             integration = get_dashboard_integration()
 
             # Start dashboard server in background
-            await dashboard.start_server_background(host="0.0.0.0", port=8050)
+            # Use localhost by default for security, can be configured via environment
+            dashboard_host = os.getenv("DASHBOARD_HOST", "127.0.0.1")
+            await dashboard.start_server_background(host=dashboard_host, port=8050)
 
             # Connect event bus to dashboard
             self.event_bus.on("game.round.start", integration.on_round_start)
