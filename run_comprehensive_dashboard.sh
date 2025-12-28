@@ -33,19 +33,19 @@ echo "  🎮 MCP GAME LEAGUE - COMPREHENSIVE DASHBOARD"
 echo "═══════════════════════════════════════════════════════════"
 echo -e "${NC}"
 
-# Check if Python is available
-if ! command -v python &> /dev/null; then
-    echo -e "${YELLOW}⚠️  Python not found. Please install Python 3.11+${NC}"
-    exit 1
-fi
-
-# Check if uv is available (optional but recommended)
+# Check if uv is available (preferred)
 if command -v uv &> /dev/null; then
     PYTHON_CMD="uv run python"
     echo -e "${GREEN}✓ Using uv for faster execution${NC}"
-else
+elif command -v python3 &> /dev/null; then
+    PYTHON_CMD="python3"
+    echo -e "${YELLOW}ℹ Using python3${NC}"
+elif command -v python &> /dev/null; then
     PYTHON_CMD="python"
-    echo -e "${YELLOW}ℹ Using standard Python (install uv for faster performance)${NC}"
+    echo -e "${YELLOW}ℹ Using python${NC}"
+else
+    echo -e "${YELLOW}⚠️  Python not found. Please install Python 3.11+${NC}"
+    exit 1
 fi
 
 echo ""

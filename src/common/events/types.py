@@ -346,3 +346,51 @@ class TournamentCompletedEvent(BaseEvent):
     final_standings: list[dict[str, Any]] = Field(default_factory=list)
     total_rounds: int = 0
     total_matches: int = 0
+
+
+# ============================================================================
+# Analytics Events (for Dashboard)
+# ============================================================================
+
+
+class StrategyPerformanceEvent(BaseEvent):
+    """Event emitted to track strategy performance over time."""
+
+    event_type: str = "strategy.performance"
+    player_id: str
+    strategy_name: str
+    round_number: int
+    wins: int
+    losses: int
+    draws: int
+    total_games: int
+    win_rate: float
+    avg_score: float
+    rounds_played: list[int] = Field(default_factory=list)
+    win_rates: list[float] = Field(default_factory=list)
+
+
+class OpponentModelUpdateEvent(BaseEvent):
+    """Event emitted when a player updates their opponent model."""
+
+    event_type: str = "opponent.model.update"
+    player_id: str
+    opponent_id: str
+    confidence: float  # 0.0 to 1.0
+    predicted_strategy: str = ""
+    belief_distribution: dict[str, float] = Field(default_factory=dict)
+    accuracy: float = 0.0
+
+
+class CounterfactualAnalysisEvent(BaseEvent):
+    """Event emitted for counterfactual regret analysis."""
+
+    event_type: str = "counterfactual.analysis"
+    player_id: str
+    game_id: str
+    round_number: int
+    actual_move: int
+    actual_payoff: int
+    alternative_moves: dict[int, int] = Field(default_factory=dict)  # move -> payoff
+    regret: dict[int, float] = Field(default_factory=dict)  # move -> regret
+    cumulative_regret: float = 0.0

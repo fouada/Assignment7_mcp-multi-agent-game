@@ -265,6 +265,8 @@ class GameOrchestrator:
         await self._init_plugins()
 
         # Start dashboard if enabled
+        dashboard = None
+        integration = None
         if self.enable_dashboard:
             from .visualization import get_dashboard
             from .visualization.integration import get_dashboard_integration
@@ -278,6 +280,12 @@ class GameOrchestrator:
             dashboard_host = os.getenv("DASHBOARD_HOST", "127.0.0.1")
             await dashboard.start_server_background(host=dashboard_host, port=8050)
 
+            # Initialize dashboard integration with tournament info
+            await integration.start(
+                tournament_id=self.config.league.league_id,
+                total_rounds=0,  # Will be updated after league starts
+            )
+
             # Connect event bus to dashboard
             self.event_bus.on("game.round.start", integration.on_round_start)
             self.event_bus.on("game.move.decision", integration.on_move_decision)
@@ -287,6 +295,10 @@ class GameOrchestrator:
 
         # Start league manager
         await self.start_league_manager()
+
+        # Connect dashboard to league manager if enabled
+        if self.enable_dashboard and dashboard:
+            self.league_manager.set_dashboard(dashboard)
 
         # Wait a bit for league manager to be ready
         await asyncio.sleep(0.5)
@@ -325,6 +337,18 @@ class GameOrchestrator:
             await asyncio.sleep(0.2)
             await player.register_with_league()
 
+            # Update strategy info in league manager if dashboard is enabled
+            if self.enable_dashboard and self.league_manager and integration:
+                # Get the player's actual strategy name
+                strategy_display_name = player.strategy.__class__.__name__
+                # Update the registered player's strategy name
+                if player.player_id in self.league_manager._players:
+                    self.league_manager._players[player.player_id].strategy_name = strategy_display_name
+                    logger.debug(f"Updated strategy for {player.player_id}: {strategy_display_name}")
+
+                # Register player with dashboard integration
+                integration.register_player(player.player_id, strategy_display_name)
+
         self._running = True
         logger.info(f"League started with {num_players} players")
 
@@ -346,6 +370,11 @@ class GameOrchestrator:
             if not result.get("success"):
                 logger.error(f"Failed to start league: {result.get('error')}")
                 return
+
+            # Stream initial tournament state to dashboard
+            if self.enable_dashboard:
+                await self.league_manager._stream_tournament_update()
+
         else:
             logger.error("League manager not initialized")
             return
@@ -395,6 +424,26 @@ class GameOrchestrator:
                 logger.info(
                     f"  {entry['rank']}. {entry['display_name']}: {entry['points']} pts ({entry['wins']}W-{entry['losses']}L)"
                 )
+
+            # Stream final tournament state and winner to dashboard
+            if self.enable_dashboard:
+                await self.league_manager._stream_tournament_update()
+
+                # Get the winner
+                if standings.get("standings"):
+                    winner = standings["standings"][0]
+                    from .visualization import get_dashboard
+
+                    dashboard = get_dashboard()
+                    await dashboard.broadcast_tournament_complete(
+                        {
+                            "player_id": winner["player_id"],
+                            "display_name": winner["display_name"],
+                            "points": winner["points"],
+                            "wins": winner["wins"],
+                            "losses": winner["losses"],
+                        }
+                    )
 
     async def _run_match(self, match_data: dict, round_num: int = 0) -> None:
         """Run a single match through a referee (round-robin assignment)."""

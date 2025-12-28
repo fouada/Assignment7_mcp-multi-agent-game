@@ -54,6 +54,8 @@ from .types import (
     AgentRegisteredEvent,
     # Base
     BaseEvent,
+    # Analytics Events
+    CounterfactualAnalysisEvent,
     GameEndedEvent,
     # Game Events
     GameStartedEvent,
@@ -61,6 +63,7 @@ from .types import (
     # Match Events
     MatchStartedEvent,
     MoveDecidedEvent,
+    OpponentModelUpdateEvent,
     # Player Events
     PlayerGameInvitedEvent,
     PlayerGameJoinedEvent,
@@ -77,6 +80,7 @@ from .types import (
     StrategyErrorEvent,
     # Strategy Events
     StrategySelectedEvent,
+    StrategyPerformanceEvent,
     SystemErrorEvent,
     SystemShutdownEvent,
     # System Events
@@ -128,6 +132,10 @@ __all__ = [
     "TournamentRoundStartedEvent",
     "StandingsUpdatedEvent",
     "TournamentCompletedEvent",
+    # Analytics Events
+    "StrategyPerformanceEvent",
+    "OpponentModelUpdateEvent",
+    "CounterfactualAnalysisEvent",
     # Decorators
     "on_event",
     "before",

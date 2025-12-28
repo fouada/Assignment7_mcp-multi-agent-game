@@ -24,6 +24,7 @@ from ..common.events import (
     PlayerGameJoinedEvent,
     PlayerMoveAfterEvent,
     PlayerMoveBeforeEvent,
+    StrategyPerformanceEvent,
     get_event_bus,
 )
 from ..common.logger import get_logger
@@ -105,6 +106,15 @@ class PlayerAgent(BaseGameServer):
 
         # Active games
         self._games: dict[str, GameSession] = {}
+
+        # Performance tracking
+        self._wins = 0
+        self._losses = 0
+        self._draws = 0
+        self._total_games = 0
+        self._total_score = 0
+        self._rounds_played: list[int] = []
+        self._win_rates: list[float] = []
 
         # MCP client
         self._client: MCPClient | None = None
@@ -266,6 +276,7 @@ class PlayerAgent(BaseGameServer):
                     "endpoint": self.url,
                     "version": "1.0.0",
                     "game_types": ["even_odd"],
+                    "strategy": self.strategy.__class__.__name__,  # Send strategy name for dashboard
                 },
             )
 
@@ -638,6 +649,51 @@ class PlayerAgent(BaseGameServer):
 
         won = winner_id == self.player_id
 
+        # Update performance tracking
+        self._total_games += 1
+        if won:
+            self._wins += 1
+        elif winner_id is None or winner_id == "":
+            self._draws += 1
+        else:
+            self._losses += 1
+
+        # Track win rate over time
+        win_rate = (self._wins / self._total_games * 100) if self._total_games > 0 else 0
+        self._rounds_played.append(self._total_games)
+        self._win_rates.append(win_rate)
+
+        # Get final score from session if available
+        game_id = match_id  # match_id might be the game_id
+        session = self._games.get(str(game_id))
+        if session:
+            self._total_score += session.my_score
+
+        avg_score = self._total_score / self._total_games if self._total_games > 0 else 0
+
+        # Emit strategy performance event
+        try:
+            event_bus = get_event_bus()
+            await event_bus.emit(
+                "strategy.performance",
+                StrategyPerformanceEvent(
+                    player_id=str(self.player_id),
+                    strategy_name=self.strategy.name if hasattr(self.strategy, 'name') else self.strategy.__class__.__name__,
+                    round_number=self._total_games,
+                    wins=self._wins,
+                    losses=self._losses,
+                    draws=self._draws,
+                    total_games=self._total_games,
+                    win_rate=win_rate,
+                    avg_score=avg_score,
+                    rounds_played=self._rounds_played.copy(),
+                    win_rates=self._win_rates.copy(),
+                    source=f"player:{self.player_name}",
+                ),
+            )
+        except Exception as e:
+            logger.error(f"Failed to emit StrategyPerformanceEvent: {e}")
+
         logger.info(
             "Game over notification received",
             match_id=match_id,
@@ -647,6 +703,7 @@ class PlayerAgent(BaseGameServer):
             parity=number_parity,
             status=status,
             reason=reason,
+            performance=f"{self._wins}W-{self._losses}L-{self._draws}D ({win_rate:.1f}%)",
         )
 
         return {

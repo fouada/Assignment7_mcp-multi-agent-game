@@ -146,8 +146,8 @@ class DashboardIntegration:
             tournament_id=tournament_id, start_time=datetime.now(), total_rounds=total_rounds
         )
 
-        # Start dashboard server (non-blocking)
-        asyncio.create_task(self.dashboard.start_server())
+        # Dashboard server is already started by the launcher
+        # No need to start it again here to avoid port conflicts
 
         logger.info(f"Dashboard integration started for tournament {tournament_id}")
 

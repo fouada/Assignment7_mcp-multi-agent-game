@@ -17,7 +17,11 @@ from typing import Any
 from ..client.mcp_client import MCPClient
 from ..common.events import (
     AgentRegisteredEvent,
+    CounterfactualAnalysisEvent,
+    OpponentModelUpdateEvent,
     StandingsUpdatedEvent,
+    StrategyPerformanceEvent,
+    TournamentCompletedEvent,
     TournamentRoundStartedEvent,
     get_event_bus,
 )
@@ -74,6 +78,7 @@ class RegisteredPlayer:
     version: str = "1.0.0"
     game_types: list[str] = field(default_factory=list)
     registered_at: datetime = field(default_factory=datetime.utcnow)
+    strategy_name: str = "Unknown"  # Strategy name for dashboard display
 
     # Stats
     played: int = 0  # Games played
@@ -87,6 +92,7 @@ class RegisteredPlayer:
             "player_id": self.player_id,
             "display_name": self.display_name,
             "endpoint": self.endpoint,
+            "strategy": self.strategy_name,
             "played": self.played,
             "wins": self.wins,
             "draws": self.draws,
@@ -161,6 +167,9 @@ class LeagueManager(BaseGameServer):
 
         # MCP client for communicating with referees
         self._client: MCPClient | None = None
+
+        # Dashboard integration (lazy-loaded)
+        self._dashboard = None
 
         # Register tools
         self._register_tools()
@@ -409,6 +418,9 @@ class LeagueManager(BaseGameServer):
             max_concurrent_matches=max_concurrent_matches,
         )
 
+        # Update dashboard with new registration
+        await self._stream_tournament_update()
+
         return self.message_factory.referee_register_response(
             status=RegistrationStatus.ACCEPTED.value,
             referee_id=referee_id,
@@ -422,6 +434,7 @@ class LeagueManager(BaseGameServer):
         endpoint = params.get("endpoint", "")
         version = params.get("version", "1.0.0")
         game_types = params.get("game_types", ["even_odd"])
+        strategy_name = params.get("strategy", "Unknown")  # Get strategy name from player
 
         # Validate state
         if self.state != LeagueState.REGISTRATION:
@@ -471,6 +484,7 @@ class LeagueManager(BaseGameServer):
             auth_token=auth_token,
             version=version,
             game_types=game_types,
+            strategy_name=strategy_name,  # Store strategy name for dashboard
         )
 
         self._players[player_id] = player
@@ -495,6 +509,9 @@ class LeagueManager(BaseGameServer):
             )
         except Exception as e:
             logger.error(f"Failed to emit AgentRegisteredEvent: {e}")
+
+        # Update dashboard with new registration
+        await self._stream_tournament_update()
 
         return self.message_factory.register_response(
             status=RegistrationStatus.ACCEPTED.value,
@@ -524,6 +541,9 @@ class LeagueManager(BaseGameServer):
             players=len(self._players),
             rounds=len(self._schedule),
         )
+
+        # Stream initial tournament state to dashboard
+        await self._stream_tournament_update()
 
         return {
             "success": True,
@@ -647,6 +667,9 @@ class LeagueManager(BaseGameServer):
         # Wait for matches to complete
         await asyncio.sleep(2)
 
+        # Stream tournament update to dashboard
+        await self._stream_tournament_update()
+
         return {
             "success": True,
             "round": self.current_round,
@@ -738,6 +761,32 @@ class LeagueManager(BaseGameServer):
             total_matches=total_matches,
             champion=champion,
         )
+
+        # Emit tournament completed event
+        try:
+            event_bus = get_event_bus()
+            winner_data = {
+                "player_id": champion["player_id"] if champion else None,
+                "display_name": champion["display_name"] if champion else None,
+                "strategy": self._players.get(champion["player_id"]).strategy_name if champion and champion["player_id"] in self._players else None,
+                "wins": self._players.get(champion["player_id"]).wins if champion and champion["player_id"] in self._players else 0,
+                "points": champion["points"] if champion else 0,
+                "win_rate": (self._players.get(champion["player_id"]).wins / self._players.get(champion["player_id"]).played * 100) if champion and champion["player_id"] in self._players and self._players.get(champion["player_id"]).played > 0 else 0,
+            }
+            await event_bus.emit(
+                "tournament.completed",
+                TournamentCompletedEvent(
+                    winner=champion["player_id"] if champion else None,
+                    final_standings=simplified_standings,
+                    total_rounds=len(self._schedule),
+                    total_matches=total_matches,
+                    source="league_manager",
+                    metadata={"winner_details": winner_data},
+                ),
+            )
+            logger.info("Tournament completed event emitted successfully")
+        except Exception as e:
+            logger.error(f"Failed to emit TournamentCompletedEvent: {e}")
 
         return {
             "success": True,
@@ -866,9 +915,63 @@ class LeagueManager(BaseGameServer):
         except Exception as e:
             logger.error(f"Failed to emit StandingsUpdatedEvent: {e}")
 
+        # Stream tournament update to dashboard
+        await self._stream_tournament_update()
+
+        # Check if tournament is complete (last round finished)
+        tournament_complete = round_complete and self.current_round >= len(self._schedule)
+        if tournament_complete:
+            # Tournament is complete! Emit completion event with winner
+            self.state = LeagueState.COMPLETED
+            
+            # Get final standings
+            final_standings_data = self._get_standings()
+            standings_list = final_standings_data.get("standings", [])
+            
+            # Determine champion (rank 1)
+            champion = None
+            simplified_standings = []
+            for standing in standings_list:
+                simplified_standings.append({
+                    "rank": standing["rank"],
+                    "player_id": standing["player_id"],
+                    "points": standing["points"],
+                })
+                if standing["rank"] == 1:
+                    player = self._players.get(standing["player_id"])
+                    champion = {
+                        "player_id": standing["player_id"],
+                        "display_name": standing["display_name"],
+                        "points": standing["points"],
+                        "wins": standing["wins"],
+                        "win_rate": (standing["wins"] / standing["played"] * 100) if standing["played"] > 0 else 0,
+                        "strategy": player.strategy_name if player else "Unknown",
+                    }
+            
+            # Calculate total matches
+            total_matches = sum(len(r) for r in self._schedule)
+            
+            try:
+                event_bus = get_event_bus()
+                await event_bus.emit(
+                    "tournament.completed",
+                    TournamentCompletedEvent(
+                        winner=champion["player_id"] if champion else None,
+                        final_standings=simplified_standings,
+                        total_rounds=len(self._schedule),
+                        total_matches=total_matches,
+                        source="league_manager",
+                        metadata={"winner_details": champion} if champion else {},
+                    ),
+                )
+                logger.info(f"Tournament completed! Champion: {champion['display_name'] if champion else 'No winner'}")
+            except Exception as e:
+                logger.error(f"Failed to emit TournamentCompletedEvent: {e}")
+
         return {
             "success": True,
             "round_complete": round_complete,
+            "tournament_complete": tournament_complete,
             "standings": standings,
             "standings_published": standings_message is not None,
         }
@@ -1002,3 +1105,256 @@ class LeagueManager(BaseGameServer):
     def is_registration_open(self) -> bool:
         """Check if registration is open."""
         return self.state == LeagueState.REGISTRATION
+
+    # ========================================================================
+    # Dashboard Integration
+    # ========================================================================
+
+    def set_dashboard(self, dashboard) -> None:
+        """Set dashboard for real-time updates."""
+        self._dashboard = dashboard
+        logger.info("Dashboard connected to league manager")
+
+    async def _stream_tournament_update(self) -> None:
+        """Stream tournament state update to dashboard."""
+        if not self._dashboard:
+            return
+
+        try:
+            # During registration phase, show registered players with 0 stats
+            if self.state == LeagueState.REGISTRATION:
+                standings_with_strategy = []
+                for idx, (player_id, player) in enumerate(self._players.items(), 1):
+                    standings_with_strategy.append({
+                        "rank": idx,
+                        "player_id": player_id,
+                        "player": player_id,
+                        "display_name": player.display_name,
+                        "strategy": player.strategy_name,  # Use actual strategy name
+                        "wins": 0,
+                        "total_wins": 0,
+                        "losses": 0,
+                        "points": 0,
+                        "score": 0,
+                        "total_score": 0,
+                        "matches_played": 0,
+                        "total_matches": 0,
+                        "win_rate": 0.0,
+                    })
+                
+                tournament_state = {
+                    "tournament_id": self.league_id,
+                    "game_type": "even_odd",
+                    "current_round": 0,
+                    "total_rounds": 0,  # Schedule not created yet
+                    "players": list(self._players.keys()),
+                    "standings": standings_with_strategy,
+                    "active_matches": [],
+                    "recent_matches": [],
+                }
+                
+                # Store and broadcast
+                from ..visualization.dashboard import TournamentState as DashboardTournamentState
+                dashboard_state = DashboardTournamentState(
+                    tournament_id=tournament_state["tournament_id"],
+                    game_type=tournament_state["game_type"],
+                    current_round=tournament_state["current_round"],
+                    total_rounds=tournament_state["total_rounds"],
+                    players=tournament_state["players"],
+                    standings=tournament_state["standings"],
+                    active_matches=tournament_state["active_matches"],
+                    recent_matches=tournament_state["recent_matches"],
+                )
+                self._dashboard.tournament_states[tournament_state["tournament_id"]] = dashboard_state
+                
+                # Convert any datetime objects to strings for JSON serialization
+                from datetime import datetime
+                from dataclasses import is_dataclass, asdict as dataclass_asdict
+                import json
+                
+                def convert_to_serializable(obj):
+                    """Recursively convert objects to JSON-serializable format"""
+                    if isinstance(obj, datetime):
+                        return obj.isoformat()
+                    elif is_dataclass(obj):
+                        return convert_to_serializable(dataclass_asdict(obj))
+                    elif isinstance(obj, dict):
+                        return {k: convert_to_serializable(v) for k, v in obj.items()}
+                    elif isinstance(obj, (list, tuple)):
+                        return [convert_to_serializable(item) for item in obj]
+                    elif hasattr(obj, 'to_dict') and callable(obj.to_dict):
+                        return convert_to_serializable(obj.to_dict())
+                    return obj
+                
+                serializable_state = convert_to_serializable(tournament_state)
+                # Double-check by encoding to JSON and back
+                try:
+                    test_json = json.dumps(serializable_state)  # Test if it's serializable
+                    logger.debug(f"Serialization test passed for registration update")
+                except TypeError as e:
+                    logger.error(f"State still not serializable after conversion: {e}")
+                    logger.error(f"Tournament state keys: {tournament_state.keys()}")
+                    logger.error(f"Standings: {tournament_state.get('standings', [])[:1]}")  # First player only
+                    return
+                
+                # Create the broadcast message
+                broadcast_message = {"type": "tournament_update", "data": serializable_state}
+                
+                # Test the full message
+                try:
+                    json.dumps(broadcast_message)
+                    logger.debug(f"Full broadcast message is JSON serializable")
+                except TypeError as e:
+                    logger.error(f"Broadcast message not serializable: {e}")
+                    return
+                    
+                await self._dashboard.connection_manager.broadcast(broadcast_message)
+                
+                logger.debug(f"Streamed registration update: {len(self._players)} players registered")
+                return
+            
+            # Get current standings (for active league)
+            standings_data = self._get_standings()
+
+            # Get active matches with moves
+            active_matches = []
+            for match in self._current_round_matches:
+                if match.state == MatchState.IN_PROGRESS or match.state == MatchState.COMPLETED:
+                    # Get game data for live display
+                    game = match.game
+                    
+                    # Get latest moves from current round (if available)
+                    player1_move = None
+                    player2_move = None
+                    if game and hasattr(game, '_current_moves'):
+                        player1_move = game._current_moves.get(game.player1_id, {}).get('value') if isinstance(game._current_moves.get(game.player1_id), dict) else None
+                        player2_move = game._current_moves.get(game.player2_id, {}).get('value') if isinstance(game._current_moves.get(game.player2_id), dict) else None
+                    
+                    match_data = {
+                        "match_id": match.match_id,
+                        "round": self.current_round,
+                        "total_rounds": len(self._schedule),
+                        "player_a": {
+                            "id": match.player1.player_id if match.player1 else "",
+                            "name": match.player1.display_name if match.player1 else "",
+                            "strategy": (
+                                self._players[match.player1.player_id].strategy_name
+                                if match.player1 and match.player1.player_id in self._players
+                                else "Unknown"
+                            ),
+                            "role": game.player1_role.value if game else "ODD",
+                            "score": game.player1_score if game else 0,
+                            "move": player1_move,
+                        },
+                        "player_b": {
+                            "id": match.player2.player_id if match.player2 else "",
+                            "name": match.player2.display_name if match.player2 else "",
+                            "strategy": (
+                                self._players[match.player2.player_id].strategy_name
+                                if match.player2 and match.player2.player_id in self._players
+                                else "Unknown"
+                            ),
+                            "role": game.player2_role.value if game else "EVEN",
+                            "score": game.player2_score if game else 0,
+                            "move": player2_move,
+                        },
+                        "state": match.state.value,
+                    }
+                    active_matches.append(match_data)
+
+            # Format standings for dashboard
+            standings_with_strategy = []
+            for standing in standings_data.get("standings", []):
+                player_id = standing["player_id"]
+                player = self._players.get(player_id)
+                strategy_name = player.strategy_name if player else "Unknown"
+
+                # Calculate win rate
+                played = standing.get("played", 0)
+                wins = standing.get("wins", 0)
+                win_rate = (wins / played * 100) if played > 0 else 0
+
+                standings_with_strategy.append(
+                    {
+                        "rank": standing["rank"],
+                        "player_id": player_id,
+                        "player": player_id,  # Alternative field name for compatibility
+                        "display_name": standing["display_name"],
+                        "strategy": strategy_name,
+                        "wins": wins,
+                        "total_wins": wins,  # Alternative field name for compatibility
+                        "losses": standing.get("losses", 0),
+                        "points": standing.get("points", 0),
+                        "score": standing.get("points", 0),  # Map points to score for dashboard
+                        "total_score": standing.get("points", 0),  # Alternative field name
+                        "matches_played": played,
+                        "total_matches": played,  # Alternative field name for compatibility
+                        "win_rate": round(win_rate, 1),
+                    }
+                )
+
+            # Create tournament state message
+            tournament_state = {
+                "tournament_id": self.league_id,
+                "game_type": "even_odd",  # Game type for dashboard display
+                "current_round": self.current_round,
+                "total_rounds": len(self._schedule),
+                "players": [p["player_id"] for p in standings_with_strategy],  # Player IDs list
+                "standings": standings_with_strategy,
+                "active_matches": active_matches,
+                "recent_matches": [],  # TODO: Add recent matches if needed
+            }
+
+            # Store and broadcast to dashboard
+            # First store the state in the dashboard's tournament_states dict
+            from ..visualization.dashboard import TournamentState as DashboardTournamentState
+            dashboard_state = DashboardTournamentState(
+                tournament_id=tournament_state["tournament_id"],
+                game_type=tournament_state["game_type"],
+                current_round=tournament_state["current_round"],
+                total_rounds=tournament_state["total_rounds"],
+                players=[],  # Will be populated from standings
+                standings=tournament_state["standings"],
+                active_matches=tournament_state["active_matches"],
+                recent_matches=tournament_state["recent_matches"],
+            )
+            self._dashboard.tournament_states[tournament_state["tournament_id"]] = dashboard_state
+            
+            # Then broadcast to all connected clients
+            # Convert any datetime objects to strings for JSON serialization
+            from datetime import datetime
+            from dataclasses import is_dataclass, asdict as dataclass_asdict
+            import json
+            
+            def convert_to_serializable(obj):
+                """Recursively convert objects to JSON-serializable format"""
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                elif is_dataclass(obj):
+                    return convert_to_serializable(dataclass_asdict(obj))
+                elif isinstance(obj, dict):
+                    return {k: convert_to_serializable(v) for k, v in obj.items()}
+                elif isinstance(obj, (list, tuple)):
+                    return [convert_to_serializable(item) for item in obj]
+                elif hasattr(obj, 'to_dict') and callable(obj.to_dict):
+                    return convert_to_serializable(obj.to_dict())
+                return obj
+            
+            serializable_state = convert_to_serializable(tournament_state)
+            # Double-check by encoding to JSON and back
+            try:
+                json.dumps(serializable_state)  # Test if it's serializable
+            except TypeError as e:
+                logger.error(f"State still not serializable: {e}")
+                return
+                
+            await self._dashboard.connection_manager.broadcast(
+                {"type": "tournament_update", "data": serializable_state}
+            )
+
+            logger.debug(
+                f"Streamed tournament update: Round {self.current_round}/{len(self._schedule)}"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to stream tournament update: {e}")

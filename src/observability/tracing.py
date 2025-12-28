@@ -28,7 +28,7 @@ Usage:
 import threading
 import time
 import uuid
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -390,18 +390,18 @@ class TracingManager:
             f"trace_id={span.trace_id[:8]}...)"
         )
 
-    @contextmanager
-    def span(
+    @asynccontextmanager
+    async def span(
         self,
         name: str,
         attributes: dict[str, Any] | None = None,
         parent_context: SpanContext | None = None,
     ):
         """
-        Context manager for creating spans.
+        Async context manager for creating spans.
 
         Usage:
-            with tracing.span("operation") as span:
+            async with tracing.span("operation") as span:
                 if span:  # Check if span was created (sampling/enabled)
                     span.set_attribute("key", "value")
                 # Your code here

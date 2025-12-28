@@ -156,6 +156,16 @@ class ConnectionManager:
 
         for connection in self.active_connections:
             try:
+                # Test JSON serialization before sending
+                import json
+                try:
+                    json.dumps(message)
+                except TypeError as json_err:
+                    logger.error(f"Message not JSON serializable before send: {json_err}")
+                    logger.error(f"Message type: {message.get('type')}")
+                    logger.error(f"Message data keys: {message.get('data', {}).keys() if isinstance(message.get('data'), dict) else 'not a dict'}")
+                    raise
+                
                 await connection.send_json(message)
             except Exception as e:
                 logger.error(f"Error broadcasting to client: {e}")
@@ -214,7 +224,39 @@ class DashboardAPI:
         @self.app.websocket("/ws")
         async def websocket_endpoint(websocket: WebSocket):
             """WebSocket for real-time updates."""
+            from datetime import datetime
+            
             await self.connection_manager.connect(websocket)
+            
+            def convert_datetimes(obj):
+                """Recursively convert datetime objects to ISO format strings"""
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                elif isinstance(obj, dict):
+                    return {k: convert_datetimes(v) for k, v in obj.items()}
+                elif isinstance(obj, (list, tuple)):
+                    return [convert_datetimes(item) for item in obj]
+                return obj
+            
+            # Send current tournament state on connect (for page refreshes)
+            try:
+                # Send all active tournament states
+                for tournament_id, state in self.tournament_states.items():
+                    state_dict = asdict(state)
+                    serializable_state = convert_datetimes(state_dict)
+                    
+                    await self.connection_manager.send_personal_message(
+                        {
+                            "type": "tournament_state",
+                            "tournament_id": tournament_id,
+                            "data": serializable_state
+                        },
+                        websocket
+                    )
+                logger.info(f"Sent {len(self.tournament_states)} tournament states to new connection")
+            except Exception as e:
+                logger.error(f"Failed to send initial state: {e}")
+            
             try:
                 while True:
                     # Keep connection alive
@@ -229,36 +271,84 @@ class DashboardAPI:
         @self.app.get("/api/tournament/{tournament_id}")
         async def get_tournament_state(tournament_id: str):
             """Get current tournament state."""
+            from datetime import datetime
+            
+            def convert_datetimes(obj):
+                """Recursively convert datetime objects to ISO format strings"""
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                elif isinstance(obj, dict):
+                    return {k: convert_datetimes(v) for k, v in obj.items()}
+                elif isinstance(obj, (list, tuple)):
+                    return [convert_datetimes(item) for item in obj]
+                return obj
+            
             state = self.tournament_states.get(tournament_id)
             if not state:
                 return {"error": "Tournament not found"}
-            return asdict(state)
+            return convert_datetimes(asdict(state))
 
         @self.app.get("/api/strategy/{strategy_name}/performance")
         async def get_strategy_performance(strategy_name: str):
             """Get strategy performance metrics."""
+            from datetime import datetime
+            
+            def convert_datetimes(obj):
+                """Recursively convert datetime objects to ISO format strings"""
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                elif isinstance(obj, dict):
+                    return {k: convert_datetimes(v) for k, v in obj.items()}
+                elif isinstance(obj, (list, tuple)):
+                    return [convert_datetimes(item) for item in obj]
+                return obj
+            
             perf = self.strategy_performance.get(strategy_name)
             if not perf:
                 return {"error": "Strategy not found"}
-            return asdict(perf)
+            return convert_datetimes(asdict(perf))
 
         @self.app.get("/api/opponent_model/{player_id}/{opponent_id}")
         async def get_opponent_model(player_id: str, opponent_id: str):
             """Get opponent model visualization data."""
+            from datetime import datetime
+            
+            def convert_datetimes(obj):
+                """Recursively convert datetime objects to ISO format strings"""
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                elif isinstance(obj, dict):
+                    return {k: convert_datetimes(v) for k, v in obj.items()}
+                elif isinstance(obj, (list, tuple)):
+                    return [convert_datetimes(item) for item in obj]
+                return obj
+            
             models = self.opponent_models.get(player_id, {})
             model = models.get(opponent_id)
             if not model:
                 return {"error": "Opponent model not found"}
-            return asdict(model)
+            return convert_datetimes(asdict(model))
 
         @self.app.get("/api/counterfactual/{player_id}/{round}")
         async def get_counterfactual(player_id: str, round: int):
             """Get counterfactual analysis for specific round."""
+            from datetime import datetime
+            
+            def convert_datetimes(obj):
+                """Recursively convert datetime objects to ISO format strings"""
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                elif isinstance(obj, dict):
+                    return {k: convert_datetimes(v) for k, v in obj.items()}
+                elif isinstance(obj, (list, tuple)):
+                    return [convert_datetimes(item) for item in obj]
+                return obj
+            
             cfs = self.counterfactuals.get(player_id, {})
             cf = cfs.get(round)
             if not cf:
                 return {"error": "Counterfactual data not found"}
-            return asdict(cf)
+            return convert_datetimes(asdict(cf))
 
         @self.app.get("/api/events/{tournament_id}")
         async def get_events(tournament_id: str, limit: int = 100):
@@ -576,6 +666,14 @@ class DashboardAPI:
         }
         .wins-cell {
             color: #10b981;
+            font-weight: 600;
+        }
+        .draws-cell {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+        .losses-cell {
+            color: #ef4444;
             font-weight: 600;
         }
         .winrate-cell {
@@ -1324,10 +1422,12 @@ class DashboardAPI:
                         <tr>
                             <th>Rank</th>
                             <th>Player & Strategy</th>
-                            <th>Score</th>
-                            <th>Wins</th>
+                            <th>Points</th>
+                            <th>W</th>
+                            <th>D</th>
+                            <th>L</th>
                             <th>Matches</th>
-                            <th>Win Rate</th>
+                            <th>Win %</th>
                         </tr>
                     </thead>
                     <tbody id="standings-tbody">
@@ -1539,6 +1639,26 @@ class DashboardAPI:
 
         function handleMessage(message) {
             switch (message.type) {
+                case 'tournament_state':
+                    // Handle initial state on reconnect
+                    handleTournamentUpdate(message.data);
+                    addLog('Tournament state restored');
+                    break;
+                case 'state_update':
+                    // Handle events forwarded from state sync service
+                    const eventType = message.event_type;
+                    const eventData = message.data;
+                    
+                    if (eventType === 'strategy.performance') {
+                        handleStrategyPerformance(eventData);
+                    } else if (eventType === 'opponent.model.update') {
+                        handleOpponentModelUpdate(eventData);
+                    } else if (eventType === 'counterfactual.analysis') {
+                        handleCounterfactualUpdate(eventData);
+                    } else if (eventType === 'tournament.completed') {
+                        handleTournamentComplete(eventData);
+                    }
+                    break;
                 case 'game_event':
                     handleGameEvent(message.data);
                     break;
@@ -1569,20 +1689,28 @@ class DashboardAPI:
         }
 
         function handleTournamentUpdate(data) {
-            document.getElementById('game-type').textContent = data.game_type;
+            document.getElementById('game-type').textContent = data.game_type || 'even_odd';
             document.getElementById('current-round').textContent =
-                `${data.current_round} / ${data.total_rounds}`;
-            document.getElementById('active-players').textContent = data.players.length;
+                `${data.current_round || 0} / ${data.total_rounds || 0}`;
+            
+            // Calculate active players from standings (more reliable than players array)
+            const activePlayers = data.standings ? data.standings.length : (data.players ? data.players.length : 0);
+            document.getElementById('active-players').textContent = activePlayers;
 
             // Update enhanced standings table
             updateStandingsTable(data.standings || []);
+            
+            // Update active matches if present
+            if (data.active_matches && data.active_matches.length > 0) {
+                updateGameArena(data.active_matches);
+            }
         }
 
         function updateStandingsTable(standings) {
             const tbody = document.getElementById('standings-tbody');
 
             if (!standings || standings.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #a0aec0; padding: 40px;">No data yet</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #a0aec0; padding: 40px;">No data yet</td></tr>';
                 return;
             }
 
@@ -1594,10 +1722,13 @@ class DashboardAPI:
                 else if (rank === 3) rankClass = 'rank-3';
 
                 const playerId = player.player_id || player.player || `Player ${rank}`;
+                const playerName = player.display_name || player.player_name || playerId;
                 const strategy = player.strategy || 'Unknown';
-                const score = (player.score || player.total_score || 0).toFixed(1);
+                const points = player.points || 0;
                 const wins = player.wins || player.total_wins || 0;
-                const matches = player.total_matches || player.matches_played || 0;
+                const draws = player.draws || 0;
+                const losses = player.losses || 0;
+                const matches = player.total_matches || player.matches_played || player.played || 0;
                 const winRate = matches > 0
                     ? ((wins / matches) * 100).toFixed(1)
                     : '0.0';
@@ -1609,15 +1740,17 @@ class DashboardAPI:
                         </td>
                         <td>
                             <div class="player-cell">
-                                <div class="player-avatar">${playerId.substring(0, 2)}</div>
+                                <div class="player-avatar">${playerName.substring(0, 2).toUpperCase()}</div>
                                 <div class="player-details">
-                                    <div class="player-name">${playerId}</div>
+                                    <div class="player-name">${playerName}</div>
                                     <span class="strategy-badge">${strategy}</span>
                                 </div>
                             </div>
                         </td>
-                        <td class="score-cell">${score}</td>
+                        <td class="score-cell">${points}</td>
                         <td class="wins-cell">${wins}</td>
+                        <td class="draws-cell">${draws}</td>
+                        <td class="losses-cell">${losses}</td>
                         <td>${matches}</td>
                         <td class="winrate-cell">${winRate}%</td>
                     </tr>
@@ -2550,14 +2683,12 @@ Round Difference: ${snap2.round - snap1.round}
             const modal = document.getElementById('winner-modal');
 
             // Populate winner data
-            document.getElementById('winner-avatar').textContent = winner.id ? winner.id.substring(0, 2) : '🥇';
-            document.getElementById('winner-name').textContent = winner.name || winner.player_id || 'Champion';
+            document.getElementById('winner-avatar').textContent = winner.player_id ? winner.player_id.substring(0, 2).toUpperCase() : '🥇';
+            document.getElementById('winner-name').textContent = winner.display_name || winner.player_id || 'Champion';
             document.getElementById('winner-strategy').textContent = `Strategy: ${winner.strategy || 'Unknown'}`;
             document.getElementById('winner-wins').textContent = winner.wins || 0;
             document.getElementById('winner-points').textContent = winner.points || 0;
-
-            const winRate = winner.played > 0 ? ((winner.wins / winner.played) * 100).toFixed(1) : 0;
-            document.getElementById('winner-winrate').textContent = `${winRate}%`;
+            document.getElementById('winner-winrate').textContent = `${(winner.win_rate || 0).toFixed(1)}%`;
 
             // Show modal
             modal.classList.remove('hidden');
@@ -2566,7 +2697,7 @@ Round Difference: ${snap2.round - snap1.round}
             createConfetti();
 
             // Log event
-            addLog(`🏆 Tournament Winner: ${winner.name || winner.player_id}`);
+            addLog(`🏆 Tournament Winner: ${winner.display_name || winner.player_id}`);
         }
 
         function createConfetti() {
@@ -2594,19 +2725,48 @@ Round Difference: ${snap2.round - snap1.round}
             modal.classList.add('hidden');
         }
 
-        // Auto-show winner celebration when tournament completes (example)
+        // Handle tournament completion with winner celebration
         function handleTournamentComplete(data) {
-            if (data.winner) {
+            // Support both direct data and event-wrapped data
+            const winnerDetails = data.winner_details || data.metadata?.winner_details;
+            const winnerId = data.winner || winnerDetails?.player_id;
+            
+            addLog(`🏆 Tournament Complete! Winner: ${winnerDetails?.display_name || winnerId || 'Unknown'}`);
+            
+            // Show winner celebration if we have winner details
+            if (winnerId && winnerDetails) {
                 setTimeout(() => {
-                    showWinnerCelebration(data.winner);
+                    showWinnerCelebration(winnerDetails);
                 }, 500);
+            } else if (winnerId) {
+                // Fallback: construct basic winner data from standings
+                const standings = document.getElementById('standings-tbody');
+                if (standings && standings.firstElementChild) {
+                    // Get top player from standings
+                    const topPlayerRow = standings.firstElementChild;
+                    const playerName = topPlayerRow.querySelector('.player-name')?.textContent || winnerId;
+                    const wins = parseInt(topPlayerRow.querySelector('.wins-cell')?.textContent || '0');
+                    const points = parseFloat(topPlayerRow.querySelector('.score-cell')?.textContent || '0');
+                    const winRate = parseFloat(topPlayerRow.querySelector('.winrate-cell')?.textContent || '0');
+                    
+                    setTimeout(() => {
+                        showWinnerCelebration({
+                            player_id: winnerId,
+                            display_name: playerName,
+                            wins: wins,
+                            points: points,
+                            win_rate: winRate,
+                            strategy: topPlayerRow.querySelector('.strategy-badge')?.textContent || 'Unknown'
+                        });
+                    }, 500);
+                }
             }
         }
 
         function clearData() {
-            performanceData: dict[str, Any] = {};
-            opponentModelData: dict[str, Any] = {};
-            regretData: dict[str, Any] = {};
+            performanceData = {};
+            opponentModelData = {};
+            regretData = {};
             events = [];
             document.getElementById('event-log').innerHTML = '';
             addLog('Data cleared');
