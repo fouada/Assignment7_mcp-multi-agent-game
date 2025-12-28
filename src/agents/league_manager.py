@@ -86,6 +86,7 @@ class RegisteredPlayer:
     draws: int = 0
     losses: int = 0
     points: int = 0
+    last_move: str | None = None  # Last move made by player for dashboard display
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -98,6 +99,7 @@ class RegisteredPlayer:
             "draws": self.draws,
             "losses": self.losses,
             "points": self.points,
+            "last_move": self.last_move,
         }
 
     def record_win(self) -> None:
@@ -850,15 +852,22 @@ class LeagueManager(BaseGameServer):
         winner_id = params.get("winner_id")
         player1_score = params.get("player1_score", 0)
         player2_score = params.get("player2_score", 0)
+        details = params.get("details", {})
 
         match = self._matches.get(match_id_str)
         if not match:
             return {"success": False, "error": f"Unknown match: {match_id}"}
 
+        # Extract last moves from details if available
+        last_moves = details.get("last_moves", {})
+        
         # Update standings
         if winner_id:
             if winner_id in self._players:
                 self._players[winner_id].record_win()
+                # Store last move for winner
+                if winner_id in last_moves:
+                    self._players[winner_id].last_move = str(last_moves[winner_id])
 
             # Record loss for other player
             player1_id = match.player1.player_id if match.player1 else ""
@@ -866,14 +875,23 @@ class LeagueManager(BaseGameServer):
             loser_id = player1_id if winner_id == player2_id else player2_id
             if loser_id in self._players:
                 self._players[loser_id].record_loss()
+                # Store last move for loser
+                if loser_id in last_moves:
+                    self._players[loser_id].last_move = str(last_moves[loser_id])
         else:
             # Draw
             player1_id = match.player1.player_id if match.player1 else ""
             player2_id = match.player2.player_id if match.player2 else ""
             if player1_id in self._players:
                 self._players[player1_id].record_draw()
+                # Store last move for player1
+                if player1_id in last_moves:
+                    self._players[player1_id].last_move = str(last_moves[player1_id])
             if player2_id in self._players:
                 self._players[player2_id].record_draw()
+                # Store last move for player2
+                if player2_id in last_moves:
+                    self._players[player2_id].last_move = str(last_moves[player2_id])
 
         # Update match state
         match.state = MatchState.COMPLETED
@@ -884,6 +902,29 @@ class LeagueManager(BaseGameServer):
             player1_id: player1_score,
             player2_id: player2_score,
         }
+        
+        # Create GameResult from details (with round history)
+        from ..game.odd_even import GameResult, RoundResult
+        rounds_data = details.get("rounds", [])
+        rounds = []
+        for r in rounds_data:
+            rounds.append(RoundResult(
+                round_number=r.get("round_number", 0),
+                player1_move=r.get("player1_move", 0),
+                player2_move=r.get("player2_move", 0),
+                sum_value=r.get("sum_value", 0),
+                sum_is_odd=r.get("sum_is_odd", False),
+                winner_id=r.get("winner_id"),
+            ))
+        
+        match.result = GameResult(
+            game_id=match.match_id,
+            winner_id=winner_id,
+            player1_score=player1_score,
+            player2_score=player2_score,
+            total_rounds=len(rounds),
+            rounds=rounds,
+        )
 
         logger.info(
             "Match result recorded",
@@ -1223,6 +1264,18 @@ class LeagueManager(BaseGameServer):
                     # Get game data for live display
                     game = match.game
                     
+                    # Get scores - use final_score for completed matches, game scores for in-progress
+                    player1_score = 0
+                    player2_score = 0
+                    if match.state == MatchState.COMPLETED and match.final_score:
+                        # Use final scores from completed match
+                        player1_score = match.final_score.get(match.player1.player_id if match.player1 else "", 0)
+                        player2_score = match.final_score.get(match.player2.player_id if match.player2 else "", 0)
+                    elif game:
+                        # Use current game scores for in-progress match
+                        player1_score = game.player1_score
+                        player2_score = game.player2_score
+                    
                     # Get latest moves from current round (if available)
                     player1_move = None
                     player2_move = None
@@ -1230,10 +1283,60 @@ class LeagueManager(BaseGameServer):
                         player1_move = game._current_moves.get(game.player1_id, {}).get('value') if isinstance(game._current_moves.get(game.player1_id), dict) else None
                         player2_move = game._current_moves.get(game.player2_id, {}).get('value') if isinstance(game._current_moves.get(game.player2_id), dict) else None
                     
+                    # Get round history with sums and winners
+                    round_history = []
+                    
+                    # Debug logging
+                    logger.info(
+                        f"[ROUND_HISTORY_DEBUG] Match {match.match_id}: "
+                        f"state={match.state}, "
+                        f"has_result={match.result is not None}, "
+                        f"has_game={game is not None}"
+                    )
+                    
+                    # For completed matches, get from match.result.rounds
+                    if match.state == MatchState.COMPLETED and match.result and hasattr(match.result, 'rounds'):
+                        logger.info(f"[ROUND_HISTORY_DEBUG] Getting from match.result.rounds, count={len(match.result.rounds)}")
+                        for round_result in match.result.rounds:
+                            round_history.append({
+                                "round_number": round_result.round_number,
+                                "player1_move": round_result.player1_move,
+                                "player2_move": round_result.player2_move,
+                                "sum": round_result.sum_value,
+                                "sum_is_odd": round_result.sum_is_odd,
+                                "winner_id": round_result.winner_id,
+                                "winner_name": (
+                                    match.player1.display_name if round_result.winner_id == match.player1.player_id
+                                    else match.player2.display_name if round_result.winner_id == match.player2.player_id
+                                    else None
+                                ) if match.player1 and match.player2 else None
+                            })
+                    # For in-progress matches, get from game.round_history
+                    elif game and hasattr(game, 'round_history'):
+                        logger.info(f"[ROUND_HISTORY_DEBUG] Getting from game.round_history, count={len(game.round_history)}")
+                        for round_result in game.round_history:
+                            round_history.append({
+                                "round_number": round_result.round_number,
+                                "player1_move": round_result.player1_move,
+                                "player2_move": round_result.player2_move,
+                                "sum": round_result.sum_value,
+                                "sum_is_odd": round_result.sum_is_odd,
+                                "winner_id": round_result.winner_id,
+                                "winner_name": (
+                                    match.player1.display_name if round_result.winner_id == match.player1.player_id
+                                    else match.player2.display_name if round_result.winner_id == match.player2.player_id
+                                    else None
+                                ) if match.player1 and match.player2 else None
+                            })
+                    
+                    logger.info(f"[ROUND_HISTORY_DEBUG] Final round_history length: {len(round_history)}")
+                    
                     match_data = {
                         "match_id": match.match_id,
                         "round": self.current_round,
                         "total_rounds": len(self._schedule),
+                        "game_rounds": game.total_rounds if game else 5,  # Total game rounds (e.g., 5)
+                        "game_round_current": game.current_round if game else 0,  # Current game round
                         "player_a": {
                             "id": match.player1.player_id if match.player1 else "",
                             "name": match.player1.display_name if match.player1 else "",
@@ -1243,7 +1346,7 @@ class LeagueManager(BaseGameServer):
                                 else "Unknown"
                             ),
                             "role": game.player1_role.value if game else "ODD",
-                            "score": game.player1_score if game else 0,
+                            "score": player1_score,
                             "move": player1_move,
                         },
                         "player_b": {
@@ -1255,10 +1358,11 @@ class LeagueManager(BaseGameServer):
                                 else "Unknown"
                             ),
                             "role": game.player2_role.value if game else "EVEN",
-                            "score": game.player2_score if game else 0,
+                            "score": player2_score,
                             "move": player2_move,
                         },
                         "state": match.state.value,
+                        "round_history": round_history,  # Include full round history
                     }
                     active_matches.append(match_data)
 
@@ -1290,6 +1394,7 @@ class LeagueManager(BaseGameServer):
                         "matches_played": played,
                         "total_matches": played,  # Alternative field name for compatibility
                         "win_rate": round(win_rate, 1),
+                        "last_move": player.last_move if player else None,  # Include last move for dashboard
                     }
                 )
 

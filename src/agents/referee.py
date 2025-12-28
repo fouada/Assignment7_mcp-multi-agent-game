@@ -766,6 +766,14 @@ class RefereeAgent(BaseGameServer):
             game.player2_id: game.player2_role.value,
         }
 
+        # Extract last moves for each player
+        last_moves = {}
+        if last_round:
+            last_moves = {
+                game.player1_id: last_round.player1_move,
+                game.player2_id: last_round.player2_move,
+            }
+
         # Determine status and reason
         if game_result.winner_id:
             status = "WIN"
@@ -824,7 +832,7 @@ class RefereeAgent(BaseGameServer):
                 logger.error(f"Failed to send GAME_OVER to {player_id}: {e}")
 
         # Step 5.6: Report to league manager
-        await self._report_to_league(session, game_result, drawn_number, choices)
+        await self._report_to_league(session, game_result, drawn_number, choices, last_moves)
 
     async def _report_to_league(
         self,
@@ -832,6 +840,7 @@ class RefereeAgent(BaseGameServer):
         result: GameResult,
         drawn_number: int = 0,
         choices: dict[str, str] | None = None,
+        last_moves: dict[str, int] | None = None,
     ) -> None:
         """
         Report game result to league manager.
@@ -841,6 +850,7 @@ class RefereeAgent(BaseGameServer):
             result: Game result
             drawn_number: The final drawn number (sum)
             choices: Map of player_id to their parity choice
+            last_moves: Map of player_id to their last move value
         """
         try:
             if self._client is None:
@@ -851,10 +861,12 @@ class RefereeAgent(BaseGameServer):
             if "league_manager" not in self._client.connected_servers:
                 await self._client.connect("league_manager", self.league_manager_url)
 
-            # Build details
+            # Build details - include rounds for dashboard round history
             details = {
                 "drawn_number": drawn_number,
                 "choices": choices or {},
+                "last_moves": last_moves or {},  # Include last moves for dashboard
+                "rounds": [r.to_dict() for r in result.rounds],  # Include full round history
             }
 
             # Call report tool with  format

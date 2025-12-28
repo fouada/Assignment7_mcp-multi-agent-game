@@ -65,6 +65,7 @@ class ComponentLauncher:
         # Components
         self.component: LeagueManager | RefereeAgent | PlayerAgent | None = None
         self.dashboard = None
+        self._integration = None  # Dashboard integration instance
 
         # Infrastructure
         self.event_bus = get_event_bus()
@@ -174,11 +175,56 @@ class ComponentLauncher:
         )
 
         # Connect event bus to dashboard
-        self.event_bus.on("game.round.start", integration.on_round_start)
-        self.event_bus.on("game.move.decision", integration.on_move_decision)
-        self.event_bus.on("game.round.complete", integration.on_round_complete)
+        # Connect to actual events being emitted by the system
+        self.event_bus.on("round.started", self._on_round_started)
+        self.event_bus.on("player.move.after", self._on_player_move)
+        self.event_bus.on("round.completed", self._on_round_completed)
+        
+        # Store integration for event handlers
+        self._integration = integration
 
         logger.info("Dashboard started and connected to event bus")
+    
+    async def _on_round_started(self, event: Any) -> None:
+        """Forward round started event to integration."""
+        try:
+            await self._integration.on_round_start(
+                round_num=event.round_number,
+                matches=[]
+            )
+        except Exception as e:
+            logger.error(f"Error forwarding round started event: {e}")
+    
+    async def _on_player_move(self, event: Any) -> None:
+        """Forward player move event to integration."""
+        try:
+            # We need to get the opponent ID from the game
+            # For now, just pass empty string for opponent_id
+            await self._integration.on_move_decision(
+                player_id=event.player_id,
+                opponent_id="",  # Will be filled in by integration
+                round_num=event.round_number,
+                move=str(event.move),
+                game_state={"game_id": event.game_id}
+            )
+        except Exception as e:
+            logger.error(f"Error forwarding player move event: {e}")
+    
+    async def _on_round_completed(self, event: Any) -> None:
+        """Forward round completed event to integration."""
+        try:
+            # Extract player IDs from moves dict
+            player_ids = list(event.moves.keys())
+            if len(player_ids) >= 2:
+                await self._integration.on_round_complete(
+                    round_num=event.round_number,
+                    player1_id=player_ids[0],
+                    player2_id=player_ids[1],
+                    moves={k: str(v) for k, v in event.moves.items()},
+                    scores={k: float(v) for k, v in event.cumulative_scores.items()}
+                )
+        except Exception as e:
+            logger.error(f"Error forwarding round completed event: {e}")
 
     async def _start_referee(self, **kwargs: Any) -> None:
         """Start a referee agent."""

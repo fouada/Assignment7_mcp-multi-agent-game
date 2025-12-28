@@ -31,6 +31,7 @@ from ..agents.strategies.counterfactual_reasoning import (
 from ..agents.strategies.hierarchical_composition import CompositeStrategy
 from ..agents.strategies.opponent_modeling import OpponentModel, OpponentModelingEngine
 from ..common.logger import get_logger
+from .analytics import get_analytics_engine, AnalyticsEngine
 from .dashboard import (
     CounterfactualVisualization,
     DashboardAPI,
@@ -125,8 +126,9 @@ class DashboardIntegration:
     ```
     """
 
-    def __init__(self, dashboard: DashboardAPI | None = None):
+    def __init__(self, dashboard: DashboardAPI | None = None, analytics_engine: AnalyticsEngine | None = None):
         self.dashboard = dashboard or get_dashboard()
+        self.analytics_engine = analytics_engine or get_analytics_engine()
         self.tournament_state: TournamentDashboardState | None = None
         self.enabled = False
 
@@ -135,7 +137,10 @@ class DashboardIntegration:
         self.cfr_engines: dict[str, CounterfactualReasoningEngine] = {}
         self.strategy_compositions: dict[str, CompositeStrategy] = {}
 
-        logger.info("DashboardIntegration initialized")
+        # Track moves for current round to accumulate both players' moves
+        self.current_round_moves: dict[int, dict[str, str]] = {}  # round_num -> {player_id: move}
+
+        logger.info("DashboardIntegration initialized with analytics engine")
 
     async def start(self, tournament_id: str, total_rounds: int):
         """Start dashboard integration for a tournament."""
@@ -175,6 +180,9 @@ class DashboardIntegration:
         """
         if not self.enabled:
             return
+
+        # Register with analytics engine
+        self.analytics_engine.register_player(player_id, strategy_name)
 
         # Create player state
         if self.tournament_state:
@@ -235,25 +243,37 @@ class DashboardIntegration:
         if not self.enabled:
             return
 
-        # Create event
-        event = GameEvent(
-            timestamp=datetime.now().isoformat(),
-            event_type="move",
-            round=round_num,
-            players=[player_id, opponent_id],
-            moves={player_id: move},
-            scores={},
-            metadata={"game_state": game_state},
-        )
-
-        # Stream to dashboard
-        await self.dashboard.stream_event(event)
+        # Accumulate moves for this round
+        if round_num not in self.current_round_moves:
+            self.current_round_moves[round_num] = {}
+        
+        self.current_round_moves[round_num][player_id] = str(move)
+        
+        # Check if we have both players' moves
+        if len(self.current_round_moves[round_num]) >= 2:
+            # Both players have moved - broadcast complete move event
+            event = GameEvent(
+                timestamp=datetime.now().isoformat(),
+                event_type="move",
+                round=round_num,
+                players=[player_id, opponent_id],
+                moves=self.current_round_moves[round_num].copy(),
+                scores={},
+                metadata={"game_state": game_state},
+            )
+            
+            # Stream to dashboard
+            await self.dashboard.stream_event(event)
+            logger.debug(f"Streamed complete move event for round {round_num}: {self.current_round_moves[round_num]}")
+        else:
+            # Only one player has moved so far
+            logger.debug(f"Move recorded for {player_id} in round {round_num}, waiting for opponent")
 
         # Update opponent modeling visualization if available
         if player_id in self.opponent_modeling_engines:
             await self._update_opponent_model_viz(player_id, opponent_id)
 
-        logger.debug(f"Streamed move event for player {player_id}")
+        logger.debug(f"Processed move for player {player_id}: {move}")
 
     async def on_round_complete(
         self,
@@ -267,7 +287,25 @@ class DashboardIntegration:
         if not self.enabled:
             return
 
-        # Create event
+        # Update analytics engine
+        await self.analytics_engine.on_round_complete(
+            round_num, player1_id, player2_id, moves, scores
+        )
+
+        # Broadcast move event for dashboard to update last move
+        move_event = GameEvent(
+            timestamp=datetime.now().isoformat(),
+            event_type="move",
+            round=round_num,
+            players=[player1_id, player2_id],
+            moves=moves,
+            scores={},
+            metadata={},
+        )
+        await self.dashboard.stream_event(move_event)
+        logger.debug(f"Streamed move event for round {round_num}: {moves}")
+
+        # Create round end event with cumulative scores in metadata
         event = GameEvent(
             timestamp=datetime.now().isoformat(),
             event_type="round_end",
@@ -275,7 +313,7 @@ class DashboardIntegration:
             players=[player1_id, player2_id],
             moves=moves,
             scores=scores,
-            metadata={},
+            metadata={"cumulative_scores": scores},  # Include cumulative scores for dashboard
         )
 
         # Update player states
@@ -307,14 +345,18 @@ class DashboardIntegration:
         # Stream to dashboard
         await self.dashboard.stream_event(event)
 
+        # Clear accumulated moves for this round
+        if round_num in self.current_round_moves:
+            del self.current_round_moves[round_num]
+
         # Update counterfactual visualization if available
         if player1_id in self.cfr_engines:
             await self._update_counterfactual_viz(player1_id, round_num)
         if player2_id in self.cfr_engines:
             await self._update_counterfactual_viz(player2_id, round_num)
 
-        # Update strategy performance
-        await self._update_strategy_performance()
+        # Update strategy performance with enriched analytics
+        await self._update_strategy_performance_with_analytics()
 
         logger.debug(f"Streamed round_end event for round {round_num}")
 
@@ -332,6 +374,16 @@ class DashboardIntegration:
         model = engine.models.get(opponent_id)
         if not model:
             return
+
+        # Update analytics engine
+        await self.analytics_engine.on_opponent_model_update(
+            player_id=player_id,
+            opponent_id=opponent_id,
+            confidence=model.confidence,
+            accuracy=model.prediction_accuracy,
+            predicted_strategy=model.strategy_type,
+            beliefs={str(k): v for k, v in model.move_distribution.items()},
+        )
 
         # Create visualization data
         # Convert move_distribution keys from int to str
@@ -410,29 +462,50 @@ class DashboardIntegration:
         # Get actual move from last CF
         actual = recent_cfs[0]
 
+        # Prepare counterfactuals list
+        counterfactuals_list = [
+            {
+                "move": cf.counterfactual_move,
+                "estimated_reward": cf.counterfactual_reward,
+                "regret": cf.regret,
+                "confidence": cf.confidence,
+            }
+            for cf in recent_cfs
+        ]
+
+        # Get cumulative regret (try to extract from regret table)
+        cumulative_regret = {}
+        try:
+            # Access regret table if available
+            if hasattr(engine, 'regret_table') and hasattr(engine.regret_table, 'cumulative_regret'):
+                # Get first infoset's regret as a representative
+                if engine.regret_table.cumulative_regret:
+                    first_infoset = list(engine.regret_table.cumulative_regret.keys())[0]
+                    cumulative_regret = {
+                        str(k): float(v) for k, v in engine.regret_table.cumulative_regret[first_infoset].items()
+                    }
+        except Exception as e:
+            logger.debug(f"Could not extract cumulative regret: {e}")
+            cumulative_regret = {}
+
+        # Update analytics engine
+        await self.analytics_engine.on_counterfactual_update(
+            player_id=player_id,
+            actual_move=str(actual.actual_move),
+            counterfactuals=counterfactuals_list,
+            cumulative_regret=cumulative_regret,
+        )
+
         # Create visualization data
         viz = CounterfactualVisualization(  # type: ignore[call-arg]
             actual_move=str(actual.actual_move),  # Convert int to str
             actual_reward=actual.actual_reward,
-            counterfactuals=[
-                {
-                    "move": cf.counterfactual_move,
-                    "estimated_reward": cf.counterfactual_reward,
-                    "regret": cf.regret,
-                    "confidence": cf.confidence,
-                }
-                for cf in recent_cfs
-            ],
-            cumulative_regret={},  # Will populate from regret table
+            counterfactuals=counterfactuals_list,
+            cumulative_regret=cumulative_regret,
         )
 
         # Store metadata separately
         viz.metadata = {"round": round_num}  # type: ignore[attr-defined]
-
-        # Get cumulative regrets from regret table (skip if no game state available)
-        # infoset = engine._get_infoset(None)  # Would need actual game state
-        # if infoset in engine.regret_table.cumulative_regret:
-        #     viz.cumulative_regret = dict(engine.regret_table.cumulative_regret[infoset])
 
         # Update player state
         if self.tournament_state is None:
@@ -477,52 +550,53 @@ class DashboardIntegration:
     # Strategy Performance Integration
     # ========================================================================
 
-    async def _update_strategy_performance(self):
-        """Update strategy performance metrics across all players."""
+    async def _update_strategy_performance_with_analytics(self):
+        """Update strategy performance metrics using analytics engine."""
         if not self.enabled:
             return
 
-        # Aggregate performance by strategy type
-        strategy_stats: dict[str, dict[str, list]] = {}
+        # Get all strategy analytics from analytics engine
+        all_analytics = self.analytics_engine.get_all_strategy_analytics()
 
-        for _player_id, state in self.tournament_state.players.items():
-            strategy_name = state.strategy_name
-
-            if strategy_name not in strategy_stats:
-                strategy_stats[strategy_name] = {"rounds": [], "win_rates": [], "avg_scores": []}
-
-            # Aggregate data
-            if state.round_history:
-                strategy_stats[strategy_name]["rounds"].extend(state.round_history)
-                strategy_stats[strategy_name]["win_rates"].extend(state.win_rate_history)
-                strategy_stats[strategy_name]["avg_scores"].extend(state.score_history)
-
-        # Create performance objects and stream to dashboard
-        for strategy_name, stats in strategy_stats.items():
-            if not stats["rounds"]:
-                continue
-
-            perf = StrategyPerformance(
-                strategy_name=strategy_name,
-                rounds=stats["rounds"],
-                win_rates=stats["win_rates"],
-                avg_scores=stats["avg_scores"],
-            )
-
-            # Stream to dashboard
+        for analytics in all_analytics:
+            # Stream enriched data to dashboard
             await self.dashboard.connection_manager.broadcast(
                 {
                     "type": "strategy_performance_update",
-                    "strategy_name": strategy_name,
+                    "strategy_name": analytics.strategy_name,
                     "data": {
-                        "rounds": perf.rounds,
-                        "win_rates": perf.win_rates,
-                        "avg_scores": perf.avg_scores,
+                        "rounds": analytics.rounds,
+                        "win_rates": analytics.win_rates,
+                        "avg_scores": analytics.avg_scores,
+                        "cumulative_scores": analytics.cumulative_scores,
+                        "learning_rate": analytics.learning_rate,
+                        "consistency": analytics.consistency,
+                        "improvement_trend": analytics.improvement_trend,
+                        "total_matches": analytics.total_matches,
+                        "win_rate": analytics.win_rate,
                     },
                 }
             )
 
-        logger.debug("Updated strategy performance metrics")
+        # Also broadcast matchup matrix
+        matchup_matrix = self.analytics_engine.get_matchup_matrix()
+        await self.dashboard.connection_manager.broadcast(
+            {
+                "type": "matchup_matrix_update",
+                "data": {
+                    "players": matchup_matrix.players,
+                    "matrix": {
+                        f"{k[0]}_vs_{k[1]}": v 
+                        for k, v in matchup_matrix.matrix.items()
+                    },
+                    "total_matches": matchup_matrix.total_matches,
+                    "finished_matches": matchup_matrix.finished_matches,
+                    "pending_matches": matchup_matrix.pending_matches,
+                },
+            }
+        )
+
+        logger.debug("Updated strategy performance metrics with analytics")
 
     # ========================================================================
     # API Endpoints Data Providers

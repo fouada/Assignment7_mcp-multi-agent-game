@@ -41,6 +41,16 @@ integration.register_player(
 Open http://localhost:8050 in browser to view live dashboard.
 """
 
+from .analytics import (
+    AnalyticsEngine,
+    CounterfactualAnalytics,
+    MatchupMatrixData,
+    OpponentModelAnalytics,
+    StrategyPerformanceAnalytics,
+    TournamentReplayState,
+    get_analytics_engine,
+    reset_analytics_engine,
+)
 from .dashboard import (
     CounterfactualVisualization,
     DashboardAPI,

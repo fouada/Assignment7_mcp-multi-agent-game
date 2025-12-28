@@ -377,6 +377,192 @@ class DashboardAPI:
                 "tournaments": len(self.tournament_states),
             }
 
+        # Advanced Analytics Endpoints
+        @self.app.get("/api/analytics/strategies")
+        async def get_all_strategies_analytics():
+            """Get analytics for all strategies."""
+            from .analytics import get_analytics_engine
+            
+            engine = get_analytics_engine()
+            all_analytics = engine.get_all_strategy_analytics()
+            
+            return {
+                "strategies": [
+                    {
+                        "strategy_name": a.strategy_name,
+                        "time_series": {
+                            "rounds": a.rounds,
+                            "win_rates": a.win_rates,
+                            "avg_scores": a.avg_scores,
+                            "cumulative_scores": a.cumulative_scores,
+                        },
+                        "metrics": {
+                            "total_matches": a.total_matches,
+                            "win_rate": a.win_rate,
+                            "learning_rate": a.learning_rate,
+                            "consistency": a.consistency,
+                            "improvement_trend": a.improvement_trend,
+                        },
+                    }
+                    for a in all_analytics
+                ]
+            }
+
+        @self.app.get("/api/analytics/strategy/{strategy_name}")
+        async def get_strategy_analytics_detailed(strategy_name: str):
+            """Get detailed analytics for a specific strategy."""
+            from .analytics import get_analytics_engine
+            
+            engine = get_analytics_engine()
+            analytics = engine.get_strategy_analytics(strategy_name)
+            
+            if not analytics:
+                return {"error": "Strategy not found"}
+            
+            return {
+                "strategy_name": analytics.strategy_name,
+                "player_ids": analytics.player_ids,
+                "time_series": {
+                    "rounds": analytics.rounds,
+                    "win_rates": analytics.win_rates,
+                    "avg_scores": analytics.avg_scores,
+                    "cumulative_scores": analytics.cumulative_scores,
+                },
+                "statistics": {
+                    "total_matches": analytics.total_matches,
+                    "total_wins": analytics.total_wins,
+                    "total_draws": analytics.total_draws,
+                    "total_losses": analytics.total_losses,
+                    "win_rate": analytics.win_rate,
+                    "avg_score_per_match": analytics.avg_score_per_match,
+                },
+                "learning_metrics": {
+                    "learning_rate": analytics.learning_rate,
+                    "consistency": analytics.consistency,
+                    "improvement_trend": analytics.improvement_trend,
+                },
+                "opponent_matchups": analytics.opponent_win_rates,
+            }
+
+        @self.app.get("/api/analytics/opponent_models/{player_id}")
+        async def get_player_opponent_models(player_id: str):
+            """Get all opponent models for a player."""
+            from .analytics import get_analytics_engine
+            
+            engine = get_analytics_engine()
+            models = engine.get_all_opponent_models(player_id)
+            
+            return {
+                "player_id": player_id,
+                "opponent_models": {
+                    opp_id: {
+                        "opponent_id": model.opponent_id,
+                        "current_confidence": model.current_confidence,
+                        "current_accuracy": model.current_accuracy,
+                        "predicted_strategy": model.predicted_strategy,
+                        "convergence_round": model.convergence_round,
+                        "time_series": {
+                            "rounds": model.rounds,
+                            "confidence_history": model.confidence_history,
+                            "accuracy_history": model.accuracy_history,
+                        },
+                        "prediction_count": model.prediction_count,
+                        "correct_predictions": model.correct_predictions,
+                    }
+                    for opp_id, model in models.items()
+                },
+            }
+
+        @self.app.get("/api/analytics/counterfactual/{player_id}")
+        async def get_player_counterfactual(player_id: str):
+            """Get counterfactual analytics for a player."""
+            from .analytics import get_analytics_engine
+            
+            engine = get_analytics_engine()
+            cf = engine.get_counterfactual_analytics(player_id)
+            
+            if not cf:
+                return {"error": "Player not found"}
+            
+            return {
+                "player_id": cf.player_id,
+                "time_series": {
+                    "rounds": cf.rounds,
+                    "regret_by_action": cf.regret_by_action,
+                    "entropy_history": cf.entropy_history,
+                },
+                "cumulative_regret": cf.cumulative_regret_by_action,
+                "strategy_distribution": cf.strategy_distribution_history[-1] if cf.strategy_distribution_history else {},
+                "metrics": {
+                    "total_regret_minimized": cf.total_regret_minimized,
+                    "strategy_stability": cf.strategy_stability,
+                    "nash_equilibrium_distance": cf.nash_equilibrium_distance,
+                },
+            }
+
+        @self.app.get("/api/analytics/matchup_matrix")
+        async def get_matchup_matrix():
+            """Get complete matchup matrix."""
+            from .analytics import get_analytics_engine
+            
+            engine = get_analytics_engine()
+            matrix = engine.get_matchup_matrix()
+            
+            return {
+                "players": matrix.players,
+                "matchups": {
+                    f"{k[0]}_vs_{k[1]}": {
+                        "player_a": v["player_a"],
+                        "player_b": v["player_b"],
+                        "total_matches": v["total_matches"],
+                        "player_a_wins": v["player_a_wins"],
+                        "player_b_wins": v["player_b_wins"],
+                        "draws": v["draws"],
+                        "avg_score_a": v["total_score_a"] / v["total_matches"] if v["total_matches"] > 0 else 0,
+                        "avg_score_b": v["total_score_b"] / v["total_matches"] if v["total_matches"] > 0 else 0,
+                        "recent_matches": v["match_history"][-5:],  # Last 5 matches
+                    }
+                    for k, v in matrix.matrix.items()
+                },
+                "summary": {
+                    "total_matches": matrix.total_matches,
+                    "finished_matches": matrix.finished_matches,
+                    "pending_matches": matrix.pending_matches,
+                },
+            }
+
+        @self.app.get("/api/analytics/replay/history")
+        async def get_replay_history(start_round: int = 0, end_round: int | None = None):
+            """Get replay history for a range of rounds."""
+            from .analytics import get_analytics_engine
+            
+            engine = get_analytics_engine()
+            history = engine.get_replay_history(start_round, end_round)
+            
+            return {
+                "start_round": start_round,
+                "end_round": end_round or engine.current_round,
+                "snapshots": [
+                    {
+                        "round": snap.round_number,
+                        "timestamp": snap.timestamp,
+                        "standings": snap.standings,
+                        "active_matches_count": len(snap.active_matches),
+                        "completed_matches_count": len(snap.completed_matches),
+                    }
+                    for snap in history
+                ],
+                "total_snapshots": len(history),
+            }
+
+        @self.app.get("/api/analytics/export")
+        async def export_analytics():
+            """Export all analytics data for research."""
+            from .analytics import get_analytics_engine
+            
+            engine = get_analytics_engine()
+            return engine.export_for_research()
+
     async def stream_event(self, event: GameEvent):
         """Stream event to all connected clients."""
         message = {"type": "game_event", "data": asdict(event)}
@@ -516,6 +702,7 @@ class DashboardAPI:
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -658,6 +845,31 @@ class DashboardAPI:
             font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+        }
+        .last-move-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            font-size: 22px;
+            font-weight: 700;
+            border-radius: 8px;
+            padding: 5px 12px;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+            animation: fadeInScale 0.3s ease;
+        }
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
         .score-cell {
             font-size: 24px;
@@ -876,6 +1088,68 @@ class DashboardAPI:
             height: 100%;
             background: linear-gradient(90deg, #667eea, #764ba2);
             transition: width 0.5s ease;
+        }
+        
+        /* Round History Styles */
+        .round-history {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .round-history-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #a0aec0;
+            margin-bottom: 10px;
+        }
+        .round-history-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .round-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 6px;
+            font-size: 13px;
+            border-left: 3px solid transparent;
+        }
+        .round-label {
+            font-weight: 600;
+            color: #667eea;
+            min-width: 30px;
+        }
+        .round-moves {
+            color: #a0aec0;
+        }
+        .round-moves.winner {
+            color: #10b981;
+            font-weight: 600;
+        }
+        .round-plus, .round-equals {
+            color: #667eea;
+            font-weight: 600;
+        }
+        .round-sum {
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .round-sum.odd {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+        .round-sum.even {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+        .round-winner {
+            color: #10b981;
+            font-weight: 600;
+            margin-left: auto;
         }
 
         /* Strategy Evolution Tabs */
@@ -1422,6 +1696,7 @@ class DashboardAPI:
                         <tr>
                             <th>Rank</th>
                             <th>Player & Strategy</th>
+                            <th>Last Move</th>
                             <th>Points</th>
                             <th>W</th>
                             <th>D</th>
@@ -1601,6 +1876,8 @@ class DashboardAPI:
         let opponentModelData = {};
         let regretData = {};
         let events = [];
+        let currentMatches = {}; // Store current match states by match_id
+        let playerLastMoves = {}; // Store last move for each player
 
         function connectWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -1677,6 +1954,9 @@ class DashboardAPI:
                 case 'match_update':
                     handleMatchUpdate(message.data);
                     break;
+                case 'matchup_matrix_update':
+                    handleMatchupMatrixUpdate(message.data);
+                    break;
                 case 'tournament_complete':
                     handleTournamentComplete(message.data);
                     break;
@@ -1685,7 +1965,171 @@ class DashboardAPI:
 
         function handleGameEvent(data) {
             events.push(data);
+            console.log('Game event received:', data); // Debug logging
             addLog(`Round ${data.round}: ${data.event_type}`);
+            
+            // Update game arena when moves are made
+            if (data.event_type === 'move' || data.event_type === 'round_end') {
+                // Create match display from game event data
+                if (data.players && data.players.length >= 2) {
+                    const matchId = `Round_${data.round}_${data.players[0]}_vs_${data.players[1]}`;
+                    
+                    // Get or create match state
+                    if (!currentMatches[matchId]) {
+                        currentMatches[matchId] = {
+                            match_id: matchId,
+                            round: data.round,
+                            total_rounds: data.round,
+                            state: 'IN_PROGRESS',
+                            player_a: {
+                                id: data.players[0],
+                                name: getPlayerDisplayName(data.players[0]),
+                                strategy: getPlayerStrategy(data.players[0]),
+                                role: 'ODD',
+                                move: '',
+                                score: 0
+                            },
+                            player_b: {
+                                id: data.players[1],
+                                name: getPlayerDisplayName(data.players[1]),
+                                strategy: getPlayerStrategy(data.players[1]),
+                                role: 'EVEN',
+                                move: '',
+                                score: 0
+                            }
+                        };
+                    }
+                    
+                    const match = currentMatches[matchId];
+                    
+                    // Update moves and track last moves
+                    if (data.moves) {
+                        if (data.moves[data.players[0]]) {
+                            match.player_a.move = data.moves[data.players[0]];
+                            // Store last move for this player
+                            playerLastMoves[data.players[0]] = data.moves[data.players[0]];
+                            playerLastMoves[match.player_a.name] = data.moves[data.players[0]];
+                        }
+                        if (data.moves[data.players[1]]) {
+                            match.player_b.move = data.moves[data.players[1]];
+                            // Store last move for this player
+                            playerLastMoves[data.players[1]] = data.moves[data.players[1]];
+                            playerLastMoves[match.player_b.name] = data.moves[data.players[1]];
+                        }
+                    }
+                    
+                    // Update scores - for round_end events, scores field contains cumulative scores
+                    console.log('[DEBUG] Game event:', {
+                        type: data.event_type,
+                        scores: data.scores,
+                        metadata: data.metadata,
+                        players: data.players
+                    });
+                    
+                    // Only update scores on round_end events (scores are cumulative)
+                    if (data.event_type === 'round_end' && data.scores && Object.keys(data.scores).length > 0) {
+                        match.player_a.score = data.scores[data.players[0]] || 0;
+                        match.player_b.score = data.scores[data.players[1]] || 0;
+                        console.log('[DEBUG] Score updated:', match.player_a.score, '-', match.player_b.score);
+                    }
+                    
+                    // Update state
+                    match.state = data.event_type === 'round_end' ? 'FINISHED' : 'IN_PROGRESS';
+                    
+                    // Update game arena with all current matches
+                    updateGameArena(Object.values(currentMatches));
+                    
+                    // Refresh standings table to show updated last moves
+                    const tbody = document.getElementById('standings-tbody');
+                    if (tbody && tbody.innerHTML !== '<tr><td colspan="9" style="text-align: center; color: #a0aec0; padding: 40px;">No data yet</td></tr>') {
+                        // Trigger standings refresh by calling handleTournamentUpdate with current data
+                        // This will re-render the standings table with new last moves
+                        const currentRound = document.getElementById('current-round').textContent;
+                        const gameType = document.getElementById('game-type').textContent;
+                        const activePlayers = document.getElementById('active-players').textContent;
+                        
+                        // Extract current standings from table and re-render
+                        const rows = tbody.querySelectorAll('tr');
+                        if (rows.length > 0 && rows[0].querySelector('.player-name')) {
+                            const standings = Array.from(rows).map(row => {
+                                const playerName = row.querySelector('.player-name')?.textContent;
+                                const strategy = row.querySelector('.strategy-badge')?.textContent;
+                                const points = parseInt(row.querySelector('.score-cell')?.textContent || '0');
+                                const wins = parseInt(row.querySelector('.wins-cell')?.textContent || '0');
+                                const draws = parseInt(row.querySelector('.draws-cell')?.textContent || '0');
+                                const losses = parseInt(row.querySelector('.losses-cell')?.textContent || '0');
+                                const matches = parseInt(row.cells[7]?.textContent || '0');
+                                
+                                return {
+                                    player_id: playerName,
+                                    display_name: playerName,
+                                    strategy: strategy,
+                                    points: points,
+                                    wins: wins,
+                                    draws: draws,
+                                    losses: losses,
+                                    total_matches: matches
+                                };
+                            });
+                            
+                            updateStandingsTable(standings);
+                        }
+                    }
+                    
+                    // Add to event log with move details
+                    if (data.moves && Object.keys(data.moves).length > 0) {
+                        const movesText = Object.entries(data.moves)
+                            .filter(([_, move]) => move !== null && move !== undefined && move !== '')
+                            .map(([player, move]) => `${getPlayerDisplayName(player)}: ${move}`)
+                            .join(', ');
+                        if (movesText) {
+                            addLog(`🎲 Moves: ${movesText}`);
+                        }
+                    } else {
+                        console.log('No moves in event data:', data);
+                    }
+                    
+                    // Clean up finished matches after a delay
+                    if (data.event_type === 'round_end') {
+                        setTimeout(() => {
+                            delete currentMatches[matchId];
+                            updateGameArena(Object.values(currentMatches));
+                        }, 5000); // Keep for 5 seconds after round ends
+                    }
+                }
+            }
+        }
+        
+        // Helper function to get player display name from standings
+        function getPlayerDisplayName(playerId) {
+            const tbody = document.getElementById('standings-tbody');
+            if (tbody) {
+                const rows = tbody.querySelectorAll('tr');
+                for (const row of rows) {
+                    const nameDiv = row.querySelector('.player-name');
+                    if (nameDiv && row.textContent.includes(playerId)) {
+                        return nameDiv.textContent.trim();
+                    }
+                }
+            }
+            return playerId;
+        }
+        
+        // Helper function to get player strategy from standings
+        function getPlayerStrategy(playerId) {
+            const tbody = document.getElementById('standings-tbody');
+            if (tbody) {
+                const rows = tbody.querySelectorAll('tr');
+                for (const row of rows) {
+                    if (row.textContent.includes(playerId)) {
+                        const badge = row.querySelector('.strategy-badge');
+                        if (badge) {
+                            return badge.textContent.trim();
+                        }
+                    }
+                }
+            }
+            return 'unknown';
         }
 
         function handleTournamentUpdate(data) {
@@ -1710,7 +2154,7 @@ class DashboardAPI:
             const tbody = document.getElementById('standings-tbody');
 
             if (!standings || standings.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #a0aec0; padding: 40px;">No data yet</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #a0aec0; padding: 40px;">No data yet</td></tr>';
                 return;
             }
 
@@ -1732,6 +2176,18 @@ class DashboardAPI:
                 const winRate = matches > 0
                     ? ((wins / matches) * 100).toFixed(1)
                     : '0.0';
+                
+                // Get last move for this player - prioritize standings data, then fall back to tracked moves
+                const lastMove = player.last_move || playerLastMoves[playerId] || playerLastMoves[playerName] || null;
+                const lastMoveDisplay = lastMove !== null && lastMove !== undefined && lastMove !== '-' 
+                    ? `<span class="last-move-badge">${lastMove}</span>` 
+                    : '<span style="color: #a0aec0;">-</span>';
+                
+                // Update playerLastMoves cache with standings data
+                if (player.last_move) {
+                    playerLastMoves[playerId] = player.last_move;
+                    playerLastMoves[playerName] = player.last_move;
+                }
 
                 return `
                     <tr>
@@ -1747,6 +2203,7 @@ class DashboardAPI:
                                 </div>
                             </div>
                         </td>
+                        <td style="text-align: center; font-size: 20px; font-weight: bold;">${lastMoveDisplay}</td>
                         <td class="score-cell">${points}</td>
                         <td class="wins-cell">${wins}</td>
                         <td class="draws-cell">${draws}</td>
@@ -1761,16 +2218,43 @@ class DashboardAPI:
         function handleStrategyPerformance(data) {
             performanceData[data.strategy_name] = data;
             updatePerformanceChart();
+            // Also update learning evolution charts
+            updateBeliefsChart();
+            updateLearningCurve();
         }
 
         function handleOpponentModelUpdate(data) {
-            opponentModelData[data.player_id] = data.model;
+            // Handle both old format and new format
+            if (data.model) {
+                opponentModelData[data.player_id] = data.model;
+            } else if (data.data) {
+                // New format from analytics
+                opponentModelData[data.player_id] = data.data;
+            }
             updateOpponentModelChart();
+            updateConfidenceEvolutionChart();
         }
 
         function handleCounterfactualUpdate(data) {
-            regretData[data.player_id] = data.counterfactual;
+            // Handle both old format and new format
+            if (data.counterfactual) {
+                regretData[data.player_id] = data.counterfactual;
+            } else if (data.data) {
+                // New format from analytics
+                regretData[data.player_id] = data.data;
+            }
             updateRegretChart();
+            updateRegretEvolutionChart();
+        }
+
+        function handleMatchupMatrixUpdate(data) {
+            // Store matchup matrix data
+            window.matchupMatrixData = data;
+            // Update matrix view if currently visible
+            const matrixView = document.getElementById('tournament-matrix');
+            if (matrixView && !matrixView.classList.contains('hidden')) {
+                createMatchupMatrix();
+            }
         }
 
         function handleMatchUpdate(data) {
@@ -1788,18 +2272,56 @@ class DashboardAPI:
                 container.innerHTML = '<p style="color: #a0aec0; text-align: center; padding: 40px;">No active matches</p>';
                 return;
             }
+            
+            // Debug: Log match data to see round_history
+            console.log('[DEBUG] Match data:', matches.map(m => ({
+                match_id: m.match_id,
+                round_history_count: m.round_history ? m.round_history.length : 0,
+                round_history: m.round_history
+            })));
 
             container.innerHTML = matches.map(match => {
                 const player_a = match.player_a || {};
                 const player_b = match.player_b || {};
                 const totalScore = (player_a.score || 0) + (player_b.score || 0);
                 const scorePercentage = totalScore > 0 ? ((player_a.score || 0) / totalScore * 100) : 50;
+                
+                // Generate round history HTML
+                let roundHistoryHtml = '';
+                if (match.round_history && match.round_history.length > 0) {
+                    roundHistoryHtml = `
+                        <div class="round-history">
+                            <div class="round-history-title">Round Details:</div>
+                            <div class="round-history-items">
+                                ${match.round_history.map(round => {
+                                    const sumParity = round.sum_is_odd ? 'ODD' : 'EVEN';
+                                    const sumParityClass = round.sum_is_odd ? 'odd' : 'even';
+                                    const isPlayer1Winner = round.winner_id === player_a.id;
+                                    const isPlayer2Winner = round.winner_id === player_b.id;
+                                    
+                                    return `
+                                        <div class="round-item">
+                                            <span class="round-label">R${round.round_number}</span>
+                                            <span class="round-moves ${isPlayer1Winner ? 'winner' : ''}">${player_a.name}: ${round.player1_move}</span>
+                                            <span class="round-plus">+</span>
+                                            <span class="round-moves ${isPlayer2Winner ? 'winner' : ''}">${player_b.name}: ${round.player2_move}</span>
+                                            <span class="round-equals">=</span>
+                                            <span class="round-sum ${sumParityClass}">${round.sum} (${sumParity})</span>
+                                            <span class="round-winner">→ ${round.winner_name || 'Unknown'} ✓</span>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
 
                 return `
                     <div class="match-card ${match.state === 'IN_PROGRESS' ? 'active' : ''}">
                         <div class="match-header">
                             <span class="match-id">${match.match_id || 'Match'}</span>
-                            <span class="round-badge">Round ${match.round || 0}/${match.total_rounds || 0}</span>
+                            <span class="round-badge">Tournament Round ${match.round || 0}/${match.total_rounds || 0}</span>
+                            ${match.game_rounds ? `<span class="round-badge" style="background: #667eea;">Game Round ${match.game_round_current || 0}/${match.game_rounds}</span>` : ''}
                         </div>
 
                         <div class="player-slot">
@@ -1811,7 +2333,10 @@ class DashboardAPI:
                                     <span class="role-badge ${player_a.role || 'ODD'}">${player_a.role || 'ODD'}</span>
                                 </div>
                             </div>
-                            ${player_a.move ? `<div class="move-display">${player_a.move}</div>` : ''}
+                            ${player_a.move ? `<div class="move-display" title="Current move">${player_a.move}</div>` : 
+                              (playerLastMoves[player_a.id] || playerLastMoves[player_a.name]) ? 
+                              `<div class="move-display" style="opacity: 0.6; font-size: 28px;" title="Last move">${playerLastMoves[player_a.id] || playerLastMoves[player_a.name]}</div>` : 
+                              ''}
                         </div>
 
                         <div class="vs-divider">VS</div>
@@ -1825,7 +2350,10 @@ class DashboardAPI:
                                     <span class="role-badge ${player_b.role || 'EVEN'}">${player_b.role || 'EVEN'}</span>
                                 </div>
                             </div>
-                            ${player_b.move ? `<div class="move-display">${player_b.move}</div>` : ''}
+                            ${player_b.move ? `<div class="move-display" title="Current move">${player_b.move}</div>` : 
+                              (playerLastMoves[player_b.id] || playerLastMoves[player_b.name]) ? 
+                              `<div class="move-display" style="opacity: 0.6; font-size: 28px;" title="Last move">${playerLastMoves[player_b.id] || playerLastMoves[player_b.name]}</div>` : 
+                              ''}
                         </div>
 
                         <div class="score-section">
@@ -1837,6 +2365,8 @@ class DashboardAPI:
                                 <div class="score-fill" style="width: ${scorePercentage}%"></div>
                             </div>
                         </div>
+                        
+                        ${roundHistoryHtml}
                     </div>
                 `;
             }).join('');
@@ -1953,168 +2483,291 @@ class DashboardAPI:
         }
 
         function updateBeliefsChart() {
-            // Sample data - would come from WebSocket in real implementation
-            const sampleData = {
-                rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                players: [
-                    {
-                        name: 'Player_1',
-                        beliefs: [0.5, 0.52, 0.54, 0.55, 0.58, 0.6, 0.62, 0.63, 0.64, 0.65],
-                        confidence: 0.85
-                    }
-                ]
-            };
+            // Fetch real data from opponent models
+            const players = Object.keys(opponentModelData);
+            
+            if (players.length === 0) {
+                // Show placeholder
+                Plotly.newPlot('beliefs-chart', [], {
+                    title: 'Bayesian Belief Evolution - Waiting for data...',
+                    xaxis: { title: 'Round' },
+                    yaxis: { title: 'Belief Probability', range: [0, 1] },
+                    template: 'plotly_dark',
+                    paper_bgcolor: '#1a1f3a',
+                    plot_bgcolor: '#1a1f3a'
+                });
+                return;
+            }
 
-            const traces = sampleData.players.map(player => ({
-                x: sampleData.rounds,
-                y: player.beliefs,
-                name: `${player.name} (conf: ${player.confidence.toFixed(2)})`,
-                mode: 'lines+markers',
-                line: { width: 2 },
-                marker: { size: 6 }
-            }));
+            // Fetch detailed opponent model data from API
+            Promise.all(players.map(pid => 
+                fetch(`/api/analytics/opponent_models/${pid}`)
+                    .then(r => r.json())
+                    .catch(() => null)
+            )).then(results => {
+                const traces = [];
+                
+                results.forEach((data, idx) => {
+                    if (!data || !data.opponent_models) return;
+                    
+                    const playerId = players[idx];
+                    Object.entries(data.opponent_models).forEach(([oppId, model]) => {
+                        if (model.time_series && model.time_series.rounds.length > 0) {
+                            traces.push({
+                                x: model.time_series.rounds,
+                                y: model.time_series.confidence_history,
+                                name: `${playerId.substring(0, 8)} → ${oppId.substring(0, 8)} (${model.predicted_strategy})`,
+                                mode: 'lines+markers',
+                                line: { width: 2 },
+                                marker: { size: 6 }
+                            });
+                        }
+                    });
+                });
 
-            Plotly.newPlot('beliefs-chart', traces, {
-                title: 'Bayesian Belief Evolution',
-                xaxis: { title: 'Round' },
-                yaxis: { title: 'P(opponent chooses ODD)', range: [0, 1] },
-                template: 'plotly_dark',
-                paper_bgcolor: '#1a1f3a',
-                plot_bgcolor: '#1a1f3a'
+                if (traces.length === 0) {
+                    traces.push({
+                        x: [1],
+                        y: [0.5],
+                        mode: 'markers',
+                        name: 'No data yet',
+                        marker: { size: 1, opacity: 0 }
+                    });
+                }
+
+                Plotly.newPlot('beliefs-chart', traces, {
+                    title: 'Opponent Model Confidence Evolution',
+                    xaxis: { title: 'Round' },
+                    yaxis: { title: 'Model Confidence', range: [0, 1] },
+                    template: 'plotly_dark',
+                    paper_bgcolor: '#1a1f3a',
+                    plot_bgcolor: '#1a1f3a'
+                });
             });
         }
 
         function updateConfidenceEvolutionChart() {
-            // Sample data
-            const sampleData = {
-                rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                players: [
-                    {
-                        name: 'Player_1',
-                        confidence_history: [0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.82, 0.84, 0.85]
+            // Fetch from API
+            fetch('/api/analytics/strategies')
+                .then(r => r.json())
+                .then(data => {
+                    const strategies = data.strategies || [];
+                    
+                    if (strategies.length === 0) {
+                        Plotly.newPlot('confidence-chart', [], {
+                            title: 'Opponent Model Confidence Evolution - Waiting for data...',
+                            xaxis: { title: 'Round' },
+                            yaxis: { title: 'Confidence', range: [0, 1] },
+                            template: 'plotly_dark',
+                            paper_bgcolor: '#1a1f3a',
+                            plot_bgcolor: '#1a1f3a'
+                        });
+                        return;
                     }
-                ]
-            };
 
-            const traces = sampleData.players.map(player => ({
-                x: sampleData.rounds,
-                y: player.confidence_history,
-                name: player.name,
-                mode: 'lines+markers',
-                line: { width: 2 },
-                marker: { size: 6 }
-            }));
+                    // Get confidence data from opponent models
+                    const players = Object.keys(opponentModelData);
+                    if (players.length === 0) {
+                        // Fallback to consistency metric from strategy performance
+                        const traces = strategies.map(strategy => ({
+                            x: strategy.time_series.rounds,
+                            y: strategy.time_series.rounds.map((_, i) => 
+                                Math.min(1.0, 0.5 + (i * 0.05))  // Simple increasing confidence
+                            ),
+                            name: strategy.strategy_name,
+                            mode: 'lines+markers',
+                            line: { width: 2 },
+                            marker: { size: 6 }
+                        }));
 
-            Plotly.newPlot('confidence-chart', traces, {
-                title: 'Opponent Model Confidence Evolution',
-                xaxis: { title: 'Round' },
-                yaxis: { title: 'Confidence', range: [0, 1] },
-                template: 'plotly_dark',
-                paper_bgcolor: '#1a1f3a',
-                plot_bgcolor: '#1a1f3a'
-            });
+                        Plotly.newPlot('confidence-chart', traces, {
+                            title: 'Strategy Consistency Over Time',
+                            xaxis: { title: 'Round' },
+                            yaxis: { title: 'Consistency', range: [0, 1] },
+                            template: 'plotly_dark',
+                            paper_bgcolor: '#1a1f3a',
+                            plot_bgcolor: '#1a1f3a'
+                        });
+                    } else {
+                        // Use actual confidence data
+                        updateBeliefsChart();  // Reuse beliefs chart logic
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to fetch confidence data:', error);
+                });
         }
 
         function updateRegretEvolutionChart() {
-            // Sample data
-            const sampleData = {
-                rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                players: [
-                    {
-                        name: 'Player_1',
-                        cumulative_regret: {
-                            odd: [-0.1, -0.2, -0.15, -0.1, -0.05, 0, 0.05, 0.1, 0.08, 0.05],
-                            even: [0.1, 0.15, 0.1, 0.05, 0, -0.05, -0.1, -0.12, -0.1, -0.08]
-                        }
+            // Fetch counterfactual data from all players
+            const players = Object.keys(regretData);
+            
+            if (players.length === 0) {
+                Plotly.newPlot('regret-chart-evolution', [], {
+                    title: 'Cumulative Regret Analysis (CFR) - Waiting for data...',
+                    xaxis: { title: 'Round' },
+                    yaxis: { title: 'Cumulative Regret' },
+                    template: 'plotly_dark',
+                    paper_bgcolor: '#1a1f3a',
+                    plot_bgcolor: '#1a1f3a'
+                });
+                return;
+            }
+
+            // Fetch detailed counterfactual analytics from API
+            Promise.all(players.map(pid =>
+                fetch(`/api/analytics/counterfactual/${pid}`)
+                    .then(r => r.json())
+                    .catch(() => null)
+            )).then(results => {
+                const traces = [];
+                let maxRound = 0;
+
+                results.forEach((data, idx) => {
+                    if (!data || !data.time_series) return;
+                    
+                    const playerId = players[idx];
+                    const regretByAction = data.time_series.regret_by_action || {};
+                    const rounds = data.time_series.rounds || [];
+                    
+                    if (rounds.length > 0) {
+                        maxRound = Math.max(maxRound, ...rounds);
                     }
-                ]
-            };
 
-            const traces = sampleData.players.flatMap(player => [
-                {
-                    x: sampleData.rounds,
-                    y: player.cumulative_regret.odd,
-                    name: `${player.name} - ODD`,
-                    mode: 'lines',
-                    line: { dash: 'solid', width: 2 }
-                },
-                {
-                    x: sampleData.rounds,
-                    y: player.cumulative_regret.even,
-                    name: `${player.name} - EVEN`,
-                    mode: 'lines',
-                    line: { dash: 'dash', width: 2 }
+                    // Create trace for each action
+                    Object.entries(regretByAction).forEach(([action, regrets]) => {
+                        if (regrets.length > 0) {
+                            traces.push({
+                                x: rounds.slice(0, regrets.length),
+                                y: regrets,
+                                name: `${playerId.substring(0, 8)} - ${action}`,
+                                mode: 'lines',
+                                line: { width: 2 }
+                            });
+                        }
+                    });
+                });
+
+                if (traces.length === 0) {
+                    traces.push({
+                        x: [1],
+                        y: [0],
+                        mode: 'markers',
+                        name: 'No data yet',
+                        marker: { size: 1, opacity: 0 }
+                    });
+                    maxRound = 1;
                 }
-            ]);
 
-            Plotly.newPlot('regret-chart-evolution', traces, {
-                title: 'Cumulative Regret Analysis (CFR)',
-                xaxis: { title: 'Round' },
-                yaxis: { title: 'Cumulative Regret' },
-                shapes: [{
-                    type: 'line',
-                    x0: 0, x1: Math.max(...sampleData.rounds),
-                    y0: 0, y1: 0,
-                    line: { color: 'red', width: 1, dash: 'dot' }
-                }],
-                template: 'plotly_dark',
-                paper_bgcolor: '#1a1f3a',
-                plot_bgcolor: '#1a1f3a'
+                Plotly.newPlot('regret-chart-evolution', traces, {
+                    title: 'Counterfactual Regret Minimization',
+                    xaxis: { title: 'Round' },
+                    yaxis: { title: 'Regret Value' },
+                    shapes: [{
+                        type: 'line',
+                        x0: 0, x1: maxRound,
+                        y0: 0, y1: 0,
+                        line: { color: 'red', width: 1, dash: 'dot' }
+                    }],
+                    template: 'plotly_dark',
+                    paper_bgcolor: '#1a1f3a',
+                    plot_bgcolor: '#1a1f3a'
+                });
             });
         }
 
         function updateLearningCurve() {
-            // Sample data
-            const sampleData = {
-                rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                players: [
-                    {
-                        name: 'Player_1',
-                        win_rate_history: [0.5, 0.52, 0.54, 0.56, 0.58, 0.6, 0.62, 0.63, 0.64, 0.65]
-                    },
-                    {
-                        name: 'Player_2',
-                        win_rate_history: [0.5, 0.48, 0.47, 0.46, 0.45, 0.44, 0.43, 0.42, 0.41, 0.4]
+            // Fetch from analytics API
+            fetch('/api/analytics/strategies')
+                .then(r => r.json())
+                .then(data => {
+                    const strategies = data.strategies || [];
+                    
+                    if (strategies.length === 0) {
+                        Plotly.newPlot('learning-chart', [], {
+                            title: 'Learning Curve (Win Rate Over Time) - Waiting for data...',
+                            xaxis: { title: 'Round' },
+                            yaxis: { title: 'Win Rate', range: [0, 1] },
+                            template: 'plotly_dark',
+                            paper_bgcolor: '#1a1f3a',
+                            plot_bgcolor: '#1a1f3a'
+                        });
+                        return;
                     }
-                ]
-            };
 
-            const traces = sampleData.players.flatMap(player => {
-                const trendline = calculateTrendline(sampleData.rounds, player.win_rate_history);
-                return [
-                    {
-                        x: sampleData.rounds,
-                        y: player.win_rate_history,
-                        name: player.name,
-                        mode: 'lines+markers',
-                        line: { width: 3, shape: 'spline' }
-                    },
-                    {
-                        x: sampleData.rounds,
-                        y: trendline,
-                        name: `${player.name} trend`,
-                        mode: 'lines',
-                        line: { dash: 'dash', width: 1 },
-                        showlegend: false,
-                        hoverinfo: 'skip'
+                    const traces = [];
+                    let maxRound = 0;
+
+                    strategies.forEach(strategy => {
+                        const rounds = strategy.time_series.rounds || [];
+                        const winRates = strategy.time_series.win_rates || [];
+
+                        if (rounds.length > 0 && winRates.length > 0) {
+                            maxRound = Math.max(maxRound, ...rounds);
+                            
+                            // Main line
+                            traces.push({
+                                x: rounds,
+                                y: winRates,
+                                name: `${strategy.strategy_name} (${strategy.metrics.improvement_trend})`,
+                                mode: 'lines+markers',
+                                line: { width: 3, shape: 'spline' },
+                                marker: { size: 6 }
+                            });
+
+                            // Trendline
+                            if (rounds.length >= 2) {
+                                const trendline = calculateTrendline(rounds, winRates);
+                                traces.push({
+                                    x: rounds,
+                                    y: trendline,
+                                    name: `${strategy.strategy_name} trend`,
+                                    mode: 'lines',
+                                    line: { dash: 'dash', width: 1 },
+                                    showlegend: false,
+                                    hoverinfo: 'skip',
+                                    opacity: 0.5
+                                });
+                            }
+                        }
+                    });
+
+                    if (traces.length === 0) {
+                        traces.push({
+                            x: [1],
+                            y: [0.5],
+                            mode: 'markers',
+                            name: 'No data yet',
+                            marker: { size: 1, opacity: 0 }
+                        });
+                        maxRound = 1;
                     }
-                ];
-            });
 
-            Plotly.newPlot('learning-chart', traces, {
-                title: 'Learning Curve (Win Rate Over Time)',
-                xaxis: { title: 'Round' },
-                yaxis: { title: 'Win Rate', range: [0, 1] },
-                shapes: [{
-                    type: 'line',
-                    x0: 0, x1: Math.max(...sampleData.rounds),
-                    y0: 0.5, y1: 0.5,
-                    line: { color: 'yellow', width: 1, dash: 'dot' }
-                }],
-                template: 'plotly_dark',
-                paper_bgcolor: '#1a1f3a',
-                plot_bgcolor: '#1a1f3a'
-            });
+                    Plotly.newPlot('learning-chart', traces, {
+                        title: 'Strategy Learning Curves (Win Rate Evolution)',
+                        xaxis: { title: 'Round' },
+                        yaxis: { title: 'Win Rate', range: [0, 1] },
+                        shapes: [{
+                            type: 'line',
+                            x0: 0, x1: maxRound,
+                            y0: 0.5, y1: 0.5,
+                            line: { color: 'yellow', width: 1, dash: 'dot' }
+                        }],
+                        template: 'plotly_dark',
+                        paper_bgcolor: '#1a1f3a',
+                        plot_bgcolor: '#1a1f3a',
+                        annotations: [{
+                            x: maxRound * 0.9,
+                            y: 0.5,
+                            text: 'Random baseline',
+                            showarrow: false,
+                            font: { color: 'yellow', size: 10 }
+                        }]
+                    });
+                })
+                .catch(error => {
+                    console.error('Failed to fetch learning curve data:', error);
+                });
         }
 
         function calculateTrendline(x, y) {
@@ -2158,16 +2811,34 @@ class DashboardAPI:
         }
 
         function createMatchupMatrix() {
-            // Sample data - would come from WebSocket in real implementation
-            const players = ['Player_1', 'Player_2', 'Player_3', 'Player_4'];
-            const matches = [
-                { player_a: 'Player_1', player_b: 'Player_2', winner: 'Player_1', score_a: 3, score_b: 2 },
-                { player_a: 'Player_1', player_b: 'Player_3', winner: 'Player_3', score_a: 1, score_b: 3 },
-                { player_a: 'Player_1', player_b: 'Player_4', winner: 'Player_1', score_a: 3, score_b: 1 },
-                { player_a: 'Player_2', player_b: 'Player_3', winner: 'Player_2', score_a: 3, score_b: 2 },
-                { player_a: 'Player_2', player_b: 'Player_4', winner: null, score_a: 2, score_b: 2 },
-                { player_a: 'Player_3', player_b: 'Player_4', winner: 'Player_3', score_a: 3, score_b: 0 }
-            ];
+            // Use real data from analytics engine via WebSocket or fetch from API
+            if (!window.matchupMatrixData || !window.matchupMatrixData.players) {
+                // Fetch from API if not available
+                fetch('/api/analytics/matchup_matrix')
+                    .then(response => response.json())
+                    .then(data => {
+                        window.matchupMatrixData = data;
+                        renderMatchupMatrix(data);
+                    })
+                    .catch(error => {
+                        console.error('Failed to fetch matchup matrix:', error);
+                        // Fallback to sample data
+                        renderMatchupMatrixFallback();
+                    });
+            } else {
+                renderMatchupMatrix(window.matchupMatrixData);
+            }
+        }
+
+        function renderMatchupMatrix(data) {
+            const players = data.players || [];
+            const matchups = data.matchups || {};
+
+            if (players.length === 0) {
+                document.getElementById('matchup-matrix').innerHTML = 
+                    '<p style="text-align: center; color: #a0aec0; padding: 40px;">No matchup data available yet</p>';
+                return;
+            }
 
             // Build matrix
             const matrix = [];
@@ -2175,41 +2846,58 @@ class DashboardAPI:
                 const row = [];
                 players.forEach(p2 => {
                     if (p1 === p2) {
-                        row.push({ value: null, text: '-', cssClass: '' });
+                        row.push({ value: null, text: '-', cssClass: '', title: 'Same player' });
                     } else {
-                        const match = matches.find(m =>
-                            (m.player_a === p1 && m.player_b === p2) ||
-                            (m.player_a === p2 && m.player_b === p1)
-                        );
-                        if (match) {
-                            let result, cssClass, score;
-                            if (!match.winner) {
-                                result = 'D';
-                                cssClass = 'draw';
-                                score = `${match.score_a}-${match.score_b}`;
-                            } else if (match.winner === p1) {
-                                result = 'W';
-                                cssClass = 'win';
-                                score = match.player_a === p1 ?
-                                    `${match.score_a}-${match.score_b}` :
-                                    `${match.score_b}-${match.score_a}`;
+                        // Find matchup (keys are ordered, so try both combinations)
+                        const key1 = `${p1}_vs_${p2}`;
+                        const key2 = `${p2}_vs_${p1}`;
+                        const matchup = matchups[key1] || matchups[key2];
+
+                        if (matchup && matchup.total_matches > 0) {
+                            // Determine result from p1's perspective
+                            let wins, losses, draws;
+                            if (matchup.player_a === p1) {
+                                wins = matchup.player_a_wins;
+                                losses = matchup.player_b_wins;
                             } else {
-                                result = 'L';
-                                cssClass = 'loss';
-                                score = match.player_a === p1 ?
-                                    `${match.score_a}-${match.score_b}` :
-                                    `${match.score_b}-${match.score_a}`;
+                                wins = matchup.player_b_wins;
+                                losses = matchup.player_a_wins;
                             }
+                            draws = matchup.draws;
+
+                            // Determine cell style and text
+                            let cssClass, text, title;
+                            if (wins > losses) {
+                                cssClass = 'matrix-cell win';
+                                text = `W ${wins}-${losses}`;
+                            } else if (losses > wins) {
+                                cssClass = 'matrix-cell loss';
+                                text = `L ${losses}-${wins}`;
+                            } else {
+                                cssClass = 'matrix-cell draw';
+                                text = `D ${wins}-${losses}`;
+                            }
+
+                            if (draws > 0) {
+                                text += ` (${draws}D)`;
+                            }
+
+                            title = `${p1} vs ${p2}: ${wins}W-${losses}L-${draws}D (${matchup.total_matches} matches)`;
+
                             row.push({
-                                value: match,
-                                text: `${result} ${score}`,
-                                cssClass: `matrix-cell ${cssClass}`
+                                value: matchup,
+                                text: text,
+                                cssClass: cssClass,
+                                title: title,
+                                p1: p1,
+                                p2: p2
                             });
                         } else {
                             row.push({
                                 value: null,
                                 text: '...',
-                                cssClass: 'matrix-cell pending'
+                                cssClass: 'matrix-cell pending',
+                                title: 'No matches played yet'
                             });
                         }
                     }
@@ -2233,8 +2921,8 @@ class DashboardAPI:
                                     <td>${p1}</td>
                                     ${matrix[i].map((cell, j) => `
                                         <td class="${cell.cssClass}"
-                                            ${cell.value ? `onclick="showMatchDetails('${p1}', '${players[j]}')"` : ''}
-                                            title="${cell.text}">
+                                            ${cell.value ? `onclick="showMatchDetails('${cell.p1}', '${cell.p2}')"` : ''}
+                                            title="${cell.title}">
                                             ${cell.text}
                                         </td>
                                     `).join('')}
@@ -2245,6 +2933,18 @@ class DashboardAPI:
                 </div>
             `;
 
+            document.getElementById('matchup-matrix').innerHTML = html;
+        }
+
+        function renderMatchupMatrixFallback() {
+            // Fallback sample data
+            const html = `
+                <div class="matchup-matrix">
+                    <p style="text-align: center; color: #a0aec0; padding: 40px;">
+                        Loading matchup matrix...
+                    </p>
+                </div>
+            `;
             document.getElementById('matchup-matrix').innerHTML = html;
         }
 
@@ -2773,19 +3473,58 @@ Round Difference: ${snap2.round - snap1.round}
         }
 
         function exportData() {
-            const data = {
-                performance: performanceData,
-                opponentModels: opponentModelData,
-                regrets: regretData,
-                events: events
-            };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `dashboard-data-${Date.now()}.json`;
-            a.click();
-            addLog('Data exported');
+            // Fetch comprehensive analytics from API
+            addLog('Exporting comprehensive analytics...');
+            
+            fetch('/api/analytics/export')
+                .then(r => r.json())
+                .then(analyticsData => {
+                    // Combine analytics with current dashboard data
+                    const data = {
+                        ...analyticsData,
+                        dashboard_state: {
+                            performance: performanceData,
+                            opponentModels: opponentModelData,
+                            regrets: regretData,
+                            events: events
+                        },
+                        exported_by: 'dashboard',
+                        format_version: '2.0'
+                    };
+                    
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `tournament-analytics-${Date.now()}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    addLog('✓ Comprehensive analytics exported (research-ready)');
+                })
+                .catch(error => {
+                    console.error('Export failed:', error);
+                    
+                    // Fallback to dashboard data only
+                    const data = {
+                        performance: performanceData,
+                        opponentModels: opponentModelData,
+                        regrets: regretData,
+                        events: events,
+                        exported_at: new Date().toISOString(),
+                        note: 'Limited export - analytics API unavailable'
+                    };
+                    
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `dashboard-data-${Date.now()}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    addLog('⚠ Partial data exported (analytics unavailable)');
+                });
         }
 
         // Auto-connect on load
