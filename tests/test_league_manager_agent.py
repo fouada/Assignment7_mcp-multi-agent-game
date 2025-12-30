@@ -402,7 +402,10 @@ class TestRoundExecution:
         manager._client = mock_client
 
         # Mock asyncio.sleep to prevent hanging
-        with patch("asyncio.sleep", AsyncMock()):
+        async def mock_sleep(seconds):
+            pass
+
+        with patch("asyncio.sleep", side_effect=mock_sleep):
             # Start first round
             result = await manager.start_next_round()
 
@@ -822,8 +825,11 @@ class TestLeagueManagerEdgeCases:
         manager._client = mock_client
 
         # Also mock asyncio.sleep to prevent hanging
+        async def mock_sleep(seconds):
+            pass
+
         with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
-            with patch("asyncio.sleep", AsyncMock()):
+            with patch("asyncio.sleep", side_effect=mock_sleep):
                 result = await manager._run_all_rounds()
 
         assert result["success"] is True
@@ -1032,8 +1038,11 @@ class TestLeagueManagerToolHandlers:
         mock_client.connected_servers = {}
         manager._client = mock_client
 
+        async def mock_sleep(seconds):
+            pass
+
         with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
-            with patch("asyncio.sleep", AsyncMock()):
+            with patch("asyncio.sleep", side_effect=mock_sleep):
                 result = await tool_handler({})
 
         assert result["success"] is True
@@ -1077,8 +1086,11 @@ class TestLeagueManagerToolHandlers:
         manager._client = mock_client
 
         # Also mock asyncio.sleep to prevent hanging
+        async def mock_sleep(seconds):
+            pass
+
         with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
-            with patch("asyncio.sleep", AsyncMock()):
+            with patch("asyncio.sleep", side_effect=mock_sleep):
                 result = await tool_handler({})
 
         assert result["success"] is True
@@ -1355,8 +1367,11 @@ class TestLeagueManagerEdgeCasesAdvanced:
             mock_event_bus.emit = AsyncMock(side_effect=Exception("Event emission failed"))
             mock_bus.return_value = mock_event_bus
 
+            async def mock_sleep(seconds):
+                pass
+
             with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
-                with patch("asyncio.sleep", AsyncMock()):
+                with patch("asyncio.sleep", side_effect=mock_sleep):
                     # Should not raise exception, just log error
                     result = await manager.start_next_round()
 
@@ -1404,9 +1419,12 @@ class TestLeagueManagerEdgeCasesAdvanced:
                 return {"success": False, "error": "Simulated failure"}
 
         # Also mock asyncio.sleep to speed up the test
+        async def mock_sleep(seconds):
+            pass
+
         with patch.object(manager, "start_next_round", side_effect=mock_start_next_round):
             with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
-                with patch("asyncio.sleep", AsyncMock()):
+                with patch("asyncio.sleep", side_effect=mock_sleep):
                     result = await manager._run_all_rounds()
 
         assert result["success"] is False
@@ -1446,8 +1464,11 @@ class TestLeagueManagerEdgeCasesAdvanced:
             return {"success": True, "league_complete": True, "round": 1, "matches": []}
 
         # Also mock asyncio.sleep to prevent hanging
+        async def mock_sleep_inner(seconds):
+            pass
+
         with patch.object(manager, "start_next_round", side_effect=mock_start_next_round):
-            with patch("asyncio.sleep", AsyncMock()):
+            with patch("asyncio.sleep", side_effect=mock_sleep_inner):
                 result = await manager._run_all_rounds()
 
         # Should complete successfully when league_complete flag is set
