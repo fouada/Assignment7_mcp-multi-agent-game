@@ -333,8 +333,6 @@ class TestGlobalHealthMonitor:
 
     def test_global_monitor_singleton(self):
         """Test that global monitor is singleton."""
-        from src.observability.health import get_health_monitor
-
         monitor1 = get_health_monitor()  # Function is get_health_monitor, not get_global_health_monitor
         monitor2 = get_health_monitor()
 
@@ -343,8 +341,6 @@ class TestGlobalHealthMonitor:
     @pytest.mark.asyncio
     async def test_global_monitor_usage(self):
         """Test using global monitor."""
-        from src.observability.health import get_health_monitor
-
         monitor = get_health_monitor()
 
         # Add a check
