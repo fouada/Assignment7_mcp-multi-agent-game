@@ -79,12 +79,6 @@ class TestSpanOperations:
         """Test span with many attributes."""
         pytest.skip("TracingManager __new__() doesn't accept 'enabled' parameter")
 
-        attributes = {f"attr_{i}": f"value_{i}" for i in range(100)}
-
-        span_id = manager.start_span("test_operation", attributes=attributes)
-
-        assert span_id is not None
-
     def test_add_event_to_nonexistent_span(self):
         """Test adding event to nonexistent span."""
         pytest.skip("TracingManager __new__() doesn't accept 'enabled' parameter")

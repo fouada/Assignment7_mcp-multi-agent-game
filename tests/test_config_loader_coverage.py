@@ -6,9 +6,6 @@ Focuses on error handling, file operations, and edge cases.
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
-
-import pytest
 
 from src.common.config_loader import (
     ConfigLoader,

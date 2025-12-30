@@ -26,7 +26,7 @@ class TestHealthCheckEdgeCases:
         """Create a fresh health monitor."""
         monitor = HealthMonitor()
         # Clear all existing checks except the default ones
-        checks_to_remove = [name for name in monitor._checks.keys() 
+        checks_to_remove = [name for name in monitor._checks.keys()
                            if name not in ["liveness", "readiness", "resources"]]
         for name in checks_to_remove:
             monitor.remove_check(name)
@@ -246,7 +246,7 @@ class TestHealthMonitorConfiguration:
     def monitor(self):
         monitor = HealthMonitor()
         # Clear all existing checks except the default ones
-        checks_to_remove = [name for name in monitor._checks.keys() 
+        checks_to_remove = [name for name in monitor._checks.keys()
                            if name not in ["liveness", "readiness", "resources"]]
         for name in checks_to_remove:
             monitor.remove_check(name)
@@ -374,7 +374,7 @@ class TestHealthEndpoints:
     def monitor(self):
         monitor = HealthMonitor()
         # Clear all existing checks except the default ones
-        checks_to_remove = [name for name in monitor._checks.keys() 
+        checks_to_remove = [name for name in monitor._checks.keys()
                            if name not in ["liveness", "readiness", "resources"]]
         for name in checks_to_remove:
             monitor.remove_check(name)
@@ -423,7 +423,7 @@ class TestHealthCheckFormatting:
     def monitor(self):
         monitor = HealthMonitor()
         # Clear all existing checks except the default ones
-        checks_to_remove = [name for name in monitor._checks.keys() 
+        checks_to_remove = [name for name in monitor._checks.keys()
                            if name not in ["liveness", "readiness", "resources"]]
         for name in checks_to_remove:
             monitor.remove_check(name)
@@ -461,6 +461,11 @@ class TestHealthCheckFormatting:
     @pytest.mark.asyncio
     async def test_empty_health_monitor(self, monitor):
         """Test health monitor with no checks."""
+        # Remove all checks including default ones for this test
+        for name in list(monitor._checks.keys()):
+            monitor.remove_check(name)
+        monitor._last_results.clear()
+
         health = await monitor.get_health()
 
         # Should return healthy with no checks

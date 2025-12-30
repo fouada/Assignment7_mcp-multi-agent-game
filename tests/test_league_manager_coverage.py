@@ -3,15 +3,12 @@ Additional tests to improve league_manager.py coverage to 85%+.
 Focuses on uncovered dashboard streaming, error handling, and edge cases.
 """
 
-from unittest.mock import AsyncMock, Mock, patch
-
 import pytest
 
 from src.agents.league_manager import (
     LeagueManager,
     LeagueState,
     RegisteredPlayer,
-    RegisteredReferee,
 )
 
 
@@ -142,18 +139,6 @@ class TestLeagueManagerEdgeCasesAdvanced:
     @pytest.mark.skip(reason="Method _handle_player_register_mcp_request doesn't exist")
     async def test_handle_player_register_mcp_request(self, league_manager):
         """Test handling MCP player registration request."""
-        message = {
-            "player_meta": {
-                "display_name": "TestPlayer",
-                "contact_endpoint": "http://localhost:9001",
-                "version": "1.0.0",
-                "game_types": ["even_odd"],
-            }
-        }
-
-        # result = await league_manager._handle_player_register_mcp_request(message)
-        # assert result["status"] == "registered"
-        # assert "player_id" in result
         pass
 
     @pytest.mark.asyncio
@@ -216,11 +201,6 @@ class TestLeagueManagerRegistrationEdgeCases:
     async def test_register_player_when_registration_closed(self, league_manager):
         """Test registering player when registration is closed."""
         pass
-
-        result = await league_manager._register_player(player_info)
-
-        assert result["status"] == "rejected"
-        assert "closed" in result.get("reason", "").lower()
 
     @pytest.mark.asyncio
     @pytest.mark.skip(reason="Method _register_player doesn't exist")
