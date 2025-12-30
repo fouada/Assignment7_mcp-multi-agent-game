@@ -10,7 +10,6 @@ import pytest
 from src.agents.referee import RefereeAgent
 from src.client.mcp_client import MCPClient
 
-
 class TestRefereeAgentErrorHandling:
     """Test referee error handling scenarios."""
 
@@ -99,7 +98,6 @@ class TestRefereeAgentErrorHandling:
         """Test sending round results with network error."""
         pass
 
-
 class TestRefereeAgentMatchSession:
     """Test match session handling."""
 
@@ -125,7 +123,6 @@ class TestRefereeAgentMatchSession:
         # Just verify it doesn't crash with custom timeout
         assert match_info["timeout"] == 120
 
-
 class TestRefereeAgentRegistration:
     """Test referee registration edge cases."""
 
@@ -148,7 +145,6 @@ class TestRefereeAgentRegistration:
     async def test_register_with_league_rejected(self, referee):
         """Test registration when league rejects."""
         pass
-
 
 class TestRefereeAgentToolHandlers:
     """Test referee tool handlers."""
@@ -173,7 +169,6 @@ class TestRefereeAgentToolHandlers:
         """Test list_active_games tool."""
         pass
 
-
 class TestRefereeAgentLifecycle:
     """Test referee lifecycle methods."""
 
@@ -196,7 +191,6 @@ class TestRefereeAgentLifecycle:
         """Test referee on_stop lifecycle."""
         await referee.on_stop()
         # Should complete without error
-
 
 class TestRefereeAgentProtocolHandling:
     """Test protocol message handling."""

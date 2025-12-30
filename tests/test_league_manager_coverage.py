@@ -14,7 +14,6 @@ from src.agents.league_manager import (
 )
 from src.common.events import get_event_bus
 
-
 class TestLeagueManagerDashboardStreaming:
     """Test dashboard streaming functionality."""
 
@@ -131,7 +130,6 @@ class TestLeagueManagerDashboardStreaming:
 
         # Verify
         assert "test_league" in mock_dashboard.tournament_states
-
 
 class TestLeagueManagerEdgeCasesAdvanced:
     """Test additional edge cases in league manager."""
@@ -304,7 +302,6 @@ class TestLeagueManagerEdgeCasesAdvanced:
         assert league_manager.state == LeagueState.COMPLETED
         assert result is not None  # Function returns a result
 
-
 class TestLeagueManagerRegistrationEdgeCases:
     """Test registration edge cases."""
 
@@ -368,7 +365,6 @@ class TestLeagueManagerRegistrationEdgeCases:
         assert result["status"].upper() == "REJECTED"
         assert "already registered" in result.get("reason", "").lower()
 
-
 class TestLeagueManagerScheduleGeneration:
     """Test schedule generation edge cases."""
 
@@ -415,7 +411,6 @@ class TestLeagueManagerScheduleGeneration:
             assert "already" in result["error"].lower()
         elif "status" in result:
             assert result["status"].upper() == "ERROR"
-
 
 class TestLeagueManagerMatchHandling:
     """Test match handling edge cases."""

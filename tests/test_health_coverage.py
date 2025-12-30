@@ -17,7 +17,6 @@ from src.observability.health import (
     ResourceCheck,
 )
 
-
 class TestHealthCheckEdgeCases:
     """Test health check edge cases."""
 
@@ -238,7 +237,6 @@ class TestHealthCheckEdgeCases:
         await monitor.get_health()
         assert call_count[0] > first_count
 
-
 class TestHealthMonitorConfiguration:
     """Test health monitor configuration."""
 
@@ -292,7 +290,6 @@ class TestHealthMonitorConfiguration:
         health = await monitor.get_health()
         assert "custom" in health["checks"]
 
-
 class TestHealthStatusEnum:
     """Test health status enum."""
 
@@ -307,7 +304,6 @@ class TestHealthStatusEnum:
         # Just verify they're different
         assert HealthStatus.HEALTHY != HealthStatus.UNHEALTHY
         assert HealthStatus.DEGRADED != HealthStatus.HEALTHY
-
 
 class TestHealthCheckResult:
     """Test HealthCheckResult dataclass."""
@@ -329,7 +325,6 @@ class TestHealthCheckResult:
         result = HealthCheckResult(status=HealthStatus.HEALTHY, message="OK")
 
         assert result.details == {}
-
 
 class TestGlobalHealthMonitor:
     """Test global health monitor singleton."""
@@ -365,7 +360,6 @@ class TestGlobalHealthMonitor:
 
         # Clean up
         monitor.remove_check("global_test")  # remove_check, not remove_health_check
-
 
 class TestHealthEndpoints:
     """Test health endpoint scenarios."""
@@ -414,7 +408,6 @@ class TestHealthEndpoints:
 
         # Should reflect dependency status
         assert result is not None
-
 
 class TestHealthCheckFormatting:
     """Test health check response formatting."""
