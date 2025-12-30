@@ -402,7 +402,7 @@ class TestRoundExecution:
         manager._client = mock_client
 
         # Mock asyncio.sleep to prevent hanging
-        with patch("asyncio.sleep", new_callable=AsyncMock):
+        with patch("asyncio.sleep", AsyncMock()):
             # Start first round
             result = await manager.start_next_round()
 
@@ -823,7 +823,7 @@ class TestLeagueManagerEdgeCases:
 
         # Also mock asyncio.sleep to prevent hanging
         with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
-            with patch("asyncio.sleep", new_callable=AsyncMock):
+            with patch("asyncio.sleep", AsyncMock()):
                 result = await manager._run_all_rounds()
 
         assert result["success"] is True
@@ -1033,7 +1033,7 @@ class TestLeagueManagerToolHandlers:
         manager._client = mock_client
 
         with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
-            with patch("asyncio.sleep", new_callable=AsyncMock):
+            with patch("asyncio.sleep", AsyncMock()):
                 result = await tool_handler({})
 
         assert result["success"] is True
@@ -1078,7 +1078,7 @@ class TestLeagueManagerToolHandlers:
 
         # Also mock asyncio.sleep to prevent hanging
         with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
-            with patch("asyncio.sleep", new_callable=AsyncMock):
+            with patch("asyncio.sleep", AsyncMock()):
                 result = await tool_handler({})
 
         assert result["success"] is True
@@ -1356,7 +1356,7 @@ class TestLeagueManagerEdgeCasesAdvanced:
             mock_bus.return_value = mock_event_bus
 
             with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
-                with patch("asyncio.sleep", new_callable=AsyncMock):
+                with patch("asyncio.sleep", AsyncMock()):
                     # Should not raise exception, just log error
                     result = await manager.start_next_round()
 
@@ -1406,7 +1406,7 @@ class TestLeagueManagerEdgeCasesAdvanced:
         # Also mock asyncio.sleep to speed up the test
         with patch.object(manager, "start_next_round", side_effect=mock_start_next_round):
             with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
-                with patch("asyncio.sleep", new_callable=AsyncMock):
+                with patch("asyncio.sleep", AsyncMock()):
                     result = await manager._run_all_rounds()
 
         assert result["success"] is False
@@ -1447,7 +1447,7 @@ class TestLeagueManagerEdgeCasesAdvanced:
 
         # Also mock asyncio.sleep to prevent hanging
         with patch.object(manager, "start_next_round", side_effect=mock_start_next_round):
-            with patch("asyncio.sleep", new_callable=AsyncMock):
+            with patch("asyncio.sleep", AsyncMock()):
                 result = await manager._run_all_rounds()
 
         # Should complete successfully when league_complete flag is set
