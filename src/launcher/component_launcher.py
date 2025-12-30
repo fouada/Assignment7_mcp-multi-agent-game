@@ -103,14 +103,18 @@ class ComponentLauncher:
         self._running = True
         logger.info(f"✓ {self.component_type.value} started successfully")
 
-        # Setup signal handlers
+        # Setup signal handlers (not supported on Windows)
         loop = asyncio.get_event_loop()
 
         def signal_handler():
             self._shutdown_event.set()
 
-        for sig in (signal.SIGINT, signal.SIGTERM):
-            loop.add_signal_handler(sig, signal_handler)
+        try:
+            for sig in (signal.SIGINT, signal.SIGTERM):
+                loop.add_signal_handler(sig, signal_handler)
+        except NotImplementedError:
+            # Signal handlers are not supported on Windows
+            pass
 
     async def _start_league_manager(self, **kwargs: Any) -> None:
         """Start League Manager with optional dashboard."""
