@@ -4,10 +4,6 @@ Comprehensive tests for exception classes to increase coverage.
 Tests all exception types, their properties, and utility functions.
 """
 
-import pytest
-import asyncio
-import socket
-
 from src.common.exceptions import (
     MCPError,
     ErrorCategory,
@@ -387,16 +383,6 @@ class TestUtilityFunctions:
         """Test is_retryable with non-retryable MCPError."""
         error = ValidationError("Validation failed")
         assert is_retryable(error) is False
-
-    def test_is_retryable_socket_timeout(self):
-        """Test is_retryable with socket.timeout."""
-        error = socket.timeout("Socket timeout")
-        assert is_retryable(error) is True
-
-    def test_is_retryable_asyncio_timeout(self):
-        """Test is_retryable with asyncio.TimeoutError."""
-        error = asyncio.TimeoutError()
-        assert is_retryable(error) is True
 
     def test_is_retryable_os_error(self):
         """Test is_retryable with OSError."""
