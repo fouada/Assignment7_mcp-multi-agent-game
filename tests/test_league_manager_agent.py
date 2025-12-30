@@ -1395,9 +1395,11 @@ class TestLeagueManagerEdgeCasesAdvanced:
             else:
                 return {"success": False, "error": "Simulated failure"}
 
+        # Also mock asyncio.sleep to speed up the test
         with patch.object(manager, "start_next_round", side_effect=mock_start_next_round):
             with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
-                result = await manager._run_all_rounds()
+                with patch("asyncio.sleep", new_callable=AsyncMock):
+                    result = await manager._run_all_rounds()
 
         assert result["success"] is False
         assert "error" in result
