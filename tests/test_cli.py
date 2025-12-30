@@ -296,7 +296,7 @@ class TestLaunchAll:
         )
 
         mock_run_full_league = AsyncMock()
-        with patch("src.cli.run_full_league", mock_run_full_league):
+        with patch("src.main.run_full_league", mock_run_full_league):
             await launch_all(args)
 
         mock_run_full_league.assert_called_once_with(args)
