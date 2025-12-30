@@ -45,8 +45,8 @@ def clean_event_bus():
 # Test helper classes
 
 
-class TestHandler:
-    """Test handler that tracks calls."""
+class MockEventHandler:
+    """Mock handler that tracks calls for testing."""
 
     def __init__(self):
         self.calls = []
@@ -94,7 +94,7 @@ class TestHandlerRegistration:
 
     def test_register_async_handler(self, clean_event_bus):
         """Test registering async handler."""
-        handler = TestHandler()
+        handler = MockEventHandler()
 
         handler_id = clean_event_bus.on(
             pattern="test.event",
@@ -106,7 +106,7 @@ class TestHandlerRegistration:
 
     def test_register_sync_handler(self, clean_event_bus):
         """Test registering sync handler."""
-        handler = TestHandler()
+        handler = MockEventHandler()
 
         handler_id = clean_event_bus.on(
             pattern="test.event",
@@ -119,7 +119,7 @@ class TestHandlerRegistration:
 
     def test_unregister_handler(self, clean_event_bus):
         """Test unregistering handler."""
-        handler = TestHandler()
+        handler = MockEventHandler()
         handler_id = clean_event_bus.on("test.event", handler.async_handler)
 
         result = clean_event_bus.off(handler_id)
@@ -134,7 +134,7 @@ class TestHandlerRegistration:
 
     def test_handler_with_metadata(self, clean_event_bus):
         """Test registering handler with metadata."""
-        handler = TestHandler()
+        handler = MockEventHandler()
 
         handler_id = clean_event_bus.on(
             pattern="test.*",
@@ -189,7 +189,7 @@ class TestEventEmission:
     @pytest.mark.asyncio
     async def test_emit_async_handler(self, clean_event_bus):
         """Test emitting event to async handler."""
-        handler = TestHandler()
+        handler = MockEventHandler()
         clean_event_bus.on("test.event", handler.async_handler)
 
         event = BaseEvent(event_type="test.event")
@@ -201,7 +201,7 @@ class TestEventEmission:
     @pytest.mark.asyncio
     async def test_emit_sync_handler(self, clean_event_bus):
         """Test emitting event to sync handler (runs in executor)."""
-        handler = TestHandler()
+        handler = MockEventHandler()
         clean_event_bus.on("test.event", handler.sync_handler)
 
         event = BaseEvent(event_type="test.event")
@@ -211,7 +211,7 @@ class TestEventEmission:
 
     def test_emit_sync(self, clean_event_bus):
         """Test synchronous event emission."""
-        handler = TestHandler()
+        handler = MockEventHandler()
         clean_event_bus.on("test.event", handler.sync_handler)
 
         event = BaseEvent(event_type="test.event")
@@ -222,7 +222,7 @@ class TestEventEmission:
     @pytest.mark.asyncio
     async def test_emit_with_kwargs(self, clean_event_bus):
         """Test emitting event with kwargs (creates event)."""
-        handler = TestHandler()
+        handler = MockEventHandler()
         clean_event_bus.on("test.event", handler.async_handler)
 
         await clean_event_bus.emit("test.event", test_data="value")
@@ -287,7 +287,7 @@ class TestErrorHandling:
         """Test error isolation continues to next handler."""
         clean_event_bus.configure(error_handling="isolate")
 
-        handler = TestHandler()
+        handler = MockEventHandler()
 
         async def failing_handler(event):
             raise ValueError("Test error")
@@ -320,7 +320,7 @@ class TestErrorHandling:
         """Test error stop halts execution."""
         clean_event_bus.configure(error_handling="stop")
 
-        handler = TestHandler()
+        handler = MockEventHandler()
 
         async def failing_handler(event):
             raise ValueError("Test error")
@@ -371,7 +371,7 @@ class TestStatistics:
     @pytest.mark.asyncio
     async def test_stats_tracking(self, clean_event_bus):
         """Test statistics are tracked."""
-        handler = TestHandler()
+        handler = MockEventHandler()
         clean_event_bus.on("test.event", handler.async_handler)
 
         await clean_event_bus.emit("test.event", BaseEvent(event_type="test.event"))
@@ -383,7 +383,7 @@ class TestStatistics:
 
     def test_get_handlers(self, clean_event_bus):
         """Test getting registered handlers."""
-        handler = TestHandler()
+        handler = MockEventHandler()
 
         clean_event_bus.on("test.event1", handler.async_handler)
         clean_event_bus.on("test.event2", handler.async_handler)
@@ -398,7 +398,7 @@ class TestStatistics:
 
     def test_reset(self, clean_event_bus):
         """Test resetting event bus."""
-        handler = TestHandler()
+        handler = MockEventHandler()
         clean_event_bus.on("test.event", handler.async_handler)
 
         clean_event_bus.reset()
@@ -413,7 +413,7 @@ class TestWildcardHandlers:
     @pytest.mark.asyncio
     async def test_wildcard_catches_all(self, clean_event_bus):
         """Test * pattern catches all events."""
-        handler = TestHandler()
+        handler = MockEventHandler()
         clean_event_bus.on("*", handler.async_handler)
 
         await clean_event_bus.emit("game.started", BaseEvent(event_type="game.started"))
@@ -424,7 +424,7 @@ class TestWildcardHandlers:
     @pytest.mark.asyncio
     async def test_multiple_patterns(self, clean_event_bus):
         """Test handler receives events from multiple patterns."""
-        handler = TestHandler()
+        handler = MockEventHandler()
 
         clean_event_bus.on("game.*", handler.async_handler)
         clean_event_bus.on("player.*", handler.async_handler)
@@ -443,7 +443,7 @@ class TestEventTypes:
     @pytest.mark.asyncio
     async def test_game_started_event(self, clean_event_bus):
         """Test GameStartedEvent."""
-        handler = TestHandler()
+        handler = MockEventHandler()
         clean_event_bus.on("game.started", handler.async_handler)
 
         event = GameStartedEvent(
@@ -463,7 +463,7 @@ class TestEventTypes:
     @pytest.mark.asyncio
     async def test_player_move_event(self, clean_event_bus):
         """Test PlayerMoveAfterEvent."""
-        handler = TestHandler()
+        handler = MockEventHandler()
         clean_event_bus.on("player.move.after", handler.async_handler)
 
         event = PlayerMoveAfterEvent(
@@ -490,7 +490,7 @@ class TestDisabledBus:
         """Test disabled bus doesn't emit events."""
         clean_event_bus.configure(enabled=False)
 
-        handler = TestHandler()
+        handler = MockEventHandler()
         clean_event_bus.on("test.event", handler.async_handler)
 
         results = await clean_event_bus.emit("test.event", BaseEvent(event_type="test.event"))

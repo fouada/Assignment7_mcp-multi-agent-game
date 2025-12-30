@@ -78,8 +78,8 @@ def sample_handler():
 # ============================================================================
 
 
-class TestMiddleware(Middleware):
-    """Simple test middleware that tracks calls."""
+class MockMiddleware(Middleware):
+    """Simple mock middleware that tracks calls for testing."""
 
     def __init__(self, name: str = "test", **kwargs):
         super().__init__(name=name, **kwargs)
@@ -129,7 +129,7 @@ class ErrorRaisingMiddleware(Middleware):
 @pytest.mark.asyncio
 async def test_middleware_base_class():
     """Test base middleware class functionality."""
-    middleware = TestMiddleware(name="test")
+    middleware = MockMiddleware(name="test")
 
     assert middleware.name == "test"
     assert middleware.enabled
@@ -184,7 +184,7 @@ async def test_response_context():
 @pytest.mark.asyncio
 async def test_pipeline_basic_execution(clean_pipeline, sample_request, sample_handler):
     """Test basic pipeline execution."""
-    middleware = TestMiddleware(name="test1")
+    middleware = MockMiddleware(name="test1")
     clean_pipeline.add_middleware(middleware, priority=10)
 
     response = await clean_pipeline.execute(sample_request, handler=sample_handler)
@@ -198,9 +198,9 @@ async def test_pipeline_basic_execution(clean_pipeline, sample_request, sample_h
 @pytest.mark.asyncio
 async def test_pipeline_priority_ordering(clean_pipeline, sample_request, sample_handler):
     """Test middleware executes in priority order."""
-    m1 = TestMiddleware(name="low_priority")
-    m2 = TestMiddleware(name="high_priority")
-    m3 = TestMiddleware(name="medium_priority")
+    m1 = MockMiddleware(name="low_priority")
+    m2 = MockMiddleware(name="high_priority")
+    m3 = MockMiddleware(name="medium_priority")
 
     clean_pipeline.add_middleware(m1, priority=10)
     clean_pipeline.add_middleware(m2, priority=100)
@@ -222,9 +222,9 @@ async def test_pipeline_priority_ordering(clean_pipeline, sample_request, sample
 @pytest.mark.asyncio
 async def test_pipeline_short_circuit(clean_pipeline, sample_request, sample_handler):
     """Test middleware can short-circuit the pipeline."""
-    m1 = TestMiddleware(name="before_short_circuit")
+    m1 = MockMiddleware(name="before_short_circuit")
     m2 = ShortCircuitMiddleware(name="short_circuit")
-    m3 = TestMiddleware(name="after_short_circuit")
+    m3 = MockMiddleware(name="after_short_circuit")
 
     clean_pipeline.add_middleware(m1, priority=100)
     clean_pipeline.add_middleware(m2, priority=50)
@@ -251,9 +251,9 @@ async def test_pipeline_error_handling_continue(sample_request, sample_handler):
     """Test error handling with 'continue' mode."""
     pipeline = MiddlewarePipeline(error_handling="continue")
 
-    m1 = TestMiddleware(name="before_error")
+    m1 = MockMiddleware(name="before_error")
     m2 = ErrorRaisingMiddleware(name="error_middleware")
-    m3 = TestMiddleware(name="after_error")
+    m3 = MockMiddleware(name="after_error")
 
     pipeline.add_middleware(m1, priority=100)
     pipeline.add_middleware(m2, priority=50)
@@ -274,9 +274,9 @@ async def test_pipeline_error_handling_stop(sample_request, sample_handler):
     """Test error handling with 'stop' mode."""
     pipeline = MiddlewarePipeline(error_handling="stop")
 
-    m1 = TestMiddleware(name="before_error")
+    m1 = MockMiddleware(name="before_error")
     m2 = ErrorRaisingMiddleware(name="error_middleware")
-    m3 = TestMiddleware(name="after_error")
+    m3 = MockMiddleware(name="after_error")
 
     pipeline.add_middleware(m1, priority=100)
     pipeline.add_middleware(m2, priority=50)
@@ -295,7 +295,7 @@ async def test_pipeline_error_handling_raise(sample_request, sample_handler):
     """Test error handling with 'raise' mode."""
     pipeline = MiddlewarePipeline(error_handling="raise")
 
-    m1 = TestMiddleware(name="before_error")
+    m1 = MockMiddleware(name="before_error")
     m2 = ErrorRaisingMiddleware(name="error_middleware")
 
     pipeline.add_middleware(m1, priority=100)
@@ -356,8 +356,8 @@ async def test_pipeline_state_sharing(clean_pipeline, sample_request, sample_han
 @pytest.mark.asyncio
 async def test_add_remove_middleware(clean_pipeline):
     """Test adding and removing middleware."""
-    m1 = TestMiddleware(name="middleware1")
-    m2 = TestMiddleware(name="middleware2")
+    m1 = MockMiddleware(name="middleware1")
+    m2 = MockMiddleware(name="middleware2")
 
     # Add middleware
     name1 = clean_pipeline.add_middleware(m1, priority=100)
@@ -385,7 +385,7 @@ async def test_add_remove_middleware(clean_pipeline):
 @pytest.mark.asyncio
 async def test_enable_disable_middleware(clean_pipeline, sample_request, sample_handler):
     """Test enabling and disabling middleware."""
-    m1 = TestMiddleware(name="test")
+    m1 = MockMiddleware(name="test")
     clean_pipeline.add_middleware(m1, priority=100)
 
     # Middleware enabled by default
@@ -409,8 +409,8 @@ async def test_enable_disable_middleware(clean_pipeline, sample_request, sample_
 @pytest.mark.asyncio
 async def test_get_middleware_list(clean_pipeline):
     """Test getting middleware list."""
-    m1 = TestMiddleware(name="test1")
-    m2 = TestMiddleware(name="test2")
+    m1 = MockMiddleware(name="test1")
+    m2 = MockMiddleware(name="test2")
 
     clean_pipeline.add_middleware(m1, priority=100, tags=["test", "logging"])
     clean_pipeline.add_middleware(m2, priority=50, tags=["test"])
@@ -679,7 +679,7 @@ async def test_full_pipeline_integration(sample_request, sample_handler):
 @pytest.mark.asyncio
 async def test_pipeline_statistics(clean_pipeline, sample_request, sample_handler):
     """Test pipeline statistics collection."""
-    m1 = TestMiddleware(name="test1")
+    m1 = MockMiddleware(name="test1")
     clean_pipeline.add_middleware(m1, priority=100)
 
     # Execute multiple requests
