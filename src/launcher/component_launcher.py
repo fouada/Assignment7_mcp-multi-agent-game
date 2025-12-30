@@ -75,6 +75,7 @@ class ComponentLauncher:
         # State
         self._running = False
         self._shutdown_event = asyncio.Event()
+        self._service_id: str | None = None  # Track service ID for unregistration
 
         logger.info(f"ComponentLauncher initialized for {component_type.value}")
 
@@ -128,8 +129,9 @@ class ComponentLauncher:
         await self.component.start()
 
         # Register with service registry
+        self._service_id = self.component.name
         await self.service_registry.register_service(
-            service_id=self.component.name,
+            service_id=self._service_id,
             service_type="league_manager",
             endpoint=self.component.url,
             metadata={
@@ -247,8 +249,9 @@ class ComponentLauncher:
         await self.component.start()
 
         # Register with service registry
+        self._service_id = referee_id
         await self.service_registry.register_service(
-            service_id=referee_id,
+            service_id=self._service_id,
             service_type="referee",
             endpoint=self.component.url,
             metadata={"league_id": self.config.league.league_id},
@@ -286,8 +289,9 @@ class ComponentLauncher:
         await self.component.start()
 
         # Register with service registry
+        self._service_id = name
         await self.service_registry.register_service(
-            service_id=name,
+            service_id=self._service_id,
             service_type="player",
             endpoint=self.component.url,
             metadata={
@@ -331,11 +335,9 @@ class ComponentLauncher:
         logger.info(f"Stopping {self.component_type.value}...")
 
         if self.component:
-            # Unregister from service registry
-            if hasattr(self.component, "name"):
-                await self.service_registry.unregister_service(
-                    str(getattr(self.component, "name", "unknown"))
-                )
+            # Unregister from service registry using tracked service_id
+            if self._service_id:
+                await self.service_registry.unregister_service(self._service_id)
 
             await self.component.stop()
             self.component = None
@@ -344,6 +346,7 @@ class ComponentLauncher:
         await self.state_sync.stop()
 
         self._running = False
+        self._service_id = None
         logger.info(f"✓ {self.component_type.value} stopped")
 
     def request_shutdown(self) -> None:

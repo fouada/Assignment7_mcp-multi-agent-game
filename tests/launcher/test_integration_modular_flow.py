@@ -21,21 +21,32 @@ import pytest
 from src.launcher import ComponentLauncher, ComponentType, get_service_registry, get_state_sync
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 async def clean_singletons():
     """Clean singleton instances before and after tests."""
     # Clean before test
     from src.launcher.service_registry import ServiceRegistry
     from src.launcher.state_sync import StateSyncService
 
+    # Reset singletons
     ServiceRegistry._instance = None
     StateSyncService._instance = None
+    
+    # Also clean the service registry state if it exists
+    registry = get_service_registry()
+    if hasattr(registry, '_services'):
+        registry._services.clear()
 
     yield
 
     # Clean after test
     ServiceRegistry._instance = None
     StateSyncService._instance = None
+    
+    # Clean registry state again
+    registry = get_service_registry()
+    if hasattr(registry, '_services'):
+        registry._services.clear()
 
 
 @pytest.mark.integration

@@ -900,6 +900,521 @@ class TestLeagueManagerLifecycle:
         assert manager._client is not None
 
 
+class TestLeagueManagerToolHandlers:
+    """Test tool handler invocations (not just underlying methods)."""
+
+    @pytest.mark.asyncio
+    async def test_register_player_tool(self):
+        """Test register_player tool handler."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Get the tool handler
+        tool_handler = None
+        for tool in manager._tools.values():
+            if tool.name == "register_player":
+                tool_handler = tool.handler
+                break
+
+        assert tool_handler is not None
+
+        params = {
+            "display_name": "TestPlayer",
+            "endpoint": "http://localhost:8101/mcp",
+            "version": "1.0.0",
+            "game_types": ["even_odd"],
+        }
+
+        result = await tool_handler(params)
+        assert result["status"] == RegistrationStatus.ACCEPTED.value
+
+    @pytest.mark.asyncio
+    async def test_get_standings_tool(self):
+        """Test get_standings tool handler."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Add a player
+        manager._players["P01"] = RegisteredPlayer(
+            player_id="P01",
+            display_name="Player1",
+            endpoint="http://localhost:8101/mcp",
+        )
+
+        # Get the tool handler
+        tool_handler = None
+        for tool in manager._tools.values():
+            if tool.name == "get_standings":
+                tool_handler = tool.handler
+                break
+
+        assert tool_handler is not None
+        result = await tool_handler({})
+        assert "standings" in result
+
+    @pytest.mark.asyncio
+    async def test_get_schedule_tool(self):
+        """Test get_schedule tool handler."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Get the tool handler
+        tool_handler = None
+        for tool in manager._tools.values():
+            if tool.name == "get_schedule":
+                tool_handler = tool.handler
+                break
+
+        assert tool_handler is not None
+        result = await tool_handler({})
+        assert "schedule" in result
+
+    @pytest.mark.asyncio
+    async def test_start_league_tool(self):
+        """Test start_league tool handler."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Add players
+        for i in range(2):
+            manager._players[f"P0{i+1}"] = RegisteredPlayer(
+                player_id=f"P0{i+1}",
+                display_name=f"Player{i+1}",
+                endpoint=f"http://localhost:810{i+1}/mcp",
+            )
+
+        # Get the tool handler
+        tool_handler = None
+        for tool in manager._tools.values():
+            if tool.name == "start_league":
+                tool_handler = tool.handler
+                break
+
+        assert tool_handler is not None
+        result = await tool_handler({})
+        assert result["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_start_next_round_tool(self):
+        """Test start_next_round tool handler."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Setup
+        for i in range(2):
+            await manager._handle_registration({
+                "display_name": f"Player{i+1}",
+                "endpoint": f"http://localhost:810{i+1}/mcp",
+                "game_types": ["even_odd"],
+            })
+
+        await manager._handle_referee_registration({
+            "referee_id": "REF01",
+            "endpoint": "http://localhost:8001/mcp",
+        })
+
+        await manager._start_league()
+
+        # Get the tool handler
+        tool_handler = None
+        for tool in manager._tools.values():
+            if tool.name == "start_next_round":
+                tool_handler = tool.handler
+                break
+
+        assert tool_handler is not None
+
+        # Mock client
+        mock_client = AsyncMock(spec=MCPClient)
+        mock_client.connected_servers = {}
+        manager._client = mock_client
+
+        with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
+            result = await tool_handler({})
+
+        assert result["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_run_all_rounds_tool(self):
+        """Test run_all_rounds tool handler."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Setup
+        for i in range(2):
+            await manager._handle_registration({
+                "display_name": f"Player{i+1}",
+                "endpoint": f"http://localhost:810{i+1}/mcp",
+                "game_types": ["even_odd"],
+            })
+
+        await manager._handle_referee_registration({
+            "referee_id": "REF01",
+            "endpoint": "http://localhost:8001/mcp",
+        })
+
+        await manager._start_league()
+
+        # Get the tool handler
+        tool_handler = None
+        for tool in manager._tools.values():
+            if tool.name == "run_all_rounds":
+                tool_handler = tool.handler
+                break
+
+        assert tool_handler is not None
+
+        # Mock client
+        mock_client = AsyncMock(spec=MCPClient)
+        mock_client.connected_servers = {}
+        manager._client = mock_client
+
+        with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
+            result = await tool_handler({})
+
+        assert result["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_report_match_result_tool(self):
+        """Test report_match_result tool handler."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Setup
+        for i in range(2):
+            await manager._handle_registration({
+                "display_name": f"Player{i+1}",
+                "endpoint": f"http://localhost:810{i+1}/mcp",
+                "game_types": ["even_odd"],
+            })
+
+        await manager._start_league()
+
+        # Get the tool handler
+        tool_handler = None
+        for tool in manager._tools.values():
+            if tool.name == "report_match_result":
+                tool_handler = tool.handler
+                break
+
+        assert tool_handler is not None
+
+        # Create a match
+        match = Match(match_id="M001")
+        match.set_players("P01", "http://localhost:8101/mcp", "P02", "http://localhost:8102/mcp")
+        manager._matches["M001"] = match
+
+        params = {
+            "match_id": "M001",
+            "winner_id": "P01",
+            "player1_score": 5,
+            "player2_score": 3,
+        }
+
+        result = await tool_handler(params)
+        assert result["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_get_player_info_tool_success(self):
+        """Test get_player_info tool handler with valid player."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Add a player
+        manager._players["P01"] = RegisteredPlayer(
+            player_id="P01",
+            display_name="Player1",
+            endpoint="http://localhost:8101/mcp",
+        )
+
+        # Get the tool handler
+        tool_handler = None
+        for tool in manager._tools.values():
+            if tool.name == "get_player_info":
+                tool_handler = tool.handler
+                break
+
+        assert tool_handler is not None
+        result = await tool_handler({"player_id": "P01"})
+        assert "player" in result
+        assert result["player"]["player_id"] == "P01"
+
+    @pytest.mark.asyncio
+    async def test_get_player_info_tool_not_found(self):
+        """Test get_player_info tool handler with invalid player."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Get the tool handler
+        tool_handler = None
+        for tool in manager._tools.values():
+            if tool.name == "get_player_info":
+                tool_handler = tool.handler
+                break
+
+        assert tool_handler is not None
+        result = await tool_handler({"player_id": "INVALID"})
+        assert "error" in result
+        assert "not found" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_register_referee_tool(self):
+        """Test register_referee tool handler."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Get the tool handler
+        tool_handler = None
+        for tool in manager._tools.values():
+            if tool.name == "register_referee":
+                tool_handler = tool.handler
+                break
+
+        assert tool_handler is not None
+
+        params = {
+            "referee_id": "REF01",
+            "endpoint": "http://localhost:8001/mcp",
+            "version": "1.0.0",
+        }
+
+        result = await tool_handler(params)
+        assert result["status"] == RegistrationStatus.ACCEPTED.value
+
+    @pytest.mark.asyncio
+    async def test_get_referees_tool(self):
+        """Test get_referees tool handler."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Add a referee
+        await manager._handle_referee_registration({
+            "referee_id": "REF01",
+            "endpoint": "http://localhost:8001/mcp",
+        })
+
+        # Get the tool handler
+        tool_handler = None
+        for tool in manager._tools.values():
+            if tool.name == "get_referees":
+                tool_handler = tool.handler
+                break
+
+        assert tool_handler is not None
+        result = await tool_handler({})
+        assert "referees" in result
+        assert len(result["referees"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_set_referee_tool(self):
+        """Test set_referee tool handler (legacy)."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Get the tool handler
+        tool_handler = None
+        for tool in manager._tools.values():
+            if tool.name == "set_referee":
+                tool_handler = tool.handler
+                break
+
+        assert tool_handler is not None
+
+        params = {"endpoint": "http://localhost:8001/mcp"}
+        result = await tool_handler(params)
+
+        assert result["success"] is True
+        assert manager._referee_endpoint == "http://localhost:8001/mcp"
+
+
+class TestLeagueManagerResourceHandlers:
+    """Test resource handler invocations."""
+
+    @pytest.mark.asyncio
+    async def test_standings_resource(self):
+        """Test standings resource handler."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Add a player
+        manager._players["P01"] = RegisteredPlayer(
+            player_id="P01",
+            display_name="Player1",
+            endpoint="http://localhost:8101/mcp",
+        )
+
+        # Get the resource handler
+        resource_handler = None
+        for resource in manager._resources.values():
+            if "standings" in resource.uri:
+                resource_handler = resource.handler
+                break
+
+        assert resource_handler is not None
+        result = await resource_handler({})
+        assert "standings" in result
+
+    @pytest.mark.asyncio
+    async def test_players_resource(self):
+        """Test players resource handler."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Add a player
+        manager._players["P01"] = RegisteredPlayer(
+            player_id="P01",
+            display_name="Player1",
+            endpoint="http://localhost:8101/mcp",
+        )
+
+        # Get the resource handler
+        resource_handler = None
+        for resource in manager._resources.values():
+            if "players" in resource.uri:
+                resource_handler = resource.handler
+                break
+
+        assert resource_handler is not None
+        result = await resource_handler({})
+        assert "players" in result
+        assert len(result["players"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_schedule_resource(self):
+        """Test schedule resource handler."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Get the resource handler
+        resource_handler = None
+        for resource in manager._resources.values():
+            if "schedule" in resource.uri:
+                resource_handler = resource.handler
+                break
+
+        assert resource_handler is not None
+        result = await resource_handler({})
+        assert "schedule" in result
+
+
+class TestLeagueManagerEdgeCasesAdvanced:
+    """Test advanced edge cases for League Manager."""
+
+    @pytest.mark.asyncio
+    async def test_referee_registration_league_completed(self):
+        """Test referee registration when league is completed."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+        manager.state = LeagueState.COMPLETED
+
+        result = await manager._handle_referee_registration({
+            "referee_id": "REF01",
+            "endpoint": "http://localhost:8001/mcp",
+        })
+
+        assert result["status"] == RegistrationStatus.REJECTED.value
+        assert "completed" in result.get("reason", "").lower()
+
+    @pytest.mark.asyncio
+    async def test_start_round_event_emission_error(self):
+        """Test error handling during event emission in start_next_round."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Setup
+        for i in range(2):
+            await manager._handle_registration({
+                "display_name": f"Player{i+1}",
+                "endpoint": f"http://localhost:810{i+1}/mcp",
+                "game_types": ["even_odd"],
+            })
+
+        await manager._handle_referee_registration({
+            "referee_id": "REF01",
+            "endpoint": "http://localhost:8001/mcp",
+        })
+
+        await manager._start_league()
+
+        # Mock client
+        mock_client = AsyncMock(spec=MCPClient)
+        mock_client.connected_servers = {}
+        manager._client = mock_client
+
+        # Mock event bus to raise exception
+        with patch("src.agents.league_manager.get_event_bus") as mock_bus:
+            mock_event_bus = AsyncMock()
+            mock_event_bus.emit = AsyncMock(side_effect=Exception("Event emission failed"))
+            mock_bus.return_value = mock_event_bus
+
+            with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
+                # Should not raise exception, just log error
+                result = await manager.start_next_round()
+
+        # Should still succeed despite event emission failure
+        assert result["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_run_all_rounds_failure_mid_execution(self):
+        """Test _run_all_rounds when a round fails mid-execution."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Setup
+        for i in range(2):
+            await manager._handle_registration({
+                "display_name": f"Player{i+1}",
+                "endpoint": f"http://localhost:810{i+1}/mcp",
+                "game_types": ["even_odd"],
+            })
+
+        await manager._handle_referee_registration({
+            "referee_id": "REF01",
+            "endpoint": "http://localhost:8001/mcp",
+        })
+
+        await manager._start_league()
+
+        # Mock client
+        mock_client = AsyncMock(spec=MCPClient)
+        mock_client.connected_servers = {}
+        manager._client = mock_client
+
+        # Mock start_next_round to fail on second call
+        call_count = 0
+        async def mock_start_next_round():
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return {"success": True, "round": 1, "matches": []}
+            else:
+                return {"success": False, "error": "Simulated failure"}
+
+        with patch.object(manager, "start_next_round", side_effect=mock_start_next_round):
+            with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
+                result = await manager._run_all_rounds()
+
+        assert result["success"] is False
+        assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_run_all_rounds_league_complete_flag(self):
+        """Test _run_all_rounds when league_complete flag is set."""
+        manager = LeagueManager(league_id="test_league", port=8000)
+
+        # Setup
+        for i in range(2):
+            await manager._handle_registration({
+                "display_name": f"Player{i+1}",
+                "endpoint": f"http://localhost:810{i+1}/mcp",
+                "game_types": ["even_odd"],
+            })
+
+        await manager._handle_referee_registration({
+            "referee_id": "REF01",
+            "endpoint": "http://localhost:8001/mcp",
+        })
+
+        await manager._start_league()
+
+        # Mock client
+        mock_client = AsyncMock(spec=MCPClient)
+        mock_client.connected_servers = {}
+        manager._client = mock_client
+
+        # Mock start_next_round to return league_complete
+        async def mock_start_next_round():
+            return {"success": True, "league_complete": True, "round": 1, "matches": []}
+
+        with patch.object(manager, "start_next_round", side_effect=mock_start_next_round):
+            result = await manager._run_all_rounds()
+
+        # Should complete successfully when league_complete flag is set
+        assert result["success"] is True
+
+
 # ============================================================================
 # Edge Case Documentation
 # ============================================================================

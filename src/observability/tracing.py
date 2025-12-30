@@ -390,8 +390,40 @@ class TracingManager:
             f"trace_id={span.trace_id[:8]}...)"
         )
 
+    @contextmanager
+    def span(
+        self,
+        name: str,
+        attributes: dict[str, Any] | None = None,
+        parent_context: SpanContext | None = None,
+    ):
+        """
+        Context manager for creating spans (synchronous version).
+
+        Usage:
+            with tracing.span("operation") as span:
+                if span:  # Check if span was created (sampling/enabled)
+                    span.set_attribute("key", "value")
+                # Your code here
+
+        Args:
+            name: Span name
+            attributes: Initial span attributes
+            parent_context: Parent span context (for distributed tracing)
+        """
+        span = self.start_span(name, parent_context=parent_context, attributes=attributes)
+        try:
+            yield span
+        except Exception as e:
+            if span:
+                span.set_status("error", str(e))
+            raise
+        finally:
+            if span:
+                self.end_span(span)
+
     @asynccontextmanager
-    async def span(
+    async def async_span(
         self,
         name: str,
         attributes: dict[str, Any] | None = None,
@@ -401,7 +433,7 @@ class TracingManager:
         Async context manager for creating spans.
 
         Usage:
-            async with tracing.span("operation") as span:
+            async with tracing.async_span("operation") as span:
                 if span:  # Check if span was created (sampling/enabled)
                     span.set_attribute("key", "value")
                 # Your code here
