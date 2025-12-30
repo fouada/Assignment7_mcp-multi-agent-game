@@ -3,17 +3,16 @@ Additional tests to improve league_manager.py coverage to 85%+.
 Focuses on uncovered dashboard streaming, error handling, and edge cases.
 """
 
-import pytest
 from unittest.mock import AsyncMock, Mock, patch
-from datetime import datetime
-from dataclasses import asdict
+
+import pytest
+
 from src.agents.league_manager import (
     LeagueManager,
     LeagueState,
     RegisteredPlayer,
     RegisteredReferee,
 )
-from src.game.match import MatchState
 
 
 class TestLeagueManagerDashboardStreaming:
@@ -83,10 +82,10 @@ class TestLeagueManagerDashboardStreaming:
     ):
         """Test streaming updates during tournament."""
         from src.game.match import Match, MatchState
-        
+
         league_manager.set_dashboard(mock_dashboard)
         league_manager.state = LeagueState.IN_PROGRESS
-        
+
         # Add players
         league_manager._players = {
             "player1": RegisteredPlayer(
@@ -110,7 +109,7 @@ class TestLeagueManagerDashboardStreaming:
                 played=3,
             ),
         }
-        
+
         # Add match
         match = Match(
             match_id="match1",
@@ -120,13 +119,13 @@ class TestLeagueManagerDashboardStreaming:
         match.state = MatchState.IN_PROGRESS
         league_manager._matches = {"match1": match}
         league_manager._current_round = 1
-        
+
         # Create schedule
         league_manager._schedule = [[("player1", "player2")]]
-        
+
         # Execute
         await league_manager._stream_tournament_update()
-        
+
         # Verify
         assert "test_league" in mock_dashboard.tournament_states
 
@@ -155,9 +154,9 @@ class TestLeagueManagerEdgeCasesAdvanced:
                 "game_types": ["even_odd"],
             }
         }
-        
+
         result = await league_manager._handle_player_register_mcp_request(message)
-        
+
         assert result["status"] == "registered"
         assert "player_id" in result
 
@@ -171,9 +170,9 @@ class TestLeagueManagerEdgeCasesAdvanced:
                 "display_name": "TestPlayer",
             }
         }
-        
+
         result = await league_manager._handle_player_register_mcp_request(message)
-        
+
         # Should still work with defaults
         assert result["status"] == "registered"
 
@@ -187,7 +186,7 @@ class TestLeagueManagerEdgeCasesAdvanced:
                 display_name=f"Player{i}",
                 endpoint=f"http://localhost:900{i}",
             )
-        
+
         message = {
             "player_meta": {
                 "display_name": "LatePlayer",
@@ -196,9 +195,9 @@ class TestLeagueManagerEdgeCasesAdvanced:
                 "game_types": ["even_odd"],
             }
         }
-        
+
         result = await league_manager._handle_player_register_mcp_request(message)
-        
+
         assert result["status"] == "rejected"
         assert "full" in result.get("reason", "").lower()
 
@@ -206,15 +205,15 @@ class TestLeagueManagerEdgeCasesAdvanced:
     async def test_register_referee_when_league_completed(self, league_manager):
         """Test registering referee after league completes."""
         league_manager.state = LeagueState.COMPLETED
-        
+
         referee_info = {
             "referee_id": "ref1",
             "endpoint": "http://localhost:7001",
             "display_name": "Referee One",
         }
-        
+
         result = await league_manager._register_referee(referee_info)
-        
+
         assert result["status"] == "rejected"
 
     @pytest.mark.asyncio
@@ -224,7 +223,7 @@ class TestLeagueManagerEdgeCasesAdvanced:
         league_manager.state = LeagueState.IN_PROGRESS
         league_manager._schedule = [[("player1", "player2")]]
         league_manager._current_round = 0
-        
+
         # Add players
         league_manager._players = {
             "player1": RegisteredPlayer(
@@ -238,7 +237,7 @@ class TestLeagueManagerEdgeCasesAdvanced:
                 endpoint="http://localhost:9002",
             ),
         }
-        
+
         # Add referee
         league_manager._referees = {
             "ref1": RegisteredReferee(
@@ -247,16 +246,16 @@ class TestLeagueManagerEdgeCasesAdvanced:
                 display_name="Referee",
             ),
         }
-        
+
         # Mock event bus to raise error
         with patch("src.agents.league_manager.get_event_bus") as mock_get_bus:
             mock_bus = Mock()
             mock_bus.emit = AsyncMock(side_effect=Exception("Event error"))
             mock_get_bus.return_value = mock_bus
-            
+
             # Should not crash even if event emission fails
             result = await league_manager.start_next_round()
-            
+
             assert result["status"] in ["started", "complete"]
 
     @pytest.mark.asyncio
@@ -275,7 +274,7 @@ class TestLeagueManagerEdgeCasesAdvanced:
                 endpoint="http://localhost:9002",
             ),
         }
-        
+
         league_manager._referees = {
             "ref1": RegisteredReferee(
                 referee_id="ref1",
@@ -283,24 +282,24 @@ class TestLeagueManagerEdgeCasesAdvanced:
                 display_name="Referee",
             ),
         }
-        
+
         # Start league
         await league_manager.start_league()
-        
+
         # Mock start_next_round to fail on second call
         original_start = league_manager.start_next_round
         call_count = [0]
-        
+
         async def failing_start_next_round():
             call_count[0] += 1
             if call_count[0] == 2:
                 raise Exception("Round start failed")
             return await original_start()
-        
+
         league_manager.start_next_round = failing_start_next_round
-        
+
         # Should handle error gracefully
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match="Round start failed"):
             await league_manager.run_all_rounds()
 
     @pytest.mark.asyncio
@@ -319,7 +318,7 @@ class TestLeagueManagerEdgeCasesAdvanced:
                 endpoint="http://localhost:9002",
             ),
         }
-        
+
         league_manager._referees = {
             "ref1": RegisteredReferee(
                 referee_id="ref1",
@@ -327,16 +326,16 @@ class TestLeagueManagerEdgeCasesAdvanced:
                 display_name="Referee",
             ),
         }
-        
+
         # Start league
         await league_manager.start_league()
-        
+
         # Mock all rounds as complete immediately
         league_manager._current_round = len(league_manager._schedule)
-        
+
         # Run all rounds
         result = await league_manager.run_all_rounds()
-        
+
         # Verify league is completed
         assert league_manager.state == LeagueState.COMPLETED
         assert result["rounds_completed"] >= 0
@@ -362,9 +361,9 @@ class TestLeagueManagerRegistrationEdgeCases:
             "endpoint": "http://localhost:9001",
             "version": "1.0.0",
         }
-        
+
         result = await league_manager._register_player(player_info)
-        
+
         assert result["status"] == "rejected"
         assert "game_types" in result.get("reason", "").lower() or "unsupported" in result.get("reason", "").lower()
 
@@ -372,16 +371,16 @@ class TestLeagueManagerRegistrationEdgeCases:
     async def test_register_player_when_registration_closed(self, league_manager):
         """Test registering player when registration is closed."""
         league_manager.state = LeagueState.IN_PROGRESS
-        
+
         player_info = {
             "display_name": "LatePlayer",
             "endpoint": "http://localhost:9001",
             "version": "1.0.0",
             "game_types": ["even_odd"],
         }
-        
+
         result = await league_manager._register_player(player_info)
-        
+
         assert result["status"] == "rejected"
         assert "closed" in result.get("reason", "").lower()
 
@@ -395,9 +394,9 @@ class TestLeagueManagerRegistrationEdgeCases:
             "version": "1.0.0",
             "game_types": ["even_odd"],
         }
-        
+
         await league_manager._register_player(player1_info)
-        
+
         # Try to register another player with same endpoint
         player2_info = {
             "display_name": "Player2",
@@ -405,9 +404,9 @@ class TestLeagueManagerRegistrationEdgeCases:
             "version": "1.0.0",
             "game_types": ["even_odd"],
         }
-        
+
         result = await league_manager._register_player(player2_info)
-        
+
         assert result["status"] == "rejected"
 
 
@@ -433,9 +432,9 @@ class TestLeagueManagerScheduleGeneration:
                 endpoint="http://localhost:9001",
             ),
         }
-        
+
         result = await league_manager.start_league()
-        
+
         assert result["status"] == "error"
         assert "insufficient" in result.get("message", "").lower()
 
@@ -443,9 +442,9 @@ class TestLeagueManagerScheduleGeneration:
     async def test_start_league_already_started(self, league_manager):
         """Test starting league that's already in progress."""
         league_manager.state = LeagueState.IN_PROGRESS
-        
+
         result = await league_manager.start_league()
-        
+
         assert result["status"] == "error"
         assert "already" in result.get("message", "").lower()
 
@@ -471,9 +470,9 @@ class TestLeagueManagerMatchHandling:
             "player_a_score": 3,
             "player_b_score": 2,
         }
-        
+
         result = await league_manager._handle_match_result(result_data)
-        
+
         assert result["status"] == "error"
 
     @pytest.mark.asyncio
@@ -492,16 +491,15 @@ class TestLeagueManagerMatchHandling:
                 endpoint="http://localhost:9002",
             ),
         }
-        
+
         # Start league
         await league_manager.start_league()
-        
+
         # Remove all referees
         league_manager._referees = {}
-        
+
         # Try to start round
         result = await league_manager.start_next_round()
-        
+
         # Should handle gracefully
         assert result["status"] in ["error", "complete"]
-
