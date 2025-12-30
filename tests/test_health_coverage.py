@@ -25,8 +25,14 @@ class TestHealthCheckEdgeCases:
     def monitor(self):
         """Create a fresh health monitor."""
         monitor = HealthMonitor()
-        monitor._checks.clear()
-        monitor._last_results.clear()  # It's _last_results, not _cache
+        # Clear all existing checks except the default ones
+        checks_to_remove = [name for name in monitor._checks.keys() 
+                           if name not in ["liveness", "readiness", "resources"]]
+        for name in checks_to_remove:
+            monitor.remove_check(name)
+        monitor._last_results.clear()
+        monitor._last_check_time = None
+        monitor._last_report = None
         return monitor
 
     @pytest.mark.asyncio
@@ -239,7 +245,14 @@ class TestHealthMonitorConfiguration:
     @pytest.fixture
     def monitor(self):
         monitor = HealthMonitor()
-        monitor._checks.clear()
+        # Clear all existing checks except the default ones
+        checks_to_remove = [name for name in monitor._checks.keys() 
+                           if name not in ["liveness", "readiness", "resources"]]
+        for name in checks_to_remove:
+            monitor.remove_check(name)
+        monitor._last_results.clear()
+        monitor._last_check_time = None
+        monitor._last_report = None
         return monitor
 
     @pytest.mark.asyncio
@@ -360,7 +373,14 @@ class TestHealthEndpoints:
     @pytest.fixture
     def monitor(self):
         monitor = HealthMonitor()
-        monitor._checks.clear()
+        # Clear all existing checks except the default ones
+        checks_to_remove = [name for name in monitor._checks.keys() 
+                           if name not in ["liveness", "readiness", "resources"]]
+        for name in checks_to_remove:
+            monitor.remove_check(name)
+        monitor._last_results.clear()
+        monitor._last_check_time = None
+        monitor._last_report = None
         return monitor
 
     @pytest.mark.asyncio
@@ -402,7 +422,14 @@ class TestHealthCheckFormatting:
     @pytest.fixture
     def monitor(self):
         monitor = HealthMonitor()
-        monitor._checks.clear()
+        # Clear all existing checks except the default ones
+        checks_to_remove = [name for name in monitor._checks.keys() 
+                           if name not in ["liveness", "readiness", "resources"]]
+        for name in checks_to_remove:
+            monitor.remove_check(name)
+        monitor._last_results.clear()
+        monitor._last_check_time = None
+        monitor._last_report = None
         return monitor
 
     @pytest.mark.asyncio

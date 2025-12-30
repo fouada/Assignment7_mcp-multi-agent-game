@@ -234,8 +234,8 @@ class TestEventEmission:
     @pytest.mark.asyncio
     async def test_emit_to_multiple_handlers(self, clean_event_bus):
         """Test emitting to multiple handlers."""
-        handler1 = TestHandler()
-        handler2 = TestHandler()
+        handler1 = MockEventHandler()
+        handler2 = MockEventHandler()
 
         clean_event_bus.on("test.event", handler1.async_handler)
         clean_event_bus.on("test.event", handler2.async_handler)
