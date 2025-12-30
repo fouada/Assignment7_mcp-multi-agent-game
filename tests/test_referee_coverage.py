@@ -58,7 +58,9 @@ class TestRefereeAgentErrorHandling:
         pass
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="OddEvenGame doesn't accept 'rounds' parameter (should be 'total_rounds')")
+    @pytest.mark.skip(
+        reason="OddEvenGame doesn't accept 'rounds' parameter (should be 'total_rounds')"
+    )
     async def test_run_round_with_move_collection_error(self, referee, mock_client):
         """Test running round when move collection fails."""
         pass
@@ -70,13 +72,17 @@ class TestRefereeAgentErrorHandling:
         pass
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="OddEvenGame doesn't accept 'rounds' parameter (should be 'total_rounds')")
+    @pytest.mark.skip(
+        reason="OddEvenGame doesn't accept 'rounds' parameter (should be 'total_rounds')"
+    )
     async def test_handle_move_submission_wrong_state(self, referee):
         """Test handling move when game is not in waiting state."""
         pass
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Method _handle_game_acceptance doesn't exist (should be handle_game_acceptance)")
+    @pytest.mark.skip(
+        reason="Method _handle_game_acceptance doesn't exist (should be handle_game_acceptance)"
+    )
     async def test_handle_game_acceptance_unknown_game(self, referee):
         """Test handling game acceptance for unknown game."""
         pass
@@ -88,7 +94,9 @@ class TestRefereeAgentErrorHandling:
         pass
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="OddEvenGame doesn't accept 'rounds' parameter (should be 'total_rounds')")
+    @pytest.mark.skip(
+        reason="OddEvenGame doesn't accept 'rounds' parameter (should be 'total_rounds')"
+    )
     async def test_complete_game_and_report_network_error(self, referee, mock_client):
         """Test completing game when reporting to league fails."""
         pass
@@ -98,6 +106,7 @@ class TestRefereeAgentErrorHandling:
     async def test_send_round_results_network_error(self, referee, mock_client):
         """Test sending round results with network error."""
         pass
+
 
 class TestRefereeAgentMatchSession:
     """Test match session handling."""
@@ -124,6 +133,7 @@ class TestRefereeAgentMatchSession:
         # Just verify it doesn't crash with custom timeout
         assert match_info["timeout"] == 120
 
+
 class TestRefereeAgentRegistration:
     """Test referee registration edge cases."""
 
@@ -136,16 +146,21 @@ class TestRefereeAgentRegistration:
         )
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="register_with_league() signature mismatch (takes 1 arg, test passes 2)")
+    @pytest.mark.skip(
+        reason="register_with_league() signature mismatch (takes 1 arg, test passes 2)"
+    )
     async def test_register_with_league_network_error(self, referee):
         """Test registration when network fails."""
         pass
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="register_with_league() signature mismatch (takes 1 arg, test passes 2)")
+    @pytest.mark.skip(
+        reason="register_with_league() signature mismatch (takes 1 arg, test passes 2)"
+    )
     async def test_register_with_league_rejected(self, referee):
         """Test registration when league rejects."""
         pass
+
 
 class TestRefereeAgentToolHandlers:
     """Test referee tool handlers."""
@@ -159,16 +174,21 @@ class TestRefereeAgentToolHandlers:
         )
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="OddEvenGame doesn't accept 'rounds' parameter (should be 'total_rounds')")
+    @pytest.mark.skip(
+        reason="OddEvenGame doesn't accept 'rounds' parameter (should be 'total_rounds')"
+    )
     async def test_get_game_state_tool(self, referee):
         """Test get_game_state tool."""
         pass
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="OddEvenGame doesn't accept 'rounds' parameter (should be 'total_rounds')")
+    @pytest.mark.skip(
+        reason="OddEvenGame doesn't accept 'rounds' parameter (should be 'total_rounds')"
+    )
     async def test_list_active_games_tool(self, referee):
         """Test list_active_games tool."""
         pass
+
 
 class TestRefereeAgentLifecycle:
     """Test referee lifecycle methods."""
@@ -193,6 +213,7 @@ class TestRefereeAgentLifecycle:
         await referee.on_stop()
         # Should complete without error
 
+
 class TestRefereeAgentProtocolHandling:
     """Test protocol message handling."""
 
@@ -205,7 +226,9 @@ class TestRefereeAgentProtocolHandling:
         )
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="OddEvenGame doesn't accept 'rounds' parameter (should be 'total_rounds')")
+    @pytest.mark.skip(
+        reason="OddEvenGame doesn't accept 'rounds' parameter (should be 'total_rounds')"
+    )
     async def test_handle_choose_parity_response(self, referee):
         """Test handling choose parity response."""
         pass

@@ -117,7 +117,7 @@ class TestLeagueManagerDashboardStreaming:
             player2_id="player2",
             player2_endpoint="http://localhost:9002",
             player1_name="Alice",
-            player2_name="Bob"
+            player2_name="Bob",
         )
         match.state = MatchState.IN_PROGRESS
         league_manager._matches = {"match1": match}
@@ -131,6 +131,7 @@ class TestLeagueManagerDashboardStreaming:
 
         # Verify
         assert "test_league" in mock_dashboard.tournament_states
+
 
 class TestLeagueManagerEdgeCasesAdvanced:
     """Test additional edge cases in league manager."""
@@ -153,7 +154,7 @@ class TestLeagueManagerEdgeCasesAdvanced:
             "endpoint": "http://localhost:9001",
             "version": "1.0.0",
             "game_types": ["even_odd"],
-            "strategy": "random"
+            "strategy": "random",
         }
 
         result = await league_manager._handle_registration(params)
@@ -303,6 +304,7 @@ class TestLeagueManagerEdgeCasesAdvanced:
         assert league_manager.state == LeagueState.COMPLETED
         assert result is not None  # Function returns a result
 
+
 class TestLeagueManagerRegistrationEdgeCases:
     """Test registration edge cases."""
 
@@ -366,6 +368,7 @@ class TestLeagueManagerRegistrationEdgeCases:
         assert result["status"].upper() == "REJECTED"
         assert "already registered" in result.get("reason", "").lower()
 
+
 class TestLeagueManagerScheduleGeneration:
     """Test schedule generation edge cases."""
 
@@ -392,10 +395,12 @@ class TestLeagueManagerScheduleGeneration:
         result = await league_manager._start_league()
 
         # Check for error condition - could be in different formats
-        assert ("error" in result or "status" in result)
+        assert "error" in result or "status" in result
         if "error" in result:
             # Error message is "Need at least 2 players, have 1"
-            assert ("need at least" in result["error"].lower() or "players" in result["error"].lower())
+            assert (
+                "need at least" in result["error"].lower() or "players" in result["error"].lower()
+            )
         elif "status" in result:
             assert result["status"].upper() == "ERROR"
 
@@ -408,11 +413,12 @@ class TestLeagueManagerScheduleGeneration:
         result = await league_manager._start_league()
 
         # Check for error condition - could be in different formats
-        assert ("error" in result or "status" in result)
+        assert "error" in result or "status" in result
         if "error" in result:
             assert "already" in result["error"].lower()
         elif "status" in result:
             assert result["status"].upper() == "ERROR"
+
 
 class TestLeagueManagerMatchHandling:
     """Test match handling edge cases."""

@@ -27,8 +27,11 @@ class TestHealthCheckEdgeCases:
         """Create a fresh health monitor."""
         monitor = HealthMonitor()
         # Clear all existing checks except the default ones
-        checks_to_remove = [name for name in monitor._checks.keys()
-                           if name not in ["liveness", "readiness", "resources"]]
+        checks_to_remove = [
+            name
+            for name in monitor._checks.keys()
+            if name not in ["liveness", "readiness", "resources"]
+        ]
         for name in checks_to_remove:
             monitor.remove_check(name)
         monitor._last_results.clear()
@@ -239,6 +242,7 @@ class TestHealthCheckEdgeCases:
         await monitor.get_health()
         assert call_count[0] > first_count
 
+
 class TestHealthMonitorConfiguration:
     """Test health monitor configuration."""
 
@@ -246,8 +250,11 @@ class TestHealthMonitorConfiguration:
     def monitor(self):
         monitor = HealthMonitor()
         # Clear all existing checks except the default ones
-        checks_to_remove = [name for name in monitor._checks.keys()
-                           if name not in ["liveness", "readiness", "resources"]]
+        checks_to_remove = [
+            name
+            for name in monitor._checks.keys()
+            if name not in ["liveness", "readiness", "resources"]
+        ]
         for name in checks_to_remove:
             monitor.remove_check(name)
         monitor._last_results.clear()
@@ -292,6 +299,7 @@ class TestHealthMonitorConfiguration:
         health = await monitor.get_health()
         assert "custom" in health["checks"]
 
+
 class TestHealthStatusEnum:
     """Test health status enum."""
 
@@ -306,6 +314,7 @@ class TestHealthStatusEnum:
         # Just verify they're different
         assert HealthStatus.HEALTHY != HealthStatus.UNHEALTHY
         assert HealthStatus.DEGRADED != HealthStatus.HEALTHY
+
 
 class TestHealthCheckResult:
     """Test HealthCheckResult dataclass."""
@@ -328,12 +337,15 @@ class TestHealthCheckResult:
 
         assert result.details == {}
 
+
 class TestGlobalHealthMonitor:
     """Test global health monitor singleton."""
 
     def test_global_monitor_singleton(self):
         """Test that global monitor is singleton."""
-        monitor1 = get_health_monitor()  # Function is get_health_monitor, not get_global_health_monitor
+        monitor1 = (
+            get_health_monitor()
+        )  # Function is get_health_monitor, not get_global_health_monitor
         monitor2 = get_health_monitor()
 
         assert monitor1 is monitor2
@@ -359,6 +371,7 @@ class TestGlobalHealthMonitor:
         # Clean up
         monitor.remove_check("global_test")  # remove_check, not remove_health_check
 
+
 class TestHealthEndpoints:
     """Test health endpoint scenarios."""
 
@@ -366,8 +379,11 @@ class TestHealthEndpoints:
     def monitor(self):
         monitor = HealthMonitor()
         # Clear all existing checks except the default ones
-        checks_to_remove = [name for name in monitor._checks.keys()
-                           if name not in ["liveness", "readiness", "resources"]]
+        checks_to_remove = [
+            name
+            for name in monitor._checks.keys()
+            if name not in ["liveness", "readiness", "resources"]
+        ]
         for name in checks_to_remove:
             monitor.remove_check(name)
         monitor._last_results.clear()
@@ -407,6 +423,7 @@ class TestHealthEndpoints:
         # Should reflect dependency status
         assert result is not None
 
+
 class TestHealthCheckFormatting:
     """Test health check response formatting."""
 
@@ -414,8 +431,11 @@ class TestHealthCheckFormatting:
     def monitor(self):
         monitor = HealthMonitor()
         # Clear all existing checks except the default ones
-        checks_to_remove = [name for name in monitor._checks.keys()
-                           if name not in ["liveness", "readiness", "resources"]]
+        checks_to_remove = [
+            name
+            for name in monitor._checks.keys()
+            if name not in ["liveness", "readiness", "resources"]
+        ]
         for name in checks_to_remove:
             monitor.remove_check(name)
         monitor._last_results.clear()
