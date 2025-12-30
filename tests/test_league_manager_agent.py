@@ -1459,17 +1459,26 @@ class TestLeagueManagerEdgeCasesAdvanced:
         mock_client.connected_servers = {}
         manager._client = mock_client
 
-        # Mock start_next_round to return league_complete
+        # Mock start_next_round to return league_complete (success: False triggers the check)
         async def mock_start_next_round():
-            return {"success": True, "league_complete": True, "round": 1, "matches": []}
+            return {"success": False, "league_complete": True, "round": 1, "matches": []}
 
-        # Also mock asyncio.sleep to prevent hanging
-        async def mock_sleep_inner(seconds):
+        # Mock asyncio.sleep to prevent hanging
+        async def mock_sleep(seconds):
+            pass
+
+        # Mock event bus emit to prevent potential hanging
+        async def mock_event_emit(*args, **kwargs):
             pass
 
         with patch.object(manager, "start_next_round", side_effect=mock_start_next_round):
-            with patch("asyncio.sleep", side_effect=mock_sleep_inner):
-                result = await manager._run_all_rounds()
+            with patch("asyncio.sleep", side_effect=mock_sleep):
+                with patch(
+                    "src.common.events.bus.EventBus.emit",
+                    new_callable=AsyncMock,
+                    side_effect=mock_event_emit,
+                ):
+                    result = await manager._run_all_rounds()
 
         # Should complete successfully when league_complete flag is set
         assert result["success"] is True
