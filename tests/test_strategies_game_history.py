@@ -25,7 +25,14 @@ class TestAllStrategiesWithVariedInputs:
     async def test_nash_with_long_game_history(self):
         """Test Nash with extensive game history."""
         strategy = NashEquilibriumStrategy()
-        history = [{"opponent_move": i % 30 + 1, "my_move": (i + 5) % 30 + 1, "result": ["win", "loss", "draw"][i % 3]} for i in range(30)]
+        history = [
+            {
+                "opponent_move": i % 30 + 1,
+                "my_move": (i + 5) % 30 + 1,
+                "result": ["win", "loss", "draw"][i % 3],
+            }
+            for i in range(30)
+        ]
 
         move = await strategy.decide_move("g1", 31, GameRole.ODD, 15, 15, history)
         assert 1 <= move <= 50
@@ -37,7 +44,9 @@ class TestAllStrategiesWithVariedInputs:
         history = []
         for i in range(20):
             parity = 1 if i < 10 else 0
-            history.append({"opponent_move": 10 + parity, "my_move": 20, "result": "win" if i % 2 else "loss"})
+            history.append(
+                {"opponent_move": 10 + parity, "my_move": 20, "result": "win" if i % 2 else "loss"}
+            )
 
         move = await strategy.decide_move("g1", 21, GameRole.EVEN, 10, 10, history)
         assert 1 <= move <= 50
@@ -48,7 +57,13 @@ class TestAllStrategiesWithVariedInputs:
         strategy = AdaptiveBayesianStrategy()
         history = []
         for i in range(25):
-            history.append({"opponent_move": 15 + (i % 10), "my_move": 25, "result": "win" if i % 2 else "loss"})
+            history.append(
+                {
+                    "opponent_move": 15 + (i % 10),
+                    "my_move": 25,
+                    "result": "win" if i % 2 else "loss",
+                }
+            )
             await strategy.decide_move("g1", i + 1, GameRole.ODD, i // 2, (25 - i) // 2, history)
 
         assert len(history) == 25
@@ -57,7 +72,9 @@ class TestAllStrategiesWithVariedInputs:
     async def test_fictitious_play_with_biased_history(self):
         """Test fictitious play with heavily biased opponent."""
         strategy = FictitiousPlayStrategy()
-        history = [{"opponent_move": 3 if i < 15 else 4, "my_move": 20, "result": "win"} for i in range(20)]
+        history = [
+            {"opponent_move": 3 if i < 15 else 4, "my_move": 20, "result": "win"} for i in range(20)
+        ]
 
         move = await strategy.decide_move("g1", 21, GameRole.ODD, 20, 0, history)
         assert 1 <= move <= 50
@@ -68,8 +85,16 @@ class TestAllStrategiesWithVariedInputs:
         strategy = RegretMatchingStrategy()
         history = []
         for i in range(30):
-            move = await strategy.decide_move("g1", i + 1, GameRole.ODD, i // 4, (30 - i) // 4, history)
-            history.append({"opponent_move": 20 + (i % 15), "my_move": move, "result": ["win", "loss", "loss", "draw"][i % 4]})
+            move = await strategy.decide_move(
+                "g1", i + 1, GameRole.ODD, i // 4, (30 - i) // 4, history
+            )
+            history.append(
+                {
+                    "opponent_move": 20 + (i % 15),
+                    "my_move": move,
+                    "result": ["win", "loss", "loss", "draw"][i % 4],
+                }
+            )
 
         assert len(history) == 30
 
@@ -79,8 +104,16 @@ class TestAllStrategiesWithVariedInputs:
         strategy = UCBStrategy()
         history = []
         for i in range(20):
-            move = await strategy.decide_move("g1", i + 1, GameRole.EVEN, i // 3, (20 - i) // 3, history)
-            history.append({"opponent_move": 12 + (i % 20), "my_move": move, "result": "win" if (move + 12 + (i % 20)) % 2 == 0 else "loss"})
+            move = await strategy.decide_move(
+                "g1", i + 1, GameRole.EVEN, i // 3, (20 - i) // 3, history
+            )
+            history.append(
+                {
+                    "opponent_move": 12 + (i % 20),
+                    "my_move": move,
+                    "result": "win" if (move + 12 + (i % 20)) % 2 == 0 else "loss",
+                }
+            )
 
         assert len(history) == 20
 
@@ -90,7 +123,9 @@ class TestAllStrategiesWithVariedInputs:
         strategy = ThompsonSamplingStrategy()
         history = []
         for i in range(25):
-            move = await strategy.decide_move("g1", i + 1, GameRole.ODD, i // 4, (25 - i) // 4, history)
+            move = await strategy.decide_move(
+                "g1", i + 1, GameRole.ODD, i // 4, (25 - i) // 4, history
+            )
             result = ["win", "win", "loss", "draw", "loss"][i % 5]
             history.append({"opponent_move": 8 + (i % 30), "my_move": move, "result": result})
 
@@ -170,8 +205,16 @@ class TestStrategyInternalState:
         strategy = BestResponseStrategy()
         history = []
         for i in range(50):
-            move = await strategy.decide_move("g1", i + 1, GameRole.ODD, i // 5, (50 - i) // 5, history)
-            history.append({"opponent_move": 5 + (i % 40), "my_move": move, "result": "win" if i % 3 == 0 else "loss"})
+            move = await strategy.decide_move(
+                "g1", i + 1, GameRole.ODD, i // 5, (50 - i) // 5, history
+            )
+            history.append(
+                {
+                    "opponent_move": 5 + (i % 40),
+                    "my_move": move,
+                    "result": "win" if i % 3 == 0 else "loss",
+                }
+            )
 
         # After 50 rounds, should have substantial observations
         assert len(history) == 50
@@ -182,9 +225,17 @@ class TestStrategyInternalState:
         strategy = AdaptiveBayesianStrategy()
         history = []
         for i in range(40):
-            move = await strategy.decide_move("g1", i + 1, GameRole.ODD, i // 4, (40 - i) // 4, history)
+            move = await strategy.decide_move(
+                "g1", i + 1, GameRole.ODD, i // 4, (40 - i) // 4, history
+            )
             # Consistent opponent behavior
-            history.append({"opponent_move": 15, "my_move": move, "result": "win" if (move + 15) % 2 == 1 else "loss"})
+            history.append(
+                {
+                    "opponent_move": 15,
+                    "my_move": move,
+                    "result": "win" if (move + 15) % 2 == 1 else "loss",
+                }
+            )
 
         assert len(history) == 40
 
@@ -194,7 +245,9 @@ class TestStrategyInternalState:
         strategy = RegretMatchingStrategy()
         history = []
         for i in range(35):
-            move = await strategy.decide_move("g1", i + 1, GameRole.EVEN, i // 4, (35 - i) // 4, history)
+            move = await strategy.decide_move(
+                "g1", i + 1, GameRole.EVEN, i // 4, (35 - i) // 4, history
+            )
             # Varied outcomes to create regrets
             opponent_move = 10 if i < 20 else 20
             result = "win" if (move + opponent_move) % 2 == 0 else "loss"
@@ -209,9 +262,17 @@ class TestStrategyInternalState:
         history = []
         moves = []
         for i in range(30):
-            move = await strategy.decide_move("g1", i + 1, GameRole.ODD, i // 3, (30 - i) // 3, history)
+            move = await strategy.decide_move(
+                "g1", i + 1, GameRole.ODD, i // 3, (30 - i) // 3, history
+            )
             moves.append(move)
-            history.append({"opponent_move": 18, "my_move": move, "result": "win" if (move + 18) % 2 == 1 else "loss"})
+            history.append(
+                {
+                    "opponent_move": 18,
+                    "my_move": move,
+                    "result": "win" if (move + 18) % 2 == 1 else "loss",
+                }
+            )
 
         # Should have made 30 moves
         assert len(moves) == 30
@@ -223,10 +284,11 @@ class TestStrategyInternalState:
         strategy = ThompsonSamplingStrategy()
         history = []
         for i in range(30):
-            move = await strategy.decide_move("g1", i + 1, GameRole.ODD, i // 3, (30 - i) // 3, history)
+            move = await strategy.decide_move(
+                "g1", i + 1, GameRole.ODD, i // 3, (30 - i) // 3, history
+            )
             # Create a pattern in outcomes
             result = "win" if i % 5 < 3 else "loss"
             history.append({"opponent_move": 22, "my_move": move, "result": result})
 
         assert len(history) == 30
-

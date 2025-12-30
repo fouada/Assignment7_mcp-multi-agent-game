@@ -70,19 +70,14 @@ class TestAdaptiveBayesianStrategyEdgeCases:
 
         # Game 1
         history1 = [{"player_a_move": 5, "player_b_move": 3}]
-        move1 = await strategy.decide_move(
-            "game1", 2, GameRole.ODD, 0, 0, history1
-        )
+        move1 = await strategy.decide_move("game1", 2, GameRole.ODD, 0, 0, history1)
         assert 1 <= move1 <= 10
 
         # Game 2 (different game_id)
         history2 = [{"player_a_move": 2, "player_b_move": 4}]
-        move2 = await strategy.decide_move(
-            "game2", 2, GameRole.EVEN, 0, 0, history2
-        )
+        move2 = await strategy.decide_move("game2", 2, GameRole.EVEN, 0, 0, history2)
         assert 1 <= move2 <= 10
 
         # Verify separate beliefs
         assert "game1" in strategy._beliefs
         assert "game2" in strategy._beliefs
-

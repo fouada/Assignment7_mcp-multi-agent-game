@@ -23,7 +23,7 @@ class TestPatternStrategyBehavior:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=0,
-            history=[]
+            history=[],
         )
 
         assert 1 <= move <= 10
@@ -46,7 +46,7 @@ class TestPatternStrategyBehavior:
             my_role=GameRole.ODD,
             my_score=2,
             opponent_score=1,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 10
@@ -69,7 +69,7 @@ class TestPatternStrategyBehavior:
             my_role=GameRole.EVEN,
             my_score=1,
             opponent_score=2,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 10
@@ -90,7 +90,7 @@ class TestPatternStrategyBehavior:
             my_role=GameRole.EVEN,
             my_score=0,
             opponent_score=2,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 10
@@ -113,7 +113,7 @@ class TestPatternStrategyBehavior:
             my_role=GameRole.ODD,
             my_score=2,
             opponent_score=2,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 10
@@ -142,4 +142,3 @@ class TestPatternStrategyBehavior:
 
         assert "name" in stats or "strategy" in stats
         assert isinstance(stats, dict)
-

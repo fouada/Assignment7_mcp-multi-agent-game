@@ -109,10 +109,7 @@ class TestConnectionErrors:
     def test_connection_error_with_existing_details(self):
         """Test ConnectionError with existing details."""
         error = ConnectionError(
-            "Connection failed",
-            host="localhost",
-            port=8080,
-            details={"extra": "info"}
+            "Connection failed", host="localhost", port=8080, details={"extra": "info"}
         )
         assert error.details["host"] == "localhost"
         assert error.details["port"] == 8080
@@ -231,9 +228,7 @@ class TestTimeoutErrors:
     def test_timeout_error_with_existing_details(self):
         """Test TimeoutError with existing details."""
         error = TimeoutError(
-            "Operation timed out",
-            timeout_seconds=30.0,
-            details={"operation": "move"}
+            "Operation timed out", timeout_seconds=30.0, details={"operation": "move"}
         )
         assert error.details["timeout_seconds"] == 30.0
         assert error.details["operation"] == "move"
@@ -403,4 +398,3 @@ class TestUtilityFunctions:
         """Test get_error_category with standard error."""
         error = ValueError("Value error")
         assert get_error_category(error) == ErrorCategory.PERMANENT
-

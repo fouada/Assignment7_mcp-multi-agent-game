@@ -4,7 +4,6 @@ Targeted tests to boost coverage to 85%+.
 These tests target uncovered lines in key modules.
 """
 
-
 import pytest
 
 from src.agents.strategies.base import StrategyConfig
@@ -34,7 +33,7 @@ class TestGameTheoryStrategiesEdgeCases:
                 my_role=GameRole.ODD,
                 my_score=0,
                 opponent_score=0,
-                history=[]
+                history=[],
             )
             moves.append(move)
 
@@ -55,7 +54,7 @@ class TestGameTheoryStrategiesEdgeCases:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=0,
-            history=[]
+            history=[],
         )
 
         assert 1 <= move <= 50
@@ -77,7 +76,7 @@ class TestGameTheoryStrategiesEdgeCases:
             my_role=GameRole.EVEN,
             my_score=1,
             opponent_score=2,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 50
@@ -96,15 +95,13 @@ class TestGameTheoryStrategiesEdgeCases:
                 my_role=GameRole.ODD,
                 my_score=i,
                 opponent_score=10 - i,
-                history=history
+                history=history,
             )
 
             # Add to history
-            history.append({
-                "opponent_move": 25,
-                "my_move": move,
-                "result": "win" if i % 2 == 0 else "loss"
-            })
+            history.append(
+                {"opponent_move": 25, "my_move": move, "result": "win" if i % 2 == 0 else "loss"}
+            )
 
         assert len(history) == 10
 
@@ -119,7 +116,7 @@ class TestGameTheoryStrategiesEdgeCases:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=0,
-            history=[]
+            history=[],
         )
 
         assert 1 <= move <= 50
@@ -144,7 +141,7 @@ class TestGameTheoryStrategiesEdgeCases:
             my_role=GameRole.ODD,
             my_score=2,
             opponent_score=3,
-            history=history
+            history=history,
         )
 
         # Should play even (opponent plays odd, we want odd sum)
@@ -161,7 +158,7 @@ class TestGameTheoryStrategiesEdgeCases:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=0,
-            history=[]
+            history=[],
         )
 
         assert 1 <= move <= 50
@@ -179,24 +176,22 @@ class TestGameTheoryStrategiesEdgeCases:
                 my_role=GameRole.ODD,
                 my_score=i // 2,
                 opponent_score=i - (i // 2),
-                history=history
+                history=history,
             )
 
-            history.append({
-                "opponent_move": 15 + i,
-                "my_move": move,
-                "result": "win" if i % 3 == 0 else "loss"
-            })
+            history.append(
+                {
+                    "opponent_move": 15 + i,
+                    "my_move": move,
+                    "result": "win" if i % 3 == 0 else "loss",
+                }
+            )
 
         assert len(history) == 15
 
     def test_strategy_config_custom_values(self):
         """Test StrategyConfig with custom values."""
-        config = StrategyConfig(
-            min_value=5,
-            max_value=25,
-            exploration_rate=0.3
-        )
+        config = StrategyConfig(min_value=5, max_value=25, exploration_rate=0.3)
 
         assert config.min_value == 5
         assert config.max_value == 25
@@ -228,7 +223,7 @@ class TestGameTheoryStrategiesEdgeCases:
             my_role=GameRole.ODD,
             my_score=1,
             opponent_score=1,
-            history=history
+            history=history,
         )
 
         stats = strategy.get_stats()
@@ -292,7 +287,7 @@ class TestMultipleGamesTracking:
             my_role=GameRole.ODD,
             my_score=1,
             opponent_score=0,
-            history=history1
+            history=history1,
         )
 
         # Game 2
@@ -303,7 +298,7 @@ class TestMultipleGamesTracking:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=1,
-            history=history2
+            history=history2,
         )
 
         # Should produce valid moves
@@ -322,7 +317,7 @@ class TestMultipleGamesTracking:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=0,
-            history=[]
+            history=[],
         )
 
         # Play game 2
@@ -332,7 +327,7 @@ class TestMultipleGamesTracking:
             my_role=GameRole.EVEN,
             my_score=0,
             opponent_score=0,
-            history=[]
+            history=[],
         )
 
         # Both should produce valid moves
@@ -355,7 +350,7 @@ class TestStrategyBoundaryValues:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=0,
-            history=[]
+            history=[],
         )
 
         assert 10 <= move <= 11
@@ -372,7 +367,7 @@ class TestStrategyBoundaryValues:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=0,
-            history=[]
+            history=[],
         )
 
         assert 1 <= move <= 100
@@ -389,11 +384,13 @@ class TestMoreStrategyCoverage:
         # Create a long history
         history = []
         for i in range(20):
-            history.append({
-                "opponent_move": (i % 10) + 1,
-                "my_move": ((i + 5) % 10) + 1,
-                "result": "win" if i % 2 == 0 else "loss"
-            })
+            history.append(
+                {
+                    "opponent_move": (i % 10) + 1,
+                    "my_move": ((i + 5) % 10) + 1,
+                    "result": "win" if i % 2 == 0 else "loss",
+                }
+            )
 
         move = await strategy.decide_move(
             game_id="test",
@@ -401,7 +398,7 @@ class TestMoreStrategyCoverage:
             my_role=GameRole.ODD,
             my_score=10,
             opponent_score=10,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 50
@@ -413,11 +410,13 @@ class TestMoreStrategyCoverage:
 
         history = []
         for i in range(10):
-            history.append({
-                "opponent_move": 5 + (i * 3),
-                "my_move": 10 + (i * 2),
-                "result": "win" if i < 5 else "loss"
-            })
+            history.append(
+                {
+                    "opponent_move": 5 + (i * 3),
+                    "my_move": 10 + (i * 2),
+                    "result": "win" if i < 5 else "loss",
+                }
+            )
 
             move = await strategy.decide_move(
                 game_id="test",
@@ -425,7 +424,7 @@ class TestMoreStrategyCoverage:
                 my_role=GameRole.ODD if i % 2 == 0 else GameRole.EVEN,
                 my_score=i,
                 opponent_score=10 - i,
-                history=history
+                history=history,
             )
 
             assert 1 <= move <= 50
@@ -438,11 +437,13 @@ class TestMoreStrategyCoverage:
         history = []
         for i in range(10):
             is_odd = i % 2 == 0
-            history.append({
-                "opponent_move": (2 * i + 1) if is_odd else (2 * i + 2),
-                "my_move": 25,
-                "result": "win" if i % 3 == 0 else "loss"
-            })
+            history.append(
+                {
+                    "opponent_move": (2 * i + 1) if is_odd else (2 * i + 2),
+                    "my_move": 25,
+                    "result": "win" if i % 3 == 0 else "loss",
+                }
+            )
 
         move = await strategy.decide_move(
             game_id="test",
@@ -450,7 +451,7 @@ class TestMoreStrategyCoverage:
             my_role=GameRole.ODD,
             my_score=3,
             opponent_score=7,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 50
@@ -468,14 +469,16 @@ class TestMoreStrategyCoverage:
                 my_role=GameRole.ODD,
                 my_score=i // 3,
                 opponent_score=i // 2,
-                history=history
+                history=history,
             )
 
-            history.append({
-                "opponent_move": 10 + (i % 20),
-                "my_move": move,
-                "result": ["win", "loss", "draw"][i % 3]
-            })
+            history.append(
+                {
+                    "opponent_move": 10 + (i % 20),
+                    "my_move": move,
+                    "result": ["win", "loss", "draw"][i % 3],
+                }
+            )
 
         assert len(history) == 25
 
@@ -491,7 +494,7 @@ class TestMoreStrategyCoverage:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=0,
-            history=[]
+            history=[],
         )
 
         # Test as EVEN player
@@ -501,7 +504,7 @@ class TestMoreStrategyCoverage:
             my_role=GameRole.EVEN,
             my_score=0,
             opponent_score=0,
-            history=[]
+            history=[],
         )
 
         assert 1 <= move1 <= 50
@@ -524,7 +527,7 @@ class TestMoreStrategyCoverage:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=0,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 50
@@ -542,7 +545,7 @@ class TestMoreStrategyCoverage:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=10,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 50
@@ -564,7 +567,7 @@ class TestMoreStrategyCoverage:
             my_role=GameRole.EVEN,
             my_score=3,
             opponent_score=0,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 50
@@ -585,7 +588,7 @@ class TestMoreStrategyCoverage:
             my_role=GameRole.EVEN,
             my_score=0,
             opponent_score=2,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 50
@@ -593,17 +596,12 @@ class TestMoreStrategyCoverage:
     def test_strategy_config_default_exploration(self):
         """Test StrategyConfig default exploration rate."""
         config = StrategyConfig()
-        assert hasattr(config, 'exploration_rate')
+        assert hasattr(config, "exploration_rate")
         assert 0 <= config.exploration_rate <= 1
 
     def test_strategy_config_edge_values(self):
         """Test StrategyConfig with edge values."""
-        config = StrategyConfig(
-            min_value=1,
-            max_value=1,
-            exploration_rate=0.0
-        )
+        config = StrategyConfig(min_value=1, max_value=1, exploration_rate=0.0)
         assert config.min_value == 1
         assert config.max_value == 1
         assert config.exploration_rate == 0.0
-

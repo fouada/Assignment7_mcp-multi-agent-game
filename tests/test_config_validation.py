@@ -3,7 +3,6 @@ Tests for configuration loading and validation.
 Covers config file loading, defaults, and error handling.
 """
 
-
 from src.common.config_loader import ConfigLoader, LeagueConfigFile
 
 
@@ -16,7 +15,7 @@ class TestConfigLoaderBehavior:
         games = loader.load_games_registry()
 
         assert games is not None
-        assert hasattr(games, 'games') or hasattr(games, 'default_game')
+        assert hasattr(games, "games") or hasattr(games, "default_game")
 
     def test_config_loader_load_referee_defaults(self):
         """Test loading referee default configuration."""
@@ -24,7 +23,7 @@ class TestConfigLoaderBehavior:
         config = loader.load_referee_defaults()
 
         assert config is not None
-        assert hasattr(config, 'move_timeout') or hasattr(config, 'game_timeout')
+        assert hasattr(config, "move_timeout") or hasattr(config, "game_timeout")
 
     def test_config_loader_load_player_defaults(self):
         """Test loading player default configuration."""
@@ -32,7 +31,7 @@ class TestConfigLoaderBehavior:
         config = loader.load_player_defaults()
 
         assert config is not None
-        assert hasattr(config, 'strategy') or hasattr(config, 'response_timeout')
+        assert hasattr(config, "strategy") or hasattr(config, "response_timeout")
 
     def test_config_loader_get_timeout_values(self):
         """Test getting various timeout values."""
@@ -55,7 +54,7 @@ class TestSystemConfigStructure:
         loader = ConfigLoader()
         config = loader.load_system()
 
-        assert hasattr(config, 'version')
+        assert hasattr(config, "version")
         assert config.version is not None
 
     def test_system_config_has_timeouts(self):
@@ -63,7 +62,7 @@ class TestSystemConfigStructure:
         loader = ConfigLoader()
         config = loader.load_system()
 
-        assert hasattr(config, 'timeouts')
+        assert hasattr(config, "timeouts")
 
 
 class TestLeagueConfigStructure:
@@ -80,7 +79,7 @@ class TestLeagueConfigStructure:
             "min_players": 2,
             "max_players": 10,
             "rounds_per_match": 5,
-            "scoring": {"win": 3, "draw": 1, "loss": 0}
+            "scoring": {"win": 3, "draw": 1, "loss": 0},
         }
 
         config = LeagueConfigFile.from_dict(data)
@@ -93,13 +92,10 @@ class TestLeagueConfigStructure:
 
     def test_league_config_defaults(self):
         """Test LeagueConfig default values."""
-        data = {
-            "league_id": "minimal_league"
-        }
+        data = {"league_id": "minimal_league"}
 
         config = LeagueConfigFile.from_dict(data)
 
         # Should have defaults
         assert config.league_id == "minimal_league"
         assert isinstance(config.scoring, dict)
-

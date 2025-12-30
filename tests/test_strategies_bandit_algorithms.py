@@ -32,7 +32,7 @@ class TestUCBStrategy:
                 my_role=GameRole.ODD,
                 my_score=0,
                 opponent_score=0,
-                history=[]
+                history=[],
             )
             assert 1 <= move <= 50
 
@@ -49,14 +49,16 @@ class TestUCBStrategy:
                 my_role=GameRole.ODD,
                 my_score=i // 2,
                 opponent_score=(10 - i) // 2,
-                history=history
+                history=history,
             )
 
-            history.append({
-                "opponent_move": 20 + i,
-                "my_move": move,
-                "result": "win" if (move + 20 + i) % 2 == 1 else "loss"
-            })
+            history.append(
+                {
+                    "opponent_move": 20 + i,
+                    "my_move": move,
+                    "result": "win" if (move + 20 + i) % 2 == 1 else "loss",
+                }
+            )
 
         assert len(history) == 10
 
@@ -72,7 +74,7 @@ class TestUCBStrategy:
             my_role=GameRole.EVEN,
             my_score=0,
             opponent_score=0,
-            history=[]
+            history=[],
         )
 
         assert 1 <= move <= 50
@@ -93,7 +95,7 @@ class TestUCBStrategy:
             my_role=GameRole.EVEN,
             my_score=2,
             opponent_score=0,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 50
@@ -126,7 +128,7 @@ class TestThompsonSamplingStrategy:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=0,
-            history=[]
+            history=[],
         )
 
         assert 1 <= move <= 50
@@ -144,18 +146,14 @@ class TestThompsonSamplingStrategy:
                 my_role=GameRole.ODD,
                 my_score=i // 3,
                 opponent_score=(15 - i) // 3,
-                history=history
+                history=history,
             )
 
             # Simulate varied results
             opponent_move = 10 + (i % 20)
             result = "win" if (move + opponent_move) % 2 == 1 else "loss"
 
-            history.append({
-                "opponent_move": opponent_move,
-                "my_move": move,
-                "result": result
-            })
+            history.append({"opponent_move": opponent_move, "my_move": move, "result": result})
 
         assert len(history) == 15
 
@@ -176,7 +174,7 @@ class TestThompsonSamplingStrategy:
             my_role=GameRole.EVEN,
             my_score=1,
             opponent_score=2,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 50
@@ -193,7 +191,7 @@ class TestThompsonSamplingStrategy:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=0,
-            history=[]
+            history=[],
         )
 
         # Game 2
@@ -203,7 +201,7 @@ class TestThompsonSamplingStrategy:
             my_role=GameRole.EVEN,
             my_score=0,
             opponent_score=0,
-            history=[]
+            history=[],
         )
 
         assert 1 <= move1 <= 50
@@ -233,11 +231,9 @@ class TestPatternStrategyDetailed:
         history = []
         for i in range(10):
             is_odd_move = i % 2 == 0
-            history.append({
-                "opponent_move": 1 if is_odd_move else 2,
-                "my_move": 25,
-                "result": "draw"
-            })
+            history.append(
+                {"opponent_move": 1 if is_odd_move else 2, "my_move": 25, "result": "draw"}
+            )
 
         move = await strategy.decide_move(
             game_id="test",
@@ -245,7 +241,7 @@ class TestPatternStrategyDetailed:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=0,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 50
@@ -257,11 +253,13 @@ class TestPatternStrategyDetailed:
 
         history = []
         for i in range(8):
-            history.append({
-                "opponent_move": 2 * i + 1,  # Always odd
-                "my_move": 20,
-                "result": "win" if i % 2 == 0 else "loss"
-            })
+            history.append(
+                {
+                    "opponent_move": 2 * i + 1,  # Always odd
+                    "my_move": 20,
+                    "result": "win" if i % 2 == 0 else "loss",
+                }
+            )
 
         move = await strategy.decide_move(
             game_id="test",
@@ -269,7 +267,7 @@ class TestPatternStrategyDetailed:
             my_role=GameRole.ODD,
             my_score=4,
             opponent_score=4,
-            history=history
+            history=history,
         )
 
         # Should recognize pattern and counter
@@ -282,11 +280,13 @@ class TestPatternStrategyDetailed:
 
         history = []
         for i in range(8):
-            history.append({
-                "opponent_move": 2 * (i + 1),  # Always even
-                "my_move": 21,
-                "result": "win" if i % 2 == 0 else "loss"
-            })
+            history.append(
+                {
+                    "opponent_move": 2 * (i + 1),  # Always even
+                    "my_move": 21,
+                    "result": "win" if i % 2 == 0 else "loss",
+                }
+            )
 
         move = await strategy.decide_move(
             game_id="test",
@@ -294,7 +294,7 @@ class TestPatternStrategyDetailed:
             my_role=GameRole.ODD,
             my_score=4,
             opponent_score=4,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 50
@@ -312,7 +312,7 @@ class TestPatternStrategyDetailed:
             my_role=GameRole.EVEN,
             my_score=1,
             opponent_score=0,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 50
@@ -324,7 +324,7 @@ class TestStrategyFactoryCoverage:
     def test_strategy_factory_exists(self):
         """Test that StrategyFactory is accessible."""
         assert StrategyFactory is not None
-        assert hasattr(StrategyFactory, 'create')
+        assert hasattr(StrategyFactory, "create")
 
     def test_strategy_config_instantiation(self):
         """Test StrategyConfig can be instantiated with custom values."""
@@ -344,11 +344,7 @@ class TestStrategiesWithEdgeCaseHistories:
 
         history = []
         for _i in range(5):
-            history.append({
-                "opponent_move": 10,
-                "my_move": 11,
-                "result": "win"
-            })
+            history.append({"opponent_move": 10, "my_move": 11, "result": "win"})
 
         move = await strategy.decide_move(
             game_id="test",
@@ -356,7 +352,7 @@ class TestStrategiesWithEdgeCaseHistories:
             my_role=GameRole.ODD,
             my_score=5,
             opponent_score=0,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 50
@@ -368,11 +364,7 @@ class TestStrategiesWithEdgeCaseHistories:
 
         history = []
         for _i in range(5):
-            history.append({
-                "opponent_move": 11,
-                "my_move": 10,
-                "result": "loss"
-            })
+            history.append({"opponent_move": 11, "my_move": 10, "result": "loss"})
 
         move = await strategy.decide_move(
             game_id="test",
@@ -380,7 +372,7 @@ class TestStrategiesWithEdgeCaseHistories:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=5,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 50
@@ -392,11 +384,7 @@ class TestStrategiesWithEdgeCaseHistories:
 
         history = []
         for _i in range(5):
-            history.append({
-                "opponent_move": 15,
-                "my_move": 15,
-                "result": "draw"
-            })
+            history.append({"opponent_move": 15, "my_move": 15, "result": "draw"})
 
         move = await strategy.decide_move(
             game_id="test",
@@ -404,8 +392,7 @@ class TestStrategiesWithEdgeCaseHistories:
             my_role=GameRole.ODD,
             my_score=0,
             opponent_score=0,
-            history=history
+            history=history,
         )
 
         assert 1 <= move <= 50
-

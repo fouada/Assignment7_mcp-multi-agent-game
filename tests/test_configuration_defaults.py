@@ -3,7 +3,6 @@ Targeted tests to push coverage over 85%.
 Focuses on simple, easy-to-cover paths in low-coverage files.
 """
 
-
 from src.agents.strategies.base import StrategyConfig
 from src.common.config_loader import ConfigLoader
 
@@ -42,4 +41,3 @@ class TestConfigLoaderEdgeCases:
         timeout = loader.get_timeout("connection")
         assert isinstance(timeout, (int, float))
         assert timeout > 0
-

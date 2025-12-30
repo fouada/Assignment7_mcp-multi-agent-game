@@ -26,7 +26,7 @@ class TestRandomStrategyBehavior:
                 my_role=GameRole.ODD,
                 my_score=0,
                 opponent_score=0,
-                history=[]
+                history=[],
             )
             moves.append(move)
 
@@ -47,7 +47,7 @@ class TestRandomStrategyBehavior:
                 my_role=GameRole.EVEN,
                 my_score=0,
                 opponent_score=0,
-                history=[]
+                history=[],
             )
             moves.append(move)
 
@@ -68,7 +68,7 @@ class TestRandomStrategyBehavior:
                 my_role=GameRole.ODD,
                 my_score=0,
                 opponent_score=0,
-                history=[]
+                history=[],
             )
             moves.append(move)
 
@@ -93,7 +93,7 @@ class TestRandomStrategyBehavior:
             my_role=GameRole.ODD,
             my_score=1,
             opponent_score=1,
-            history=history
+            history=history,
         )
 
         # Should still generate valid move regardless of history
@@ -151,7 +151,7 @@ class TestRandomStrategyStatistics:
                 my_role=GameRole.ODD,
                 my_score=0,
                 opponent_score=0,
-                history=[]
+                history=[],
             )
             moves.append(move)
 
@@ -172,7 +172,7 @@ class TestRandomStrategyStatistics:
                 my_role=GameRole.ODD,
                 my_score=0,
                 opponent_score=0,
-                history=[]
+                history=[],
             )
             moves.append(move)
 
@@ -182,4 +182,3 @@ class TestRandomStrategyStatistics:
 
         assert has_odd
         assert has_even
-

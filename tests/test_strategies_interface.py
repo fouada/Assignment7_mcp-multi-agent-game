@@ -79,7 +79,7 @@ class TestStrategyBasicOperations:
                 my_role=GameRole.ODD,
                 my_score=0,
                 opponent_score=0,
-                history=[]
+                history=[],
             )
             assert 1 <= move <= 50
 
@@ -100,13 +100,11 @@ class TestStrategyWithRoundProgression:
                 my_role=GameRole.ODD if i % 2 == 0 else GameRole.EVEN,
                 my_score=i // 2,
                 opponent_score=(100 - i) // 2,
-                history=history
+                history=history,
             )
-            history.append({
-                "opponent_move": 25,
-                "my_move": move,
-                "result": "win" if i % 3 == 0 else "loss"
-            })
+            history.append(
+                {"opponent_move": 25, "my_move": move, "result": "win" if i % 3 == 0 else "loss"}
+            )
 
         assert len(history) == 100
 
@@ -132,15 +130,11 @@ class TestStrategyWithRoundProgression:
                     my_role=GameRole.ODD,
                     my_score=i // 5,
                     opponent_score=(50 - i) // 5,
-                    history=history
+                    history=history,
                 )
                 opponent_move = 20 + (i % 15)
                 result = "win" if (move + opponent_move) % 2 == 1 else "loss"
-                history.append({
-                    "opponent_move": opponent_move,
-                    "my_move": move,
-                    "result": result
-                })
+                history.append({"opponent_move": opponent_move, "my_move": move, "result": result})
 
             assert len(history) == 50
 
@@ -180,11 +174,14 @@ class TestStrategyEdgeCaseRoundNumbers:
 
         # Build a long history
         history = [
-            {"opponent_move": (i % 30) + 10, "my_move": (i % 20) + 15, "result": ["win", "loss", "draw"][i % 3]}
+            {
+                "opponent_move": (i % 30) + 10,
+                "my_move": (i % 20) + 15,
+                "result": ["win", "loss", "draw"][i % 3],
+            }
             for i in range(100)  # Sample history, not full 1000 rounds
         ]
 
         for strategy in strategies:
             move = await strategy.decide_move("test", 1000, GameRole.ODD, 500, 500, history)
             assert 1 <= move <= 50
-
