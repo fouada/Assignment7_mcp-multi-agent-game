@@ -16,11 +16,10 @@ Test Coverage:
 
 import asyncio
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.common.events import BaseEvent
 from src.launcher.state_sync import StateChange, StateSnapshot, StateSyncService
 
 

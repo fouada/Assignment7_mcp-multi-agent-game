@@ -31,7 +31,7 @@ async def clean_singletons():
     # Reset singletons
     ServiceRegistry._instance = None
     StateSyncService._instance = None
-    
+
     # Also clean the service registry state if it exists
     registry = get_service_registry()
     if hasattr(registry, '_services'):
@@ -42,7 +42,7 @@ async def clean_singletons():
     # Clean after test
     ServiceRegistry._instance = None
     StateSyncService._instance = None
-    
+
     # Clean registry state again
     registry = get_service_registry()
     if hasattr(registry, '_services'):

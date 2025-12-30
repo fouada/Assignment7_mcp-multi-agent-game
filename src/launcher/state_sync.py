@@ -20,9 +20,10 @@ Architecture:
 
 import asyncio
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any
 
 from ..common.events import BaseEvent, get_event_bus
 from ..common.logger import get_logger
@@ -128,9 +129,9 @@ class StateSyncService:
         # Track state change - timestamp is already a datetime object
         # Convert event to dict for data, excluding base fields
         event_dict = event.dict()
-        event_data = {k: v for k, v in event_dict.items() 
+        event_data = {k: v for k, v in event_dict.items()
                       if k not in ('event_id', 'event_type', 'timestamp', 'source', 'metadata')}
-        
+
         change = StateChange(
             change_id=f"{event.event_type}_{event.timestamp.isoformat()}",
             event_type=event.event_type,
@@ -245,9 +246,10 @@ class StateSyncService:
         """Forward event to dashboard via WebSocket."""
         try:
             if hasattr(dashboard, "connection_manager"):
+                from dataclasses import asdict as dataclass_asdict
+                from dataclasses import is_dataclass
                 from datetime import datetime
-                from dataclasses import is_dataclass, asdict as dataclass_asdict
-                
+
                 def convert_to_serializable(obj):
                     """Recursively convert objects to JSON-serializable format"""
                     if isinstance(obj, datetime):
@@ -261,12 +263,12 @@ class StateSyncService:
                     elif hasattr(obj, 'to_dict') and callable(obj.to_dict):
                         return convert_to_serializable(obj.to_dict())
                     return obj
-                
+
                 # Convert event to dict for serialization
                 event_dict = event.dict()
                 # Ensure all datetime objects are converted
                 serializable_event_dict = convert_to_serializable(event_dict)
-                
+
                 await dashboard.connection_manager.broadcast(
                     {
                         "type": "state_update",

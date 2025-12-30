@@ -78,9 +78,9 @@ from .types import (
     RoundStartedEvent,
     StandingsUpdatedEvent,
     StrategyErrorEvent,
+    StrategyPerformanceEvent,
     # Strategy Events
     StrategySelectedEvent,
-    StrategyPerformanceEvent,
     SystemErrorEvent,
     SystemShutdownEvent,
     # System Events

@@ -20,7 +20,6 @@ First comprehensive analytics system for multi-agent game theory research
 with publication-ready visualizations and insights.
 """
 
-import asyncio
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -496,7 +495,7 @@ class AnalyticsEngine:
 
     def get_matchup_matrix(self) -> MatchupMatrixData:
         """Get complete matchup matrix."""
-        players = sorted(list(self.all_players))
+        players = sorted(self.all_players)
 
         total_matches = sum(m["total_matches"] for m in self.matchup_matrix.values())
         finished_matches = total_matches

@@ -41,9 +41,9 @@ async def launch_league_manager(args: argparse.Namespace) -> None:
         print(f"{'='*60}")
         print(f"  Endpoint: http://localhost:{args.port or 8000}")
         if args.dashboard:
-            print(f"  Dashboard: http://localhost:8050")
+            print("  Dashboard: http://localhost:8050")
         print(f"  League ID: {launcher.config.league.league_id}")
-        print(f"\n  Press Ctrl+C to stop")
+        print("\n  Press Ctrl+C to stop")
         print(f"{'='*60}\n")
 
         await launcher.wait_for_shutdown()
@@ -69,8 +69,8 @@ async def launch_referee(args: argparse.Namespace) -> None:
         print(f"  Endpoint: http://localhost:{args.port}")
         print(f"  League Manager: {launcher.config.league_manager.url}")
         if args.register:
-            print(f"  Status: Registered with league")
-        print(f"\n  Press Ctrl+C to stop")
+            print("  Status: Registered with league")
+        print("\n  Press Ctrl+C to stop")
         print(f"{'='*60}\n")
 
         await launcher.wait_for_shutdown()
@@ -98,8 +98,8 @@ async def launch_player(args: argparse.Namespace) -> None:
         print(f"  Strategy: {args.strategy}")
         print(f"  League Manager: {launcher.config.league_manager.url}")
         if args.register:
-            print(f"  Status: Registered with league")
-        print(f"\n  Press Ctrl+C to stop")
+            print("  Status: Registered with league")
+        print("\n  Press Ctrl+C to stop")
         print(f"{'='*60}\n")
 
         await launcher.wait_for_shutdown()

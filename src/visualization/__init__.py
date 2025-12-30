@@ -69,6 +69,15 @@ from .integration import (
 )
 
 __all__ = [
+    # Analytics
+    "AnalyticsEngine",
+    "CounterfactualAnalytics",
+    "MatchupMatrixData",
+    "OpponentModelAnalytics",
+    "StrategyPerformanceAnalytics",
+    "TournamentReplayState",
+    "get_analytics_engine",
+    "reset_analytics_engine",
     # Dashboard API
     "DashboardAPI",
     "GameEvent",

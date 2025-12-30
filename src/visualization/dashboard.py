@@ -165,7 +165,7 @@ class ConnectionManager:
                     logger.error(f"Message type: {message.get('type')}")
                     logger.error(f"Message data keys: {message.get('data', {}).keys() if isinstance(message.get('data'), dict) else 'not a dict'}")
                     raise
-                
+
                 await connection.send_json(message)
             except Exception as e:
                 logger.error(f"Error broadcasting to client: {e}")
@@ -225,9 +225,9 @@ class DashboardAPI:
         async def websocket_endpoint(websocket: WebSocket):
             """WebSocket for real-time updates."""
             from datetime import datetime
-            
+
             await self.connection_manager.connect(websocket)
-            
+
             def convert_datetimes(obj):
                 """Recursively convert datetime objects to ISO format strings"""
                 if isinstance(obj, datetime):
@@ -237,14 +237,14 @@ class DashboardAPI:
                 elif isinstance(obj, (list, tuple)):
                     return [convert_datetimes(item) for item in obj]
                 return obj
-            
+
             # Send current tournament state on connect (for page refreshes)
             try:
                 # Send all active tournament states
                 for tournament_id, state in self.tournament_states.items():
                     state_dict = asdict(state)
                     serializable_state = convert_datetimes(state_dict)
-                    
+
                     await self.connection_manager.send_personal_message(
                         {
                             "type": "tournament_state",
@@ -256,7 +256,7 @@ class DashboardAPI:
                 logger.info(f"Sent {len(self.tournament_states)} tournament states to new connection")
             except Exception as e:
                 logger.error(f"Failed to send initial state: {e}")
-            
+
             try:
                 while True:
                     # Keep connection alive
@@ -272,7 +272,7 @@ class DashboardAPI:
         async def get_tournament_state(tournament_id: str):
             """Get current tournament state."""
             from datetime import datetime
-            
+
             def convert_datetimes(obj):
                 """Recursively convert datetime objects to ISO format strings"""
                 if isinstance(obj, datetime):
@@ -282,7 +282,7 @@ class DashboardAPI:
                 elif isinstance(obj, (list, tuple)):
                     return [convert_datetimes(item) for item in obj]
                 return obj
-            
+
             state = self.tournament_states.get(tournament_id)
             if not state:
                 return {"error": "Tournament not found"}
@@ -292,7 +292,7 @@ class DashboardAPI:
         async def get_strategy_performance(strategy_name: str):
             """Get strategy performance metrics."""
             from datetime import datetime
-            
+
             def convert_datetimes(obj):
                 """Recursively convert datetime objects to ISO format strings"""
                 if isinstance(obj, datetime):
@@ -302,7 +302,7 @@ class DashboardAPI:
                 elif isinstance(obj, (list, tuple)):
                     return [convert_datetimes(item) for item in obj]
                 return obj
-            
+
             perf = self.strategy_performance.get(strategy_name)
             if not perf:
                 return {"error": "Strategy not found"}
@@ -312,7 +312,7 @@ class DashboardAPI:
         async def get_opponent_model(player_id: str, opponent_id: str):
             """Get opponent model visualization data."""
             from datetime import datetime
-            
+
             def convert_datetimes(obj):
                 """Recursively convert datetime objects to ISO format strings"""
                 if isinstance(obj, datetime):
@@ -322,7 +322,7 @@ class DashboardAPI:
                 elif isinstance(obj, (list, tuple)):
                     return [convert_datetimes(item) for item in obj]
                 return obj
-            
+
             models = self.opponent_models.get(player_id, {})
             model = models.get(opponent_id)
             if not model:
@@ -333,7 +333,7 @@ class DashboardAPI:
         async def get_counterfactual(player_id: str, round: int):
             """Get counterfactual analysis for specific round."""
             from datetime import datetime
-            
+
             def convert_datetimes(obj):
                 """Recursively convert datetime objects to ISO format strings"""
                 if isinstance(obj, datetime):
@@ -343,7 +343,7 @@ class DashboardAPI:
                 elif isinstance(obj, (list, tuple)):
                     return [convert_datetimes(item) for item in obj]
                 return obj
-            
+
             cfs = self.counterfactuals.get(player_id, {})
             cf = cfs.get(round)
             if not cf:
@@ -382,10 +382,10 @@ class DashboardAPI:
         async def get_all_strategies_analytics():
             """Get analytics for all strategies."""
             from .analytics import get_analytics_engine
-            
+
             engine = get_analytics_engine()
             all_analytics = engine.get_all_strategy_analytics()
-            
+
             return {
                 "strategies": [
                     {
@@ -412,13 +412,13 @@ class DashboardAPI:
         async def get_strategy_analytics_detailed(strategy_name: str):
             """Get detailed analytics for a specific strategy."""
             from .analytics import get_analytics_engine
-            
+
             engine = get_analytics_engine()
             analytics = engine.get_strategy_analytics(strategy_name)
-            
+
             if not analytics:
                 return {"error": "Strategy not found"}
-            
+
             return {
                 "strategy_name": analytics.strategy_name,
                 "player_ids": analytics.player_ids,
@@ -448,10 +448,10 @@ class DashboardAPI:
         async def get_player_opponent_models(player_id: str):
             """Get all opponent models for a player."""
             from .analytics import get_analytics_engine
-            
+
             engine = get_analytics_engine()
             models = engine.get_all_opponent_models(player_id)
-            
+
             return {
                 "player_id": player_id,
                 "opponent_models": {
@@ -477,13 +477,13 @@ class DashboardAPI:
         async def get_player_counterfactual(player_id: str):
             """Get counterfactual analytics for a player."""
             from .analytics import get_analytics_engine
-            
+
             engine = get_analytics_engine()
             cf = engine.get_counterfactual_analytics(player_id)
-            
+
             if not cf:
                 return {"error": "Player not found"}
-            
+
             return {
                 "player_id": cf.player_id,
                 "time_series": {
@@ -504,10 +504,10 @@ class DashboardAPI:
         async def get_matchup_matrix():
             """Get complete matchup matrix."""
             from .analytics import get_analytics_engine
-            
+
             engine = get_analytics_engine()
             matrix = engine.get_matchup_matrix()
-            
+
             return {
                 "players": matrix.players,
                 "matchups": {
@@ -535,10 +535,10 @@ class DashboardAPI:
         async def get_replay_history(start_round: int = 0, end_round: int | None = None):
             """Get replay history for a range of rounds."""
             from .analytics import get_analytics_engine
-            
+
             engine = get_analytics_engine()
             history = engine.get_replay_history(start_round, end_round)
-            
+
             return {
                 "start_round": start_round,
                 "end_round": end_round or engine.current_round,
@@ -559,7 +559,7 @@ class DashboardAPI:
         async def export_analytics():
             """Export all analytics data for research."""
             from .analytics import get_analytics_engine
-            
+
             engine = get_analytics_engine()
             return engine.export_for_research()
 
@@ -1089,7 +1089,7 @@ class DashboardAPI:
             background: linear-gradient(90deg, #667eea, #764ba2);
             transition: width 0.5s ease;
         }
-        
+
         /* Round History Styles */
         .round-history {
             margin-top: 15px;
@@ -1925,7 +1925,7 @@ class DashboardAPI:
                     // Handle events forwarded from state sync service
                     const eventType = message.event_type;
                     const eventData = message.data;
-                    
+
                     if (eventType === 'strategy.performance') {
                         handleStrategyPerformance(eventData);
                     } else if (eventType === 'opponent.model.update') {
@@ -1967,13 +1967,13 @@ class DashboardAPI:
             events.push(data);
             console.log('Game event received:', data); // Debug logging
             addLog(`Round ${data.round}: ${data.event_type}`);
-            
+
             // Update game arena when moves are made
             if (data.event_type === 'move' || data.event_type === 'round_end') {
                 // Create match display from game event data
                 if (data.players && data.players.length >= 2) {
                     const matchId = `Round_${data.round}_${data.players[0]}_vs_${data.players[1]}`;
-                    
+
                     // Get or create match state
                     if (!currentMatches[matchId]) {
                         currentMatches[matchId] = {
@@ -1999,9 +1999,9 @@ class DashboardAPI:
                             }
                         };
                     }
-                    
+
                     const match = currentMatches[matchId];
-                    
+
                     // Update moves and track last moves
                     if (data.moves) {
                         if (data.moves[data.players[0]]) {
@@ -2017,7 +2017,7 @@ class DashboardAPI:
                             playerLastMoves[match.player_b.name] = data.moves[data.players[1]];
                         }
                     }
-                    
+
                     // Update scores - for round_end events, scores field contains cumulative scores
                     console.log('[DEBUG] Game event:', {
                         type: data.event_type,
@@ -2025,20 +2025,20 @@ class DashboardAPI:
                         metadata: data.metadata,
                         players: data.players
                     });
-                    
+
                     // Only update scores on round_end events (scores are cumulative)
                     if (data.event_type === 'round_end' && data.scores && Object.keys(data.scores).length > 0) {
                         match.player_a.score = data.scores[data.players[0]] || 0;
                         match.player_b.score = data.scores[data.players[1]] || 0;
                         console.log('[DEBUG] Score updated:', match.player_a.score, '-', match.player_b.score);
                     }
-                    
+
                     // Update state
                     match.state = data.event_type === 'round_end' ? 'FINISHED' : 'IN_PROGRESS';
-                    
+
                     // Update game arena with all current matches
                     updateGameArena(Object.values(currentMatches));
-                    
+
                     // Refresh standings table to show updated last moves
                     const tbody = document.getElementById('standings-tbody');
                     if (tbody && tbody.innerHTML !== '<tr><td colspan="9" style="text-align: center; color: #a0aec0; padding: 40px;">No data yet</td></tr>') {
@@ -2047,7 +2047,7 @@ class DashboardAPI:
                         const currentRound = document.getElementById('current-round').textContent;
                         const gameType = document.getElementById('game-type').textContent;
                         const activePlayers = document.getElementById('active-players').textContent;
-                        
+
                         // Extract current standings from table and re-render
                         const rows = tbody.querySelectorAll('tr');
                         if (rows.length > 0 && rows[0].querySelector('.player-name')) {
@@ -2059,7 +2059,7 @@ class DashboardAPI:
                                 const draws = parseInt(row.querySelector('.draws-cell')?.textContent || '0');
                                 const losses = parseInt(row.querySelector('.losses-cell')?.textContent || '0');
                                 const matches = parseInt(row.cells[7]?.textContent || '0');
-                                
+
                                 return {
                                     player_id: playerName,
                                     display_name: playerName,
@@ -2071,11 +2071,11 @@ class DashboardAPI:
                                     total_matches: matches
                                 };
                             });
-                            
+
                             updateStandingsTable(standings);
                         }
                     }
-                    
+
                     // Add to event log with move details
                     if (data.moves && Object.keys(data.moves).length > 0) {
                         const movesText = Object.entries(data.moves)
@@ -2088,7 +2088,7 @@ class DashboardAPI:
                     } else {
                         console.log('No moves in event data:', data);
                     }
-                    
+
                     // Clean up finished matches after a delay
                     if (data.event_type === 'round_end') {
                         setTimeout(() => {
@@ -2099,7 +2099,7 @@ class DashboardAPI:
                 }
             }
         }
-        
+
         // Helper function to get player display name from standings
         function getPlayerDisplayName(playerId) {
             const tbody = document.getElementById('standings-tbody');
@@ -2114,7 +2114,7 @@ class DashboardAPI:
             }
             return playerId;
         }
-        
+
         // Helper function to get player strategy from standings
         function getPlayerStrategy(playerId) {
             const tbody = document.getElementById('standings-tbody');
@@ -2136,14 +2136,14 @@ class DashboardAPI:
             document.getElementById('game-type').textContent = data.game_type || 'even_odd';
             document.getElementById('current-round').textContent =
                 `${data.current_round || 0} / ${data.total_rounds || 0}`;
-            
+
             // Calculate active players from standings (more reliable than players array)
             const activePlayers = data.standings ? data.standings.length : (data.players ? data.players.length : 0);
             document.getElementById('active-players').textContent = activePlayers;
 
             // Update enhanced standings table
             updateStandingsTable(data.standings || []);
-            
+
             // Update active matches if present
             if (data.active_matches && data.active_matches.length > 0) {
                 updateGameArena(data.active_matches);
@@ -2176,13 +2176,13 @@ class DashboardAPI:
                 const winRate = matches > 0
                     ? ((wins / matches) * 100).toFixed(1)
                     : '0.0';
-                
+
                 // Get last move for this player - prioritize standings data, then fall back to tracked moves
                 const lastMove = player.last_move || playerLastMoves[playerId] || playerLastMoves[playerName] || null;
-                const lastMoveDisplay = lastMove !== null && lastMove !== undefined && lastMove !== '-' 
-                    ? `<span class="last-move-badge">${lastMove}</span>` 
+                const lastMoveDisplay = lastMove !== null && lastMove !== undefined && lastMove !== '-'
+                    ? `<span class="last-move-badge">${lastMove}</span>`
                     : '<span style="color: #a0aec0;">-</span>';
-                
+
                 // Update playerLastMoves cache with standings data
                 if (player.last_move) {
                     playerLastMoves[playerId] = player.last_move;
@@ -2272,7 +2272,7 @@ class DashboardAPI:
                 container.innerHTML = '<p style="color: #a0aec0; text-align: center; padding: 40px;">No active matches</p>';
                 return;
             }
-            
+
             // Debug: Log match data to see round_history
             console.log('[DEBUG] Match data:', matches.map(m => ({
                 match_id: m.match_id,
@@ -2285,7 +2285,7 @@ class DashboardAPI:
                 const player_b = match.player_b || {};
                 const totalScore = (player_a.score || 0) + (player_b.score || 0);
                 const scorePercentage = totalScore > 0 ? ((player_a.score || 0) / totalScore * 100) : 50;
-                
+
                 // Generate round history HTML
                 let roundHistoryHtml = '';
                 if (match.round_history && match.round_history.length > 0) {
@@ -2298,7 +2298,7 @@ class DashboardAPI:
                                     const sumParityClass = round.sum_is_odd ? 'odd' : 'even';
                                     const isPlayer1Winner = round.winner_id === player_a.id;
                                     const isPlayer2Winner = round.winner_id === player_b.id;
-                                    
+
                                     return `
                                         <div class="round-item">
                                             <span class="round-label">R${round.round_number}</span>
@@ -2333,9 +2333,9 @@ class DashboardAPI:
                                     <span class="role-badge ${player_a.role || 'ODD'}">${player_a.role || 'ODD'}</span>
                                 </div>
                             </div>
-                            ${player_a.move ? `<div class="move-display" title="Current move">${player_a.move}</div>` : 
-                              (playerLastMoves[player_a.id] || playerLastMoves[player_a.name]) ? 
-                              `<div class="move-display" style="opacity: 0.6; font-size: 28px;" title="Last move">${playerLastMoves[player_a.id] || playerLastMoves[player_a.name]}</div>` : 
+                            ${player_a.move ? `<div class="move-display" title="Current move">${player_a.move}</div>` :
+                              (playerLastMoves[player_a.id] || playerLastMoves[player_a.name]) ?
+                              `<div class="move-display" style="opacity: 0.6; font-size: 28px;" title="Last move">${playerLastMoves[player_a.id] || playerLastMoves[player_a.name]}</div>` :
                               ''}
                         </div>
 
@@ -2350,9 +2350,9 @@ class DashboardAPI:
                                     <span class="role-badge ${player_b.role || 'EVEN'}">${player_b.role || 'EVEN'}</span>
                                 </div>
                             </div>
-                            ${player_b.move ? `<div class="move-display" title="Current move">${player_b.move}</div>` : 
-                              (playerLastMoves[player_b.id] || playerLastMoves[player_b.name]) ? 
-                              `<div class="move-display" style="opacity: 0.6; font-size: 28px;" title="Last move">${playerLastMoves[player_b.id] || playerLastMoves[player_b.name]}</div>` : 
+                            ${player_b.move ? `<div class="move-display" title="Current move">${player_b.move}</div>` :
+                              (playerLastMoves[player_b.id] || playerLastMoves[player_b.name]) ?
+                              `<div class="move-display" style="opacity: 0.6; font-size: 28px;" title="Last move">${playerLastMoves[player_b.id] || playerLastMoves[player_b.name]}</div>` :
                               ''}
                         </div>
 
@@ -2365,7 +2365,7 @@ class DashboardAPI:
                                 <div class="score-fill" style="width: ${scorePercentage}%"></div>
                             </div>
                         </div>
-                        
+
                         ${roundHistoryHtml}
                     </div>
                 `;
@@ -2485,7 +2485,7 @@ class DashboardAPI:
         function updateBeliefsChart() {
             // Fetch real data from opponent models
             const players = Object.keys(opponentModelData);
-            
+
             if (players.length === 0) {
                 // Show placeholder
                 Plotly.newPlot('beliefs-chart', [], {
@@ -2500,16 +2500,16 @@ class DashboardAPI:
             }
 
             // Fetch detailed opponent model data from API
-            Promise.all(players.map(pid => 
+            Promise.all(players.map(pid =>
                 fetch(`/api/analytics/opponent_models/${pid}`)
                     .then(r => r.json())
                     .catch(() => null)
             )).then(results => {
                 const traces = [];
-                
+
                 results.forEach((data, idx) => {
                     if (!data || !data.opponent_models) return;
-                    
+
                     const playerId = players[idx];
                     Object.entries(data.opponent_models).forEach(([oppId, model]) => {
                         if (model.time_series && model.time_series.rounds.length > 0) {
@@ -2552,7 +2552,7 @@ class DashboardAPI:
                 .then(r => r.json())
                 .then(data => {
                     const strategies = data.strategies || [];
-                    
+
                     if (strategies.length === 0) {
                         Plotly.newPlot('confidence-chart', [], {
                             title: 'Opponent Model Confidence Evolution - Waiting for data...',
@@ -2571,7 +2571,7 @@ class DashboardAPI:
                         // Fallback to consistency metric from strategy performance
                         const traces = strategies.map(strategy => ({
                             x: strategy.time_series.rounds,
-                            y: strategy.time_series.rounds.map((_, i) => 
+                            y: strategy.time_series.rounds.map((_, i) =>
                                 Math.min(1.0, 0.5 + (i * 0.05))  // Simple increasing confidence
                             ),
                             name: strategy.strategy_name,
@@ -2601,7 +2601,7 @@ class DashboardAPI:
         function updateRegretEvolutionChart() {
             // Fetch counterfactual data from all players
             const players = Object.keys(regretData);
-            
+
             if (players.length === 0) {
                 Plotly.newPlot('regret-chart-evolution', [], {
                     title: 'Cumulative Regret Analysis (CFR) - Waiting for data...',
@@ -2625,11 +2625,11 @@ class DashboardAPI:
 
                 results.forEach((data, idx) => {
                     if (!data || !data.time_series) return;
-                    
+
                     const playerId = players[idx];
                     const regretByAction = data.time_series.regret_by_action || {};
                     const rounds = data.time_series.rounds || [];
-                    
+
                     if (rounds.length > 0) {
                         maxRound = Math.max(maxRound, ...rounds);
                     }
@@ -2682,7 +2682,7 @@ class DashboardAPI:
                 .then(r => r.json())
                 .then(data => {
                     const strategies = data.strategies || [];
-                    
+
                     if (strategies.length === 0) {
                         Plotly.newPlot('learning-chart', [], {
                             title: 'Learning Curve (Win Rate Over Time) - Waiting for data...',
@@ -2704,7 +2704,7 @@ class DashboardAPI:
 
                         if (rounds.length > 0 && winRates.length > 0) {
                             maxRound = Math.max(maxRound, ...rounds);
-                            
+
                             // Main line
                             traces.push({
                                 x: rounds,
@@ -2835,7 +2835,7 @@ class DashboardAPI:
             const matchups = data.matchups || {};
 
             if (players.length === 0) {
-                document.getElementById('matchup-matrix').innerHTML = 
+                document.getElementById('matchup-matrix').innerHTML =
                     '<p style="text-align: center; color: #a0aec0; padding: 40px;">No matchup data available yet</p>';
                 return;
             }
@@ -3430,9 +3430,9 @@ Round Difference: ${snap2.round - snap1.round}
             // Support both direct data and event-wrapped data
             const winnerDetails = data.winner_details || data.metadata?.winner_details;
             const winnerId = data.winner || winnerDetails?.player_id;
-            
+
             addLog(`🏆 Tournament Complete! Winner: ${winnerDetails?.display_name || winnerId || 'Unknown'}`);
-            
+
             // Show winner celebration if we have winner details
             if (winnerId && winnerDetails) {
                 setTimeout(() => {
@@ -3448,7 +3448,7 @@ Round Difference: ${snap2.round - snap1.round}
                     const wins = parseInt(topPlayerRow.querySelector('.wins-cell')?.textContent || '0');
                     const points = parseFloat(topPlayerRow.querySelector('.score-cell')?.textContent || '0');
                     const winRate = parseFloat(topPlayerRow.querySelector('.winrate-cell')?.textContent || '0');
-                    
+
                     setTimeout(() => {
                         showWinnerCelebration({
                             player_id: winnerId,
@@ -3475,7 +3475,7 @@ Round Difference: ${snap2.round - snap1.round}
         function exportData() {
             // Fetch comprehensive analytics from API
             addLog('Exporting comprehensive analytics...');
-            
+
             fetch('/api/analytics/export')
                 .then(r => r.json())
                 .then(analyticsData => {
@@ -3491,7 +3491,7 @@ Round Difference: ${snap2.round - snap1.round}
                         exported_by: 'dashboard',
                         format_version: '2.0'
                     };
-                    
+
                     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -3499,12 +3499,12 @@ Round Difference: ${snap2.round - snap1.round}
                     a.download = `tournament-analytics-${Date.now()}.json`;
                     a.click();
                     URL.revokeObjectURL(url);
-                    
+
                     addLog('✓ Comprehensive analytics exported (research-ready)');
                 })
                 .catch(error => {
                     console.error('Export failed:', error);
-                    
+
                     // Fallback to dashboard data only
                     const data = {
                         performance: performanceData,
@@ -3514,7 +3514,7 @@ Round Difference: ${snap2.round - snap1.round}
                         exported_at: new Date().toISOString(),
                         note: 'Limited export - analytics API unavailable'
                     };
-                    
+
                     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -3522,7 +3522,7 @@ Round Difference: ${snap2.round - snap1.round}
                     a.download = `dashboard-data-${Date.now()}.json`;
                     a.click();
                     URL.revokeObjectURL(url);
-                    
+
                     addLog('⚠ Partial data exported (analytics unavailable)');
                 });
         }

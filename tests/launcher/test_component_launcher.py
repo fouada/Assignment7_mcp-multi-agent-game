@@ -14,7 +14,7 @@ Test Coverage:
 """
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -259,7 +259,7 @@ class TestComponentLauncher:
         # Mock the state_sync to be async
         mock_state_sync = AsyncMock()
         mock_state_sync.start = AsyncMock()
-        
+
         with patch("src.launcher.component_launcher.get_service_registry"):
             with patch("src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync):
                 launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
@@ -361,7 +361,7 @@ class TestComponentLauncherEdgeCases:
                         mock_player.url = "http://localhost:8101"
                         mock_player.start = AsyncMock()
                         mock_player.register_with_league = AsyncMock(
-                            side_effect=asyncio.TimeoutError("Registration timeout")
+                            side_effect=TimeoutError("Registration timeout")
                         )
                         MockPlayer.return_value = mock_player
 

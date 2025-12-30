@@ -181,12 +181,12 @@ class ComponentLauncher:
         self.event_bus.on("round.started", self._on_round_started)
         self.event_bus.on("player.move.after", self._on_player_move)
         self.event_bus.on("round.completed", self._on_round_completed)
-        
+
         # Store integration for event handlers
         self._integration = integration
 
         logger.info("Dashboard started and connected to event bus")
-    
+
     async def _on_round_started(self, event: Any) -> None:
         """Forward round started event to integration."""
         try:
@@ -196,7 +196,7 @@ class ComponentLauncher:
             )
         except Exception as e:
             logger.error(f"Error forwarding round started event: {e}")
-    
+
     async def _on_player_move(self, event: Any) -> None:
         """Forward player move event to integration."""
         try:
@@ -211,7 +211,7 @@ class ComponentLauncher:
             )
         except Exception as e:
             logger.error(f"Error forwarding player move event: {e}")
-    
+
     async def _on_round_completed(self, event: Any) -> None:
         """Forward round completed event to integration."""
         try:

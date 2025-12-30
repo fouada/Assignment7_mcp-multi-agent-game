@@ -21,7 +21,6 @@ First real-time visualization of internal agent reasoning:
 - Observe strategy composition decisions
 """
 
-import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -31,13 +30,12 @@ from ..agents.strategies.counterfactual_reasoning import (
 from ..agents.strategies.hierarchical_composition import CompositeStrategy
 from ..agents.strategies.opponent_modeling import OpponentModel, OpponentModelingEngine
 from ..common.logger import get_logger
-from .analytics import get_analytics_engine, AnalyticsEngine
+from .analytics import AnalyticsEngine, get_analytics_engine
 from .dashboard import (
     CounterfactualVisualization,
     DashboardAPI,
     GameEvent,
     OpponentModelVisualization,
-    StrategyPerformance,
     get_dashboard,
 )
 
@@ -246,9 +244,9 @@ class DashboardIntegration:
         # Accumulate moves for this round
         if round_num not in self.current_round_moves:
             self.current_round_moves[round_num] = {}
-        
+
         self.current_round_moves[round_num][player_id] = str(move)
-        
+
         # Check if we have both players' moves
         if len(self.current_round_moves[round_num]) >= 2:
             # Both players have moved - broadcast complete move event
@@ -261,7 +259,7 @@ class DashboardIntegration:
                 scores={},
                 metadata={"game_state": game_state},
             )
-            
+
             # Stream to dashboard
             await self.dashboard.stream_event(event)
             logger.debug(f"Streamed complete move event for round {round_num}: {self.current_round_moves[round_num]}")
@@ -586,7 +584,7 @@ class DashboardIntegration:
                 "data": {
                     "players": matchup_matrix.players,
                     "matrix": {
-                        f"{k[0]}_vs_{k[1]}": v 
+                        f"{k[0]}_vs_{k[1]}": v
                         for k, v in matchup_matrix.matrix.items()
                     },
                     "total_matches": matchup_matrix.total_matches,
