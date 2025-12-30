@@ -7,13 +7,13 @@ Simple tests that exercise uncovered code paths.
 import pytest
 
 from src.agents.strategies.game_theory import (
-    NashEquilibriumStrategy,
-    BestResponseStrategy,
     AdaptiveBayesianStrategy,
+    BestResponseStrategy,
     FictitiousPlayStrategy,
+    NashEquilibriumStrategy,
     RegretMatchingStrategy,
-    UCBStrategy,
     ThompsonSamplingStrategy,
+    UCBStrategy,
 )
 from src.game.odd_even import GameRole
 

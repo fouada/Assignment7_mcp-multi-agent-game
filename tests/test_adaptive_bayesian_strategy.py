@@ -5,7 +5,7 @@ Focuses on specific uncovered paths in high-value files.
 
 import pytest
 
-from src.agents.strategies.base import GameRole, StrategyConfig
+from src.agents.strategies.base import GameRole
 from src.agents.strategies.game_theory import AdaptiveBayesianStrategy
 
 

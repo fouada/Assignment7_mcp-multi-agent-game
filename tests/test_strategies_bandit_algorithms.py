@@ -6,13 +6,13 @@ Focus on exercising real code paths in strategy modules.
 
 import pytest
 
-from src.agents.strategies.base import Strategy, StrategyConfig
+from src.agents.strategies.base import StrategyConfig
 from src.agents.strategies.classic import PatternStrategy
-from src.agents.strategies.game_theory import (
-    UCBStrategy,
-    ThompsonSamplingStrategy,
-)
 from src.agents.strategies.factory import StrategyFactory
+from src.agents.strategies.game_theory import (
+    ThompsonSamplingStrategy,
+    UCBStrategy,
+)
 from src.game.odd_even import GameRole
 
 
@@ -343,7 +343,7 @@ class TestStrategiesWithEdgeCaseHistories:
         strategy = UCBStrategy()
 
         history = []
-        for i in range(5):
+        for _i in range(5):
             history.append({
                 "opponent_move": 10,
                 "my_move": 11,
@@ -367,7 +367,7 @@ class TestStrategiesWithEdgeCaseHistories:
         strategy = ThompsonSamplingStrategy()
 
         history = []
-        for i in range(5):
+        for _i in range(5):
             history.append({
                 "opponent_move": 11,
                 "my_move": 10,
@@ -391,7 +391,7 @@ class TestStrategiesWithEdgeCaseHistories:
         strategy = PatternStrategy()
 
         history = []
-        for i in range(5):
+        for _i in range(5):
             history.append({
                 "opponent_move": 15,
                 "my_move": 15,

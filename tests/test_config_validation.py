@@ -3,12 +3,8 @@ Tests for configuration loading and validation.
 Covers config file loading, defaults, and error handling.
 """
 
-import json
-import pytest
-from pathlib import Path
-import tempfile
 
-from src.common.config_loader import ConfigLoader, SystemConfig, LeagueConfigFile
+from src.common.config_loader import ConfigLoader, LeagueConfigFile
 
 
 class TestConfigLoaderBehavior:

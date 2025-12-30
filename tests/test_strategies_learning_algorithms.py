@@ -4,15 +4,15 @@ Targeted tests to boost coverage to 85%+.
 These tests target uncovered lines in key modules.
 """
 
+
 import pytest
-from unittest.mock import Mock, AsyncMock
 
 from src.agents.strategies.base import StrategyConfig
 from src.agents.strategies.game_theory import (
-    NashEquilibriumStrategy,
-    BestResponseStrategy,
     AdaptiveBayesianStrategy,
+    BestResponseStrategy,
     FictitiousPlayStrategy,
+    NashEquilibriumStrategy,
     RegretMatchingStrategy,
 )
 from src.game.odd_even import GameRole

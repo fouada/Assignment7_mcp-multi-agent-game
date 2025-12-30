@@ -6,7 +6,6 @@ Covers pattern detection, role-based behavior, and edge cases.
 import pytest
 
 from src.agents.strategies.classic import PatternStrategy
-from src.agents.strategies.base import StrategyConfig
 from src.game.odd_even import GameRole
 
 

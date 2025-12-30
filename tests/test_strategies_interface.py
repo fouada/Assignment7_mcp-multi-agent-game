@@ -4,17 +4,17 @@ Simple additional tests to incrementally improve coverage.
 
 import pytest
 
-from src.agents.strategies.game_theory import (
-    NashEquilibriumStrategy,
-    BestResponseStrategy,
-    AdaptiveBayesianStrategy,
-    FictitiousPlayStrategy,
-    RegretMatchingStrategy,
-    UCBStrategy,
-    ThompsonSamplingStrategy,
-)
-from src.agents.strategies.classic import PatternStrategy, RandomStrategy
 from src.agents.strategies.base import StrategyConfig
+from src.agents.strategies.classic import PatternStrategy, RandomStrategy
+from src.agents.strategies.game_theory import (
+    AdaptiveBayesianStrategy,
+    BestResponseStrategy,
+    FictitiousPlayStrategy,
+    NashEquilibriumStrategy,
+    RegretMatchingStrategy,
+    ThompsonSamplingStrategy,
+    UCBStrategy,
+)
 from src.game.odd_even import GameRole
 
 

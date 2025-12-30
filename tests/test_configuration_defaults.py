@@ -3,9 +3,8 @@ Targeted tests to push coverage over 85%.
 Focuses on simple, easy-to-cover paths in low-coverage files.
 """
 
-import pytest
 
-from src.agents.strategies.base import GameRole, StrategyConfig
+from src.agents.strategies.base import StrategyConfig
 from src.common.config_loader import ConfigLoader
 
 

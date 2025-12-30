@@ -5,8 +5,8 @@ Covers random move generation, bounds checking, and statistics.
 
 import pytest
 
-from src.agents.strategies.classic import RandomStrategy
 from src.agents.strategies.base import StrategyConfig
+from src.agents.strategies.classic import RandomStrategy
 from src.game.odd_even import GameRole
 
 
@@ -119,16 +119,16 @@ class TestRandomStrategyBehavior:
     def test_random_strategy_reset(self):
         """Test that reset works without errors."""
         strategy = RandomStrategy()
-        
+
         # Reset should work without issues
         strategy.reset()
 
     def test_random_strategy_get_stats(self):
         """Test get_stats returns proper information."""
         strategy = RandomStrategy()
-        
+
         stats = strategy.get_stats()
-        
+
         assert isinstance(stats, dict)
         assert "name" in stats or "strategy" in stats
         assert "min_value" in stats
@@ -179,7 +179,7 @@ class TestRandomStrategyStatistics:
         # Should have both odd and even numbers
         has_odd = any(move % 2 == 1 for move in moves)
         has_even = any(move % 2 == 0 for move in moves)
-        
+
         assert has_odd
         assert has_even
 
