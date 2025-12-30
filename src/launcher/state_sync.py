@@ -169,8 +169,10 @@ class StateSyncService:
         event = BaseEvent(
             event_type=event_type,
             source=source,
-            data=data,
         )
+        # Add data to event if provided
+        if data:
+            event.metadata = data
 
         # Emit via event bus
         await self.event_bus.emit(event_type, event)
@@ -188,11 +190,13 @@ class StateSyncService:
         Returns:
             Subscription ID for unsubscribing
         """
-        return self.event_bus.on(event_pattern, handler)
+        result = self.event_bus.on(event_pattern, handler)
+        return str(result) if result else ""
 
     def unsubscribe(self, subscription_id: str) -> bool:
         """Unsubscribe from state changes."""
-        return self.event_bus.off(subscription_id)
+        result = self.event_bus.off(subscription_id)
+        return bool(result) if result is not None else False
 
     async def _notify_subscribers(self, event_type: str, event: BaseEvent) -> None:
         """Notify all subscribers of a state change."""

@@ -425,7 +425,8 @@ class AnalyticsEngine:
     ):
         """Update matchup matrix with match result."""
         # Use ordered tuple as key (always smaller player_id first)
-        key = tuple(sorted([player1_id, player2_id]))
+        sorted_ids = sorted([player1_id, player2_id])
+        key: tuple[str, str] = (sorted_ids[0], sorted_ids[1])
 
         if key not in self.matchup_matrix:
             self.matchup_matrix[key] = {

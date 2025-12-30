@@ -64,8 +64,8 @@ class ComponentLauncher:
 
         # Components
         self.component: LeagueManager | RefereeAgent | PlayerAgent | None = None
-        self.dashboard = None
-        self._integration = None  # Dashboard integration instance
+        self.dashboard: Any = None
+        self._integration: Any = None  # Dashboard integration instance
 
         # Infrastructure
         self.event_bus = get_event_bus()

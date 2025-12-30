@@ -297,7 +297,7 @@ class GameOrchestrator:
         await self.start_league_manager()
 
         # Connect dashboard to league manager if enabled
-        if self.enable_dashboard and dashboard:
+        if self.enable_dashboard and dashboard and self.league_manager:
             self.league_manager.set_dashboard(dashboard)
 
         # Wait a bit for league manager to be ready
@@ -351,7 +351,8 @@ class GameOrchestrator:
                     )
 
                 # Register player with dashboard integration
-                integration.register_player(player.player_id, strategy_display_name)
+                if player.player_id:
+                    integration.register_player(player.player_id, strategy_display_name)
 
         self._running = True
         logger.info(f"League started with {num_players} players")

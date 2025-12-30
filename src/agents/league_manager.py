@@ -764,24 +764,19 @@ class LeagueManager(BaseGameServer):
         # Emit tournament completed event
         try:
             event_bus = get_event_bus()
+            champion_player = (
+                self._players.get(champion["player_id"])
+                if champion and champion["player_id"] in self._players
+                else None
+            )
             winner_data = {
                 "player_id": champion["player_id"] if champion else None,
                 "display_name": champion["display_name"] if champion else None,
-                "strategy": self._players.get(champion["player_id"]).strategy_name
-                if champion and champion["player_id"] in self._players
-                else None,
-                "wins": self._players.get(champion["player_id"]).wins
-                if champion and champion["player_id"] in self._players
-                else 0,
+                "strategy": champion_player.strategy_name if champion_player else None,
+                "wins": champion_player.wins if champion_player else 0,
                 "points": champion["points"] if champion else 0,
-                "win_rate": (
-                    self._players.get(champion["player_id"]).wins
-                    / self._players.get(champion["player_id"]).played
-                    * 100
-                )
-                if champion
-                and champion["player_id"] in self._players
-                and self._players.get(champion["player_id"]).played > 0
+                "win_rate": (champion_player.wins / champion_player.played * 100)
+                if champion_player and champion_player.played > 0
                 else 0,
             }
             await event_bus.emit(
