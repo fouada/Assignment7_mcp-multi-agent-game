@@ -401,8 +401,10 @@ class TestRoundExecution:
         mock_client.call_tool = AsyncMock(return_value={"success": True})
         manager._client = mock_client
 
-        # Start first round
-        result = await manager.start_next_round()
+        # Mock asyncio.sleep to prevent hanging
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            # Start first round
+            result = await manager.start_next_round()
 
         assert result["success"] is True
         assert result["round"] == 1
@@ -819,8 +821,10 @@ class TestLeagueManagerEdgeCases:
         mock_client.call_tool = AsyncMock(return_value={"success": True})
         manager._client = mock_client
 
+        # Also mock asyncio.sleep to prevent hanging
         with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
-            result = await manager._run_all_rounds()
+            with patch("asyncio.sleep", new_callable=AsyncMock):
+                result = await manager._run_all_rounds()
 
         assert result["success"] is True
         assert result["rounds_completed"] > 0
@@ -1029,7 +1033,8 @@ class TestLeagueManagerToolHandlers:
         manager._client = mock_client
 
         with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
-            result = await tool_handler({})
+            with patch("asyncio.sleep", new_callable=AsyncMock):
+                result = await tool_handler({})
 
         assert result["success"] is True
 
@@ -1071,8 +1076,10 @@ class TestLeagueManagerToolHandlers:
         mock_client.connected_servers = {}
         manager._client = mock_client
 
+        # Also mock asyncio.sleep to prevent hanging
         with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
-            result = await tool_handler({})
+            with patch("asyncio.sleep", new_callable=AsyncMock):
+                result = await tool_handler({})
 
         assert result["success"] is True
 
@@ -1349,8 +1356,9 @@ class TestLeagueManagerEdgeCasesAdvanced:
             mock_bus.return_value = mock_event_bus
 
             with patch.object(manager, "_send_match_to_referee", new_callable=AsyncMock):
-                # Should not raise exception, just log error
-                result = await manager.start_next_round()
+                with patch("asyncio.sleep", new_callable=AsyncMock):
+                    # Should not raise exception, just log error
+                    result = await manager.start_next_round()
 
         # Should still succeed despite event emission failure
         assert result["success"] is True
@@ -1437,8 +1445,10 @@ class TestLeagueManagerEdgeCasesAdvanced:
         async def mock_start_next_round():
             return {"success": True, "league_complete": True, "round": 1, "matches": []}
 
+        # Also mock asyncio.sleep to prevent hanging
         with patch.object(manager, "start_next_round", side_effect=mock_start_next_round):
-            result = await manager._run_all_rounds()
+            with patch("asyncio.sleep", new_callable=AsyncMock):
+                result = await manager._run_all_rounds()
 
         # Should complete successfully when league_complete flag is set
         assert result["success"] is True
