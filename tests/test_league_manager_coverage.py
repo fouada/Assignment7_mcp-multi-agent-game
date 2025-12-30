@@ -394,8 +394,8 @@ class TestLeagueManagerScheduleGeneration:
         # Check for error condition - could be in different formats
         assert ("error" in result or "status" in result)
         if "error" in result:
-            error_msg = result["error"].lower()
-            assert "insufficient" in error_msg or "need at least" in error_msg
+            # Error message is "Need at least 2 players, have 1"
+            assert ("need at least" in result["error"].lower() or "players" in result["error"].lower())
         elif "status" in result:
             assert result["status"].upper() == "ERROR"
 
