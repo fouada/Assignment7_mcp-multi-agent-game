@@ -129,8 +129,11 @@ class StateSyncService:
         # Track state change - timestamp is already a datetime object
         # Convert event to dict for data, excluding base fields
         event_dict = event.dict()
-        event_data = {k: v for k, v in event_dict.items()
-                      if k not in ('event_id', 'event_type', 'timestamp', 'source', 'metadata')}
+        event_data = {
+            k: v
+            for k, v in event_dict.items()
+            if k not in ("event_id", "event_type", "timestamp", "source", "metadata")
+        }
 
         change = StateChange(
             change_id=f"{event.event_type}_{event.timestamp.isoformat()}",
@@ -260,7 +263,7 @@ class StateSyncService:
                         return {k: convert_to_serializable(v) for k, v in obj.items()}
                     elif isinstance(obj, (list, tuple)):
                         return [convert_to_serializable(item) for item in obj]
-                    elif hasattr(obj, 'to_dict') and callable(obj.to_dict):
+                    elif hasattr(obj, "to_dict") and callable(obj.to_dict):
                         return convert_to_serializable(obj.to_dict())
                     return obj
 
@@ -273,7 +276,9 @@ class StateSyncService:
                     {
                         "type": "state_update",
                         "event_type": event.event_type,
-                        "timestamp": event.timestamp.isoformat() if isinstance(event.timestamp, datetime) else event.timestamp,
+                        "timestamp": event.timestamp.isoformat()
+                        if isinstance(event.timestamp, datetime)
+                        else event.timestamp,
                         "data": serializable_event_dict,
                     }
                 )

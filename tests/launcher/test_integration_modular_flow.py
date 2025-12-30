@@ -34,7 +34,7 @@ async def clean_singletons():
 
     # Also clean the service registry state if it exists
     registry = get_service_registry()
-    if hasattr(registry, '_services'):
+    if hasattr(registry, "_services"):
         registry._services.clear()
 
     yield
@@ -45,7 +45,7 @@ async def clean_singletons():
 
     # Clean registry state again
     registry = get_service_registry()
-    if hasattr(registry, '_services'):
+    if hasattr(registry, "_services"):
         registry._services.clear()
 
 
@@ -99,11 +99,7 @@ class TestModularFlowIntegration:
 
             # Create and start referee
             launcher = ComponentLauncher(ComponentType.REFEREE)
-            await launcher.start(
-                referee_id="REF01",
-                port=8001,
-                auto_register=True
-            )
+            await launcher.start(referee_id="REF01", port=8001, auto_register=True)
 
             # Verify service registered
             registry = get_service_registry()
@@ -133,10 +129,7 @@ class TestModularFlowIntegration:
                 # Create and start player
                 launcher = ComponentLauncher(ComponentType.PLAYER)
                 await launcher.start(
-                    name="TestPlayer",
-                    port=8101,
-                    strategy="random",
-                    auto_register=True
+                    name="TestPlayer", port=8101, strategy="random", auto_register=True
                 )
 
                 # Verify service registered
@@ -174,10 +167,14 @@ class TestModularFlowIntegration:
                         await league_launcher.start(enable_dashboard=False)
 
                         ref1_launcher = ComponentLauncher(ComponentType.REFEREE)
-                        await ref1_launcher.start(referee_id="REF01", port=8001, auto_register=False)
+                        await ref1_launcher.start(
+                            referee_id="REF01", port=8001, auto_register=False
+                        )
 
                         ref2_launcher = ComponentLauncher(ComponentType.REFEREE)
-                        await ref2_launcher.start(referee_id="REF02", port=8002, auto_register=False)
+                        await ref2_launcher.start(
+                            referee_id="REF02", port=8002, auto_register=False
+                        )
 
                         player_launcher = ComponentLauncher(ComponentType.PLAYER)
                         await player_launcher.start(name="Player_1", port=8101, auto_register=False)
@@ -221,15 +218,11 @@ class TestModularFlowIntegration:
 
         # Publish state changes
         await sync.publish_state_change(
-            event_type="test.event.1",
-            source="component_1",
-            data={"value": 1}
+            event_type="test.event.1", source="component_1", data={"value": 1}
         )
 
         await sync.publish_state_change(
-            event_type="test.event.2",
-            source="component_2",
-            data={"value": 2}
+            event_type="test.event.2", source="component_2", data={"value": 2}
         )
 
         # Give time to process
@@ -288,9 +281,7 @@ class TestModularFlowIntegration:
 
         # Publish events that dashboard should receive
         await sync.publish_state_change(
-            event_type="agent.registered",
-            source="league",
-            data={"player_id": "P01"}
+            event_type="agent.registered", source="league", data={"player_id": "P01"}
         )
 
         await asyncio.sleep(0.2)
@@ -338,10 +329,12 @@ class TestModularFlowPerformance:
             # Start all concurrently
             start_time = asyncio.get_event_loop().time()
 
-            await asyncio.gather(*[
-                launcher.start(referee_id=f"REF{i:02d}", port=8001+i, auto_register=False)
-                for i, launcher in enumerate(launchers)
-            ])
+            await asyncio.gather(
+                *[
+                    launcher.start(referee_id=f"REF{i:02d}", port=8001 + i, auto_register=False)
+                    for i, launcher in enumerate(launchers)
+                ]
+            )
 
             elapsed = asyncio.get_event_loop().time() - start_time
 
@@ -362,9 +355,7 @@ class TestModularFlowPerformance:
 
         for i in range(100):
             await sync.publish_state_change(
-                event_type=f"test.event.{i}",
-                source="test",
-                data={"index": i}
+                event_type=f"test.event.{i}", source="test", data={"index": i}
             )
 
         elapsed = asyncio.get_event_loop().time() - start_time

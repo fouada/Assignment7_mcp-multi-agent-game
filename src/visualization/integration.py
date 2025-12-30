@@ -124,7 +124,9 @@ class DashboardIntegration:
     ```
     """
 
-    def __init__(self, dashboard: DashboardAPI | None = None, analytics_engine: AnalyticsEngine | None = None):
+    def __init__(
+        self, dashboard: DashboardAPI | None = None, analytics_engine: AnalyticsEngine | None = None
+    ):
         self.dashboard = dashboard or get_dashboard()
         self.analytics_engine = analytics_engine or get_analytics_engine()
         self.tournament_state: TournamentDashboardState | None = None
@@ -262,10 +264,14 @@ class DashboardIntegration:
 
             # Stream to dashboard
             await self.dashboard.stream_event(event)
-            logger.debug(f"Streamed complete move event for round {round_num}: {self.current_round_moves[round_num]}")
+            logger.debug(
+                f"Streamed complete move event for round {round_num}: {self.current_round_moves[round_num]}"
+            )
         else:
             # Only one player has moved so far
-            logger.debug(f"Move recorded for {player_id} in round {round_num}, waiting for opponent")
+            logger.debug(
+                f"Move recorded for {player_id} in round {round_num}, waiting for opponent"
+            )
 
         # Update opponent modeling visualization if available
         if player_id in self.opponent_modeling_engines:
@@ -475,12 +481,15 @@ class DashboardIntegration:
         cumulative_regret = {}
         try:
             # Access regret table if available
-            if hasattr(engine, 'regret_table') and hasattr(engine.regret_table, 'cumulative_regret'):
+            if hasattr(engine, "regret_table") and hasattr(
+                engine.regret_table, "cumulative_regret"
+            ):
                 # Get first infoset's regret as a representative
                 if engine.regret_table.cumulative_regret:
                     first_infoset = list(engine.regret_table.cumulative_regret.keys())[0]
                     cumulative_regret = {
-                        str(k): float(v) for k, v in engine.regret_table.cumulative_regret[first_infoset].items()
+                        str(k): float(v)
+                        for k, v in engine.regret_table.cumulative_regret[first_infoset].items()
                     }
         except Exception as e:
             logger.debug(f"Could not extract cumulative regret: {e}")
@@ -583,10 +592,7 @@ class DashboardIntegration:
                 "type": "matchup_matrix_update",
                 "data": {
                     "players": matchup_matrix.players,
-                    "matrix": {
-                        f"{k[0]}_vs_{k[1]}": v
-                        for k, v in matchup_matrix.matrix.items()
-                    },
+                    "matrix": {f"{k[0]}_vs_{k[1]}": v for k, v in matchup_matrix.matrix.items()},
                     "total_matches": matchup_matrix.total_matches,
                     "finished_matches": matchup_matrix.finished_matches,
                     "pending_matches": matchup_matrix.pending_matches,

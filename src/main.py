@@ -343,8 +343,12 @@ class GameOrchestrator:
                 strategy_display_name = player.strategy.__class__.__name__
                 # Update the registered player's strategy name
                 if player.player_id in self.league_manager._players:
-                    self.league_manager._players[player.player_id].strategy_name = strategy_display_name
-                    logger.debug(f"Updated strategy for {player.player_id}: {strategy_display_name}")
+                    self.league_manager._players[
+                        player.player_id
+                    ].strategy_name = strategy_display_name
+                    logger.debug(
+                        f"Updated strategy for {player.player_id}: {strategy_display_name}"
+                    )
 
                 # Register player with dashboard integration
                 integration.register_player(player.player_id, strategy_display_name)

@@ -767,10 +767,22 @@ class LeagueManager(BaseGameServer):
             winner_data = {
                 "player_id": champion["player_id"] if champion else None,
                 "display_name": champion["display_name"] if champion else None,
-                "strategy": self._players.get(champion["player_id"]).strategy_name if champion and champion["player_id"] in self._players else None,
-                "wins": self._players.get(champion["player_id"]).wins if champion and champion["player_id"] in self._players else 0,
+                "strategy": self._players.get(champion["player_id"]).strategy_name
+                if champion and champion["player_id"] in self._players
+                else None,
+                "wins": self._players.get(champion["player_id"]).wins
+                if champion and champion["player_id"] in self._players
+                else 0,
                 "points": champion["points"] if champion else 0,
-                "win_rate": (self._players.get(champion["player_id"]).wins / self._players.get(champion["player_id"]).played * 100) if champion and champion["player_id"] in self._players and self._players.get(champion["player_id"]).played > 0 else 0,
+                "win_rate": (
+                    self._players.get(champion["player_id"]).wins
+                    / self._players.get(champion["player_id"]).played
+                    * 100
+                )
+                if champion
+                and champion["player_id"] in self._players
+                and self._players.get(champion["player_id"]).played > 0
+                else 0,
             }
             await event_bus.emit(
                 "tournament.completed",
@@ -902,17 +914,20 @@ class LeagueManager(BaseGameServer):
 
         # Create GameResult from details (with round history)
         from ..game.odd_even import GameResult, RoundResult
+
         rounds_data = details.get("rounds", [])
         rounds = []
         for r in rounds_data:
-            rounds.append(RoundResult(
-                round_number=r.get("round_number", 0),
-                player1_move=r.get("player1_move", 0),
-                player2_move=r.get("player2_move", 0),
-                sum_value=r.get("sum_value", 0),
-                sum_is_odd=r.get("sum_is_odd", False),
-                winner_id=r.get("winner_id"),
-            ))
+            rounds.append(
+                RoundResult(
+                    round_number=r.get("round_number", 0),
+                    player1_move=r.get("player1_move", 0),
+                    player2_move=r.get("player2_move", 0),
+                    sum_value=r.get("sum_value", 0),
+                    sum_is_odd=r.get("sum_is_odd", False),
+                    winner_id=r.get("winner_id"),
+                )
+            )
 
         match.result = GameResult(
             game_id=match.match_id,
@@ -970,11 +985,13 @@ class LeagueManager(BaseGameServer):
             champion = None
             simplified_standings = []
             for standing in standings_list:
-                simplified_standings.append({
-                    "rank": standing["rank"],
-                    "player_id": standing["player_id"],
-                    "points": standing["points"],
-                })
+                simplified_standings.append(
+                    {
+                        "rank": standing["rank"],
+                        "player_id": standing["player_id"],
+                        "points": standing["points"],
+                    }
+                )
                 if standing["rank"] == 1:
                     player = self._players.get(standing["player_id"])
                     champion = {
@@ -982,7 +999,9 @@ class LeagueManager(BaseGameServer):
                         "display_name": standing["display_name"],
                         "points": standing["points"],
                         "wins": standing["wins"],
-                        "win_rate": (standing["wins"] / standing["played"] * 100) if standing["played"] > 0 else 0,
+                        "win_rate": (standing["wins"] / standing["played"] * 100)
+                        if standing["played"] > 0
+                        else 0,
                         "strategy": player.strategy_name if player else "Unknown",
                     }
 
@@ -1002,7 +1021,9 @@ class LeagueManager(BaseGameServer):
                         metadata={"winner_details": champion} if champion else {},
                     ),
                 )
-                logger.info(f"Tournament completed! Champion: {champion['display_name'] if champion else 'No winner'}")
+                logger.info(
+                    f"Tournament completed! Champion: {champion['display_name'] if champion else 'No winner'}"
+                )
             except Exception as e:
                 logger.error(f"Failed to emit TournamentCompletedEvent: {e}")
 
@@ -1163,22 +1184,24 @@ class LeagueManager(BaseGameServer):
             if self.state == LeagueState.REGISTRATION:
                 standings_with_strategy = []
                 for idx, (player_id, player) in enumerate(self._players.items(), 1):
-                    standings_with_strategy.append({
-                        "rank": idx,
-                        "player_id": player_id,
-                        "player": player_id,
-                        "display_name": player.display_name,
-                        "strategy": player.strategy_name,  # Use actual strategy name
-                        "wins": 0,
-                        "total_wins": 0,
-                        "losses": 0,
-                        "points": 0,
-                        "score": 0,
-                        "total_score": 0,
-                        "matches_played": 0,
-                        "total_matches": 0,
-                        "win_rate": 0.0,
-                    })
+                    standings_with_strategy.append(
+                        {
+                            "rank": idx,
+                            "player_id": player_id,
+                            "player": player_id,
+                            "display_name": player.display_name,
+                            "strategy": player.strategy_name,  # Use actual strategy name
+                            "wins": 0,
+                            "total_wins": 0,
+                            "losses": 0,
+                            "points": 0,
+                            "score": 0,
+                            "total_score": 0,
+                            "matches_played": 0,
+                            "total_matches": 0,
+                            "win_rate": 0.0,
+                        }
+                    )
 
                 tournament_state = {
                     "tournament_id": self.league_id,
@@ -1193,6 +1216,7 @@ class LeagueManager(BaseGameServer):
 
                 # Store and broadcast
                 from ..visualization.dashboard import TournamentState as DashboardTournamentState
+
                 dashboard_state = DashboardTournamentState(
                     tournament_id=tournament_state["tournament_id"],
                     game_type=tournament_state["game_type"],
@@ -1203,7 +1227,9 @@ class LeagueManager(BaseGameServer):
                     active_matches=tournament_state["active_matches"],
                     recent_matches=tournament_state["recent_matches"],
                 )
-                self._dashboard.tournament_states[tournament_state["tournament_id"]] = dashboard_state
+                self._dashboard.tournament_states[tournament_state["tournament_id"]] = (
+                    dashboard_state
+                )
 
                 # Convert any datetime objects to strings for JSON serialization
                 import json
@@ -1221,7 +1247,7 @@ class LeagueManager(BaseGameServer):
                         return {k: convert_to_serializable(v) for k, v in obj.items()}
                     elif isinstance(obj, (list, tuple)):
                         return [convert_to_serializable(item) for item in obj]
-                    elif hasattr(obj, 'to_dict') and callable(obj.to_dict):
+                    elif hasattr(obj, "to_dict") and callable(obj.to_dict):
                         return convert_to_serializable(obj.to_dict())
                     return obj
 
@@ -1233,7 +1259,9 @@ class LeagueManager(BaseGameServer):
                 except TypeError as e:
                     logger.error(f"State still not serializable after conversion: {e}")
                     logger.error(f"Tournament state keys: {tournament_state.keys()}")
-                    logger.error(f"Standings: {tournament_state.get('standings', [])[:1]}")  # First player only
+                    logger.error(
+                        f"Standings: {tournament_state.get('standings', [])[:1]}"
+                    )  # First player only
                     return
 
                 # Create the broadcast message
@@ -1249,7 +1277,9 @@ class LeagueManager(BaseGameServer):
 
                 await self._dashboard.connection_manager.broadcast(broadcast_message)
 
-                logger.debug(f"Streamed registration update: {len(self._players)} players registered")
+                logger.debug(
+                    f"Streamed registration update: {len(self._players)} players registered"
+                )
                 return
 
             # Get current standings (for active league)
@@ -1267,8 +1297,12 @@ class LeagueManager(BaseGameServer):
                     player2_score = 0
                     if match.state == MatchState.COMPLETED and match.final_score:
                         # Use final scores from completed match
-                        player1_score = match.final_score.get(match.player1.player_id if match.player1 else "", 0)
-                        player2_score = match.final_score.get(match.player2.player_id if match.player2 else "", 0)
+                        player1_score = match.final_score.get(
+                            match.player1.player_id if match.player1 else "", 0
+                        )
+                        player2_score = match.final_score.get(
+                            match.player2.player_id if match.player2 else "", 0
+                        )
                     elif game:
                         # Use current game scores for in-progress match
                         player1_score = game.player1_score
@@ -1277,9 +1311,17 @@ class LeagueManager(BaseGameServer):
                     # Get latest moves from current round (if available)
                     player1_move = None
                     player2_move = None
-                    if game and hasattr(game, '_current_moves'):
-                        player1_move = game._current_moves.get(game.player1_id, {}).get('value') if isinstance(game._current_moves.get(game.player1_id), dict) else None
-                        player2_move = game._current_moves.get(game.player2_id, {}).get('value') if isinstance(game._current_moves.get(game.player2_id), dict) else None
+                    if game and hasattr(game, "_current_moves"):
+                        player1_move = (
+                            game._current_moves.get(game.player1_id, {}).get("value")
+                            if isinstance(game._current_moves.get(game.player1_id), dict)
+                            else None
+                        )
+                        player2_move = (
+                            game._current_moves.get(game.player2_id, {}).get("value")
+                            if isinstance(game._current_moves.get(game.player2_id), dict)
+                            else None
+                        )
 
                     # Get round history with sums and winners
                     round_history = []
@@ -1293,48 +1335,74 @@ class LeagueManager(BaseGameServer):
                     )
 
                     # For completed matches, get from match.result.rounds
-                    if match.state == MatchState.COMPLETED and match.result and hasattr(match.result, 'rounds'):
-                        logger.info(f"[ROUND_HISTORY_DEBUG] Getting from match.result.rounds, count={len(match.result.rounds)}")
+                    if (
+                        match.state == MatchState.COMPLETED
+                        and match.result
+                        and hasattr(match.result, "rounds")
+                    ):
+                        logger.info(
+                            f"[ROUND_HISTORY_DEBUG] Getting from match.result.rounds, count={len(match.result.rounds)}"
+                        )
                         for round_result in match.result.rounds:
-                            round_history.append({
-                                "round_number": round_result.round_number,
-                                "player1_move": round_result.player1_move,
-                                "player2_move": round_result.player2_move,
-                                "sum": round_result.sum_value,
-                                "sum_is_odd": round_result.sum_is_odd,
-                                "winner_id": round_result.winner_id,
-                                "winner_name": (
-                                    match.player1.display_name if round_result.winner_id == match.player1.player_id
-                                    else match.player2.display_name if round_result.winner_id == match.player2.player_id
-                                    else None
-                                ) if match.player1 and match.player2 else None
-                            })
+                            round_history.append(
+                                {
+                                    "round_number": round_result.round_number,
+                                    "player1_move": round_result.player1_move,
+                                    "player2_move": round_result.player2_move,
+                                    "sum": round_result.sum_value,
+                                    "sum_is_odd": round_result.sum_is_odd,
+                                    "winner_id": round_result.winner_id,
+                                    "winner_name": (
+                                        match.player1.display_name
+                                        if round_result.winner_id == match.player1.player_id
+                                        else match.player2.display_name
+                                        if round_result.winner_id == match.player2.player_id
+                                        else None
+                                    )
+                                    if match.player1 and match.player2
+                                    else None,
+                                }
+                            )
                     # For in-progress matches, get from game.round_history
-                    elif game and hasattr(game, 'round_history'):
-                        logger.info(f"[ROUND_HISTORY_DEBUG] Getting from game.round_history, count={len(game.round_history)}")
+                    elif game and hasattr(game, "round_history"):
+                        logger.info(
+                            f"[ROUND_HISTORY_DEBUG] Getting from game.round_history, count={len(game.round_history)}"
+                        )
                         for round_result in game.round_history:
-                            round_history.append({
-                                "round_number": round_result.round_number,
-                                "player1_move": round_result.player1_move,
-                                "player2_move": round_result.player2_move,
-                                "sum": round_result.sum_value,
-                                "sum_is_odd": round_result.sum_is_odd,
-                                "winner_id": round_result.winner_id,
-                                "winner_name": (
-                                    match.player1.display_name if round_result.winner_id == match.player1.player_id
-                                    else match.player2.display_name if round_result.winner_id == match.player2.player_id
-                                    else None
-                                ) if match.player1 and match.player2 else None
-                            })
+                            round_history.append(
+                                {
+                                    "round_number": round_result.round_number,
+                                    "player1_move": round_result.player1_move,
+                                    "player2_move": round_result.player2_move,
+                                    "sum": round_result.sum_value,
+                                    "sum_is_odd": round_result.sum_is_odd,
+                                    "winner_id": round_result.winner_id,
+                                    "winner_name": (
+                                        match.player1.display_name
+                                        if round_result.winner_id == match.player1.player_id
+                                        else match.player2.display_name
+                                        if round_result.winner_id == match.player2.player_id
+                                        else None
+                                    )
+                                    if match.player1 and match.player2
+                                    else None,
+                                }
+                            )
 
-                    logger.info(f"[ROUND_HISTORY_DEBUG] Final round_history length: {len(round_history)}")
+                    logger.info(
+                        f"[ROUND_HISTORY_DEBUG] Final round_history length: {len(round_history)}"
+                    )
 
                     match_data = {
                         "match_id": match.match_id,
                         "round": self.current_round,
                         "total_rounds": len(self._schedule),
-                        "game_rounds": game.total_rounds if game else 5,  # Total game rounds (e.g., 5)
-                        "game_round_current": game.current_round if game else 0,  # Current game round
+                        "game_rounds": game.total_rounds
+                        if game
+                        else 5,  # Total game rounds (e.g., 5)
+                        "game_round_current": game.current_round
+                        if game
+                        else 0,  # Current game round
                         "player_a": {
                             "id": match.player1.player_id if match.player1 else "",
                             "name": match.player1.display_name if match.player1 else "",
@@ -1392,7 +1460,9 @@ class LeagueManager(BaseGameServer):
                         "matches_played": played,
                         "total_matches": played,  # Alternative field name for compatibility
                         "win_rate": round(win_rate, 1),
-                        "last_move": player.last_move if player else None,  # Include last move for dashboard
+                        "last_move": player.last_move
+                        if player
+                        else None,  # Include last move for dashboard
                     }
                 )
 
@@ -1411,6 +1481,7 @@ class LeagueManager(BaseGameServer):
             # Store and broadcast to dashboard
             # First store the state in the dashboard's tournament_states dict
             from ..visualization.dashboard import TournamentState as DashboardTournamentState
+
             dashboard_state = DashboardTournamentState(
                 tournament_id=tournament_state["tournament_id"],
                 game_type=tournament_state["game_type"],
@@ -1440,7 +1511,7 @@ class LeagueManager(BaseGameServer):
                     return {k: convert_to_serializable(v) for k, v in obj.items()}
                 elif isinstance(obj, (list, tuple)):
                     return [convert_to_serializable(item) for item in obj]
-                elif hasattr(obj, 'to_dict') and callable(obj.to_dict):
+                elif hasattr(obj, "to_dict") and callable(obj.to_dict):
                     return convert_to_serializable(obj.to_dict())
                 return obj
 

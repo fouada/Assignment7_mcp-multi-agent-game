@@ -256,7 +256,13 @@ class AnalyticsEngine:
         logger.debug(f"Analytics updated for round {round_num}")
 
     async def on_opponent_model_update(
-        self, player_id: str, opponent_id: str, confidence: float, accuracy: float, predicted_strategy: str, beliefs: dict[str, float]
+        self,
+        player_id: str,
+        opponent_id: str,
+        confidence: float,
+        accuracy: float,
+        predicted_strategy: str,
+        beliefs: dict[str, float],
     ):
         """Process opponent model update."""
         if player_id not in self.opponent_models:
@@ -287,7 +293,13 @@ class AnalyticsEngine:
 
         logger.debug(f"Opponent model analytics updated: {player_id} -> {opponent_id}")
 
-    async def on_counterfactual_update(self, player_id: str, actual_move: str, counterfactuals: list[dict[str, Any]], cumulative_regret: dict[str, float]):
+    async def on_counterfactual_update(
+        self,
+        player_id: str,
+        actual_move: str,
+        counterfactuals: list[dict[str, Any]],
+        cumulative_regret: dict[str, float],
+    ):
         """Process counterfactual regret update."""
         if player_id not in self.counterfactual_analytics:
             self.counterfactual_analytics[player_id] = CounterfactualAnalytics(player_id=player_id)
@@ -315,11 +327,14 @@ class AnalyticsEngine:
             total_positive_regret = sum(max(0, r) for r in cumulative_regret.values())
             if total_positive_regret > 0:
                 strategy_dist = {
-                    move: max(0, regret) / total_positive_regret for move, regret in cumulative_regret.items()
+                    move: max(0, regret) / total_positive_regret
+                    for move, regret in cumulative_regret.items()
                 }
             else:
                 # Uniform distribution if no positive regret
-                strategy_dist = {move: 1.0 / len(cumulative_regret) for move in cumulative_regret.keys()}
+                strategy_dist = {
+                    move: 1.0 / len(cumulative_regret) for move in cumulative_regret.keys()
+                }
 
             analytics.strategy_distribution_history.append(strategy_dist)
 
@@ -333,7 +348,9 @@ class AnalyticsEngine:
     # Strategy Performance Analytics
     # ========================================================================
 
-    async def _update_strategy_performance(self, round_num: int, player1_id: str, player2_id: str, scores: dict[str, float]):
+    async def _update_strategy_performance(
+        self, round_num: int, player1_id: str, player2_id: str, scores: dict[str, float]
+    ):
         """Update strategy performance metrics."""
         for player_id in [player1_id, player2_id]:
             if player_id not in self.player_strategies:
@@ -365,12 +382,18 @@ class AnalyticsEngine:
             analytics.cumulative_scores.append(cumulative)
 
             # Calculate current win rate
-            current_win_rate = analytics.total_wins / analytics.total_matches if analytics.total_matches > 0 else 0.0
+            current_win_rate = (
+                analytics.total_wins / analytics.total_matches
+                if analytics.total_matches > 0
+                else 0.0
+            )
             analytics.win_rates.append(current_win_rate)
             analytics.win_rate = current_win_rate
 
             # Calculate average score per match
-            analytics.avg_score_per_match = cumulative / analytics.total_matches if analytics.total_matches > 0 else 0.0
+            analytics.avg_score_per_match = (
+                cumulative / analytics.total_matches if analytics.total_matches > 0 else 0.0
+            )
 
             # Calculate learning metrics
             if len(analytics.win_rates) >= 3:
@@ -393,7 +416,12 @@ class AnalyticsEngine:
                 analytics.consistency = 1.0 / (1.0 + variance) if variance >= 0 else 0.0
 
     def _update_matchup_matrix(
-        self, player1_id: str, player2_id: str, scores: dict[str, float], moves: dict[str, str], round_num: int
+        self,
+        player1_id: str,
+        player2_id: str,
+        scores: dict[str, float],
+        moves: dict[str, str],
+        round_num: int,
     ):
         """Update matchup matrix with match result."""
         # Use ordered tuple as key (always smaller player_id first)
@@ -435,7 +463,13 @@ class AnalyticsEngine:
 
         # Add to match history
         matchup["match_history"].append(
-            {"round": round_num, "score_a": score_a, "score_b": score_b, "winner": winner, "moves": moves.copy()}
+            {
+                "round": round_num,
+                "score_a": score_a,
+                "score_b": score_b,
+                "winner": winner,
+                "moves": moves.copy(),
+            }
         )
 
         # Keep only last 20 matches
@@ -481,7 +515,9 @@ class AnalyticsEngine:
         """Get analytics for all strategies."""
         return list(self.strategy_performance.values())
 
-    def get_opponent_model_analytics(self, player_id: str, opponent_id: str) -> OpponentModelAnalytics | None:
+    def get_opponent_model_analytics(
+        self, player_id: str, opponent_id: str
+    ) -> OpponentModelAnalytics | None:
         """Get opponent modeling analytics."""
         return self.opponent_models.get(player_id, {}).get(opponent_id)
 
@@ -501,7 +537,13 @@ class AnalyticsEngine:
         finished_matches = total_matches
         pending_matches = (len(players) * (len(players) - 1) // 2) - len(self.matchup_matrix)
 
-        return MatchupMatrixData(players=players, matrix=self.matchup_matrix.copy(), total_matches=total_matches, finished_matches=finished_matches, pending_matches=pending_matches)
+        return MatchupMatrixData(
+            players=players,
+            matrix=self.matchup_matrix.copy(),
+            total_matches=total_matches,
+            finished_matches=finished_matches,
+            pending_matches=pending_matches,
+        )
 
     def get_replay_state(self, round_num: int) -> TournamentReplayState | None:
         """Get replay state for a specific round."""
@@ -510,7 +552,9 @@ class AnalyticsEngine:
                 return snapshot
         return None
 
-    def get_replay_history(self, start_round: int = 0, end_round: int | None = None) -> list[TournamentReplayState]:
+    def get_replay_history(
+        self, start_round: int = 0, end_round: int | None = None
+    ) -> list[TournamentReplayState]:
         """Get replay history for a range of rounds."""
         if end_round is None:
             end_round = self.current_round
@@ -540,7 +584,8 @@ class AnalyticsEngine:
                     "wins": analytics.total_wins // len(analytics.player_ids),  # Approximate
                     "draws": analytics.total_draws // len(analytics.player_ids),
                     "losses": analytics.total_losses // len(analytics.player_ids),
-                    "points": (analytics.total_wins * 3 + analytics.total_draws) // len(analytics.player_ids),
+                    "points": (analytics.total_wins * 3 + analytics.total_draws)
+                    // len(analytics.player_ids),
                     "matches": analytics.total_matches // len(analytics.player_ids),
                     "win_rate": analytics.win_rate,
                 }
@@ -561,12 +606,17 @@ class AnalyticsEngine:
             "tournament_id": "analytics_export",
             "total_rounds": self.current_round,
             "exported_at": datetime.now().isoformat(),
-            "strategy_performance": {name: asdict(analytics) for name, analytics in self.strategy_performance.items()},
+            "strategy_performance": {
+                name: asdict(analytics) for name, analytics in self.strategy_performance.items()
+            },
             "opponent_models": {
                 player_id: {opp_id: asdict(analytics) for opp_id, analytics in models.items()}
                 for player_id, models in self.opponent_models.items()
             },
-            "counterfactual_analytics": {player_id: asdict(analytics) for player_id, analytics in self.counterfactual_analytics.items()},
+            "counterfactual_analytics": {
+                player_id: asdict(analytics)
+                for player_id, analytics in self.counterfactual_analytics.items()
+            },
             "matchup_matrix": {f"{k[0]}_vs_{k[1]}": v for k, v in self.matchup_matrix.items()},
             "replay_history_count": len(self.replay_history),
         }
@@ -603,7 +653,11 @@ class AnalyticsEngine:
                         "win_rates": a.win_rates,
                         "avg_scores": a.avg_scores,
                     },
-                    "metrics": {"win_rate": a.win_rate, "learning_rate": a.learning_rate, "improvement_trend": a.improvement_trend},
+                    "metrics": {
+                        "win_rate": a.win_rate,
+                        "learning_rate": a.learning_rate,
+                        "improvement_trend": a.improvement_trend,
+                    },
                 }
                 for name, a in self.strategy_performance.items()
             }
@@ -628,4 +682,3 @@ def reset_analytics_engine():
     """Reset global analytics engine (for testing)."""
     global _analytics_engine
     _analytics_engine = None
-

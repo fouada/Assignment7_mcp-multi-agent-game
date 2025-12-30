@@ -36,15 +36,15 @@ async def launch_league_manager(args: argparse.Namespace) -> None:
             port=args.port if args.port else None,
         )
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("League Manager Running")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"  Endpoint: http://localhost:{args.port or 8000}")
         if args.dashboard:
             print("  Dashboard: http://localhost:8050")
         print(f"  League ID: {launcher.config.league.league_id}")
         print("\n  Press Ctrl+C to stop")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         await launcher.wait_for_shutdown()
 
@@ -63,15 +63,15 @@ async def launch_referee(args: argparse.Namespace) -> None:
             auto_register=args.register,
         )
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Referee {args.id} Running")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"  Endpoint: http://localhost:{args.port}")
         print(f"  League Manager: {launcher.config.league_manager.url}")
         if args.register:
             print("  Status: Registered with league")
         print("\n  Press Ctrl+C to stop")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         await launcher.wait_for_shutdown()
 
@@ -91,16 +91,16 @@ async def launch_player(args: argparse.Namespace) -> None:
             auto_register=args.register,
         )
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Player {args.name} Running")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"  Endpoint: http://localhost:{args.port}")
         print(f"  Strategy: {args.strategy}")
         print(f"  League Manager: {launcher.config.league_manager.url}")
         if args.register:
             print("  Status: Registered with league")
         print("\n  Press Ctrl+C to stop")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         await launcher.wait_for_shutdown()
 
@@ -154,9 +154,7 @@ Examples:
     league_parser.add_argument(
         "--no-dashboard", action="store_false", dest="dashboard", help="Disable dashboard"
     )
-    league_parser.add_argument(
-        "--debug", action="store_true", help="Enable debug logging"
-    )
+    league_parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 
     # Referee command
     referee_parser = subparsers.add_parser("referee", help="Start Referee agent")
@@ -172,18 +170,14 @@ Examples:
         default=True,
         help="Auto-register with league (default: True)",
     )
-    referee_parser.add_argument(
-        "--debug", action="store_true", help="Enable debug logging"
-    )
+    referee_parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 
     # Player command
     player_parser = subparsers.add_parser("player", help="Start Player agent")
     player_parser.add_argument(
         "--name", type=str, default="Player_1", help="Player name (default: Player_1)"
     )
-    player_parser.add_argument(
-        "--port", type=int, default=8101, help="Player port (default: 8101)"
-    )
+    player_parser.add_argument("--port", type=int, default=8101, help="Player port (default: 8101)")
     player_parser.add_argument(
         "--strategy",
         type=str,
@@ -196,15 +190,11 @@ Examples:
         default=True,
         help="Auto-register with league (default: True)",
     )
-    player_parser.add_argument(
-        "--debug", action="store_true", help="Enable debug logging"
-    )
+    player_parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 
     # All components command (legacy)
     all_parser = subparsers.add_parser("all", help="Start all components (legacy mode)")
-    all_parser.add_argument(
-        "--players", type=int, default=4, help="Number of players (default: 4)"
-    )
+    all_parser.add_argument("--players", type=int, default=4, help="Number of players (default: 4)")
     all_parser.add_argument(
         "--referees", type=int, default=2, help="Number of referees (default: 2)"
     )
@@ -214,15 +204,9 @@ Examples:
         default="mixed",
         help="Player strategy: mixed, random, pattern, llm (default: mixed)",
     )
-    all_parser.add_argument(
-        "--dashboard", action="store_true", help="Enable dashboard"
-    )
-    all_parser.add_argument(
-        "--run", action="store_true", help="Auto-run the league"
-    )
-    all_parser.add_argument(
-        "--debug", action="store_true", help="Enable debug logging"
-    )
+    all_parser.add_argument("--dashboard", action="store_true", help="Enable dashboard")
+    all_parser.add_argument("--run", action="store_true", help="Auto-run the league")
+    all_parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 
     args = parser.parse_args()
 

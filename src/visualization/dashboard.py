@@ -158,12 +158,15 @@ class ConnectionManager:
             try:
                 # Test JSON serialization before sending
                 import json
+
                 try:
                     json.dumps(message)
                 except TypeError as json_err:
                     logger.error(f"Message not JSON serializable before send: {json_err}")
                     logger.error(f"Message type: {message.get('type')}")
-                    logger.error(f"Message data keys: {message.get('data', {}).keys() if isinstance(message.get('data'), dict) else 'not a dict'}")
+                    logger.error(
+                        f"Message data keys: {message.get('data', {}).keys() if isinstance(message.get('data'), dict) else 'not a dict'}"
+                    )
                     raise
 
                 await connection.send_json(message)
@@ -249,11 +252,13 @@ class DashboardAPI:
                         {
                             "type": "tournament_state",
                             "tournament_id": tournament_id,
-                            "data": serializable_state
+                            "data": serializable_state,
                         },
-                        websocket
+                        websocket,
                     )
-                logger.info(f"Sent {len(self.tournament_states)} tournament states to new connection")
+                logger.info(
+                    f"Sent {len(self.tournament_states)} tournament states to new connection"
+                )
             except Exception as e:
                 logger.error(f"Failed to send initial state: {e}")
 
@@ -492,7 +497,9 @@ class DashboardAPI:
                     "entropy_history": cf.entropy_history,
                 },
                 "cumulative_regret": cf.cumulative_regret_by_action,
-                "strategy_distribution": cf.strategy_distribution_history[-1] if cf.strategy_distribution_history else {},
+                "strategy_distribution": cf.strategy_distribution_history[-1]
+                if cf.strategy_distribution_history
+                else {},
                 "metrics": {
                     "total_regret_minimized": cf.total_regret_minimized,
                     "strategy_stability": cf.strategy_stability,
@@ -518,8 +525,12 @@ class DashboardAPI:
                         "player_a_wins": v["player_a_wins"],
                         "player_b_wins": v["player_b_wins"],
                         "draws": v["draws"],
-                        "avg_score_a": v["total_score_a"] / v["total_matches"] if v["total_matches"] > 0 else 0,
-                        "avg_score_b": v["total_score_b"] / v["total_matches"] if v["total_matches"] > 0 else 0,
+                        "avg_score_a": v["total_score_a"] / v["total_matches"]
+                        if v["total_matches"] > 0
+                        else 0,
+                        "avg_score_b": v["total_score_b"] / v["total_matches"]
+                        if v["total_matches"] > 0
+                        else 0,
                         "recent_matches": v["match_history"][-5:],  # Last 5 matches
                     }
                     for k, v in matrix.matrix.items()

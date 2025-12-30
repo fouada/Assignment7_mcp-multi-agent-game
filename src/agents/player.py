@@ -678,7 +678,9 @@ class PlayerAgent(BaseGameServer):
                 "strategy.performance",
                 StrategyPerformanceEvent(
                     player_id=str(self.player_id),
-                    strategy_name=self.strategy.name if hasattr(self.strategy, 'name') else self.strategy.__class__.__name__,
+                    strategy_name=self.strategy.name
+                    if hasattr(self.strategy, "name")
+                    else self.strategy.__class__.__name__,
                     round_number=self._total_games,
                     wins=self._wins,
                     losses=self._losses,

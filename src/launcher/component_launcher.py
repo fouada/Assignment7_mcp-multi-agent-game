@@ -190,10 +190,7 @@ class ComponentLauncher:
     async def _on_round_started(self, event: Any) -> None:
         """Forward round started event to integration."""
         try:
-            await self._integration.on_round_start(
-                round_num=event.round_number,
-                matches=[]
-            )
+            await self._integration.on_round_start(round_num=event.round_number, matches=[])
         except Exception as e:
             logger.error(f"Error forwarding round started event: {e}")
 
@@ -207,7 +204,7 @@ class ComponentLauncher:
                 opponent_id="",  # Will be filled in by integration
                 round_num=event.round_number,
                 move=str(event.move),
-                game_state={"game_id": event.game_id}
+                game_state={"game_id": event.game_id},
             )
         except Exception as e:
             logger.error(f"Error forwarding player move event: {e}")
@@ -223,7 +220,7 @@ class ComponentLauncher:
                     player1_id=player_ids[0],
                     player2_id=player_ids[1],
                     moves={k: str(v) for k, v in event.moves.items()},
-                    scores={k: float(v) for k, v in event.cumulative_scores.items()}
+                    scores={k: float(v) for k, v in event.cumulative_scores.items()},
                 )
         except Exception as e:
             logger.error(f"Error forwarding round completed event: {e}")
@@ -232,9 +229,7 @@ class ComponentLauncher:
         """Start a referee agent."""
         referee_id = kwargs.get("referee_id", "REF01")
         port = kwargs.get("port", self.config.referee.port)
-        league_manager_url = kwargs.get(
-            "league_manager_url", self.config.league_manager.url
-        )
+        league_manager_url = kwargs.get("league_manager_url", self.config.league_manager.url)
 
         # Create Referee
         self.component = RefereeAgent(
@@ -269,9 +264,7 @@ class ComponentLauncher:
         name = kwargs.get("name", "Player")
         port = kwargs.get("port", 8101)
         strategy_type = kwargs.get("strategy", "random")
-        league_manager_url = kwargs.get(
-            "league_manager_url", self.config.league_manager.url
-        )
+        league_manager_url = kwargs.get("league_manager_url", self.config.league_manager.url)
 
         # Create strategy
         strategy = await self._create_strategy(strategy_type)

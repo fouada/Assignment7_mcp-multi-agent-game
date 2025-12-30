@@ -94,9 +94,7 @@ class TestStateSyncService:
 
         # Publish state change
         await running_state_sync.publish_state_change(
-            event_type=event_type,
-            source=source,
-            data=data
+            event_type=event_type, source=source, data=data
         )
 
         # Give event bus time to process
@@ -123,9 +121,7 @@ class TestStateSyncService:
 
         # Publish an event
         await running_state_sync.publish_state_change(
-            event_type="test.event",
-            source="test",
-            data={"value": 123}
+            event_type="test.event", source="test", data={"value": 123}
         )
 
         # Give time to process
@@ -154,9 +150,7 @@ class TestStateSyncService:
 
         # Publish event - handler should not be called
         await running_state_sync.publish_state_change(
-            event_type="test.event",
-            source="test",
-            data={}
+            event_type="test.event", source="test", data={}
         )
 
         await asyncio.sleep(0.1)
@@ -171,9 +165,7 @@ class TestStateSyncService:
         # Publish events
         for i in range(5):
             await running_state_sync.publish_state_change(
-                event_type=f"test.event.{i}",
-                source="test",
-                data={"index": i}
+                event_type=f"test.event.{i}", source="test", data={"index": i}
             )
 
         await asyncio.sleep(0.1)
@@ -208,9 +200,7 @@ class TestStateSyncService:
         # Publish some events
         for i in range(3):
             await running_state_sync.publish_state_change(
-                event_type="test.event",
-                source="test",
-                data={"index": i}
+                event_type="test.event", source="test", data={"index": i}
             )
 
         await asyncio.sleep(0.1)
@@ -228,9 +218,7 @@ class TestStateSyncService:
         # Publish many events
         for i in range(20):
             await running_state_sync.publish_state_change(
-                event_type="test.event",
-                source="test",
-                data={"index": i}
+                event_type="test.event", source="test", data={"index": i}
             )
 
         await asyncio.sleep(0.1)
@@ -254,9 +242,7 @@ class TestStateSyncService:
 
         # Publish an event that dashboard should receive
         await running_state_sync.publish_state_change(
-            event_type="agent.registered",
-            source="league_manager",
-            data={"player_id": "P01"}
+            event_type="agent.registered", source="league_manager", data={"player_id": "P01"}
         )
 
         await asyncio.sleep(0.2)
@@ -272,17 +258,14 @@ class TestStateSyncServiceEdgeCases:
     async def test_publish_when_not_running(self, state_sync):
         """Test publishing state change when service not running."""
         # Should still work (event bus is independent)
-        await state_sync.publish_state_change(
-            event_type="test.event",
-            source="test",
-            data={}
-        )
+        await state_sync.publish_state_change(event_type="test.event", source="test", data={})
 
         # No exception should be raised
 
     @pytest.mark.asyncio
     async def test_subscribe_when_not_running(self, state_sync):
         """Test subscribing when service not running."""
+
         async def handler(event):
             pass
 
@@ -308,9 +291,7 @@ class TestStateSyncServiceEdgeCases:
 
         # Publish event - should handle error gracefully
         await running_state_sync.publish_state_change(
-            event_type="agent.registered",
-            source="test",
-            data={}
+            event_type="agent.registered", source="test", data={}
         )
 
         await asyncio.sleep(0.1)
@@ -320,20 +301,17 @@ class TestStateSyncServiceEdgeCases:
     @pytest.mark.asyncio
     async def test_concurrent_state_changes(self, running_state_sync):
         """Test concurrent state change publishing."""
+
         async def publish_events(start_idx, count):
             for i in range(count):
                 await running_state_sync.publish_state_change(
                     event_type=f"test.event.{start_idx + i}",
                     source="test",
-                    data={"index": start_idx + i}
+                    data={"index": start_idx + i},
                 )
 
         # Publish events concurrently
-        await asyncio.gather(
-            publish_events(0, 10),
-            publish_events(10, 10),
-            publish_events(20, 10)
-        )
+        await asyncio.gather(publish_events(0, 10), publish_events(10, 10), publish_events(20, 10))
 
         await asyncio.sleep(0.2)
 
@@ -369,9 +347,7 @@ class TestStateSyncServiceEdgeCases:
         # Publish more events than maxlen (1000)
         for i in range(1100):
             await running_state_sync.publish_state_change(
-                event_type="test.event",
-                source="test",
-                data={"index": i}
+                event_type="test.event", source="test", data={"index": i}
             )
 
         await asyncio.sleep(0.5)
@@ -393,7 +369,7 @@ class TestStateChange:
             event_type="test.event",
             timestamp=datetime.now(),
             source="test_source",
-            data={"key": "value"}
+            data={"key": "value"},
         )
 
         assert change.change_id == "test_change"
@@ -409,10 +385,7 @@ class TestStateSnapshot:
 
     def test_state_snapshot_creation(self):
         """Test creating StateSnapshot."""
-        snapshot = StateSnapshot(
-            snapshot_id="test_snapshot",
-            timestamp=datetime.now()
-        )
+        snapshot = StateSnapshot(snapshot_id="test_snapshot", timestamp=datetime.now())
 
         assert snapshot.snapshot_id == "test_snapshot"
         assert isinstance(snapshot.timestamp, datetime)
@@ -433,7 +406,7 @@ class TestStateSnapshot:
             components=components,
             standings=standings,
             current_round=5,
-            matches=matches
+            matches=matches,
         )
 
         assert snapshot.components == components

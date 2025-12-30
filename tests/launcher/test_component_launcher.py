@@ -73,8 +73,13 @@ class TestComponentLauncher:
     @pytest.mark.asyncio
     async def test_start_league_manager(self, mock_config, mock_service_registry, mock_state_sync):
         """Test starting league manager."""
-        with patch("src.launcher.component_launcher.get_service_registry", return_value=mock_service_registry):
-            with patch("src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync):
+        with patch(
+            "src.launcher.component_launcher.get_service_registry",
+            return_value=mock_service_registry,
+        ):
+            with patch(
+                "src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync
+            ):
                 with patch("src.launcher.component_launcher.LeagueManager") as MockLeagueManager:
                     # Setup mocks
                     mock_league = AsyncMock()
@@ -108,8 +113,13 @@ class TestComponentLauncher:
     @pytest.mark.asyncio
     async def test_start_referee(self, mock_config, mock_service_registry, mock_state_sync):
         """Test starting referee agent."""
-        with patch("src.launcher.component_launcher.get_service_registry", return_value=mock_service_registry):
-            with patch("src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync):
+        with patch(
+            "src.launcher.component_launcher.get_service_registry",
+            return_value=mock_service_registry,
+        ):
+            with patch(
+                "src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync
+            ):
                 with patch("src.launcher.component_launcher.RefereeAgent") as MockReferee:
                     # Setup mocks
                     mock_referee = AsyncMock()
@@ -122,11 +132,7 @@ class TestComponentLauncher:
                     launcher = ComponentLauncher(ComponentType.REFEREE, mock_config)
 
                     # Start with auto-register
-                    await launcher.start(
-                        referee_id="REF01",
-                        port=8001,
-                        auto_register=True
-                    )
+                    await launcher.start(referee_id="REF01", port=8001, auto_register=True)
 
                     # Verify referee created and started
                     MockReferee.assert_called_once()
@@ -145,8 +151,13 @@ class TestComponentLauncher:
     @pytest.mark.asyncio
     async def test_start_player(self, mock_config, mock_service_registry, mock_state_sync):
         """Test starting player agent."""
-        with patch("src.launcher.component_launcher.get_service_registry", return_value=mock_service_registry):
-            with patch("src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync):
+        with patch(
+            "src.launcher.component_launcher.get_service_registry",
+            return_value=mock_service_registry,
+        ):
+            with patch(
+                "src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync
+            ):
                 with patch("src.launcher.component_launcher.PlayerAgent") as MockPlayer:
                     with patch("src.launcher.component_launcher.RandomStrategy"):
                         # Setup mocks
@@ -161,10 +172,7 @@ class TestComponentLauncher:
 
                         # Start with auto-register
                         await launcher.start(
-                            name="TestPlayer",
-                            port=8101,
-                            strategy="random",
-                            auto_register=True
+                            name="TestPlayer", port=8101, strategy="random", auto_register=True
                         )
 
                         # Verify player created and started
@@ -184,8 +192,13 @@ class TestComponentLauncher:
     @pytest.mark.asyncio
     async def test_stop_component(self, mock_config, mock_service_registry, mock_state_sync):
         """Test stopping a component."""
-        with patch("src.launcher.component_launcher.get_service_registry", return_value=mock_service_registry):
-            with patch("src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync):
+        with patch(
+            "src.launcher.component_launcher.get_service_registry",
+            return_value=mock_service_registry,
+        ):
+            with patch(
+                "src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync
+            ):
                 with patch("src.launcher.component_launcher.RefereeAgent") as MockReferee:
                     # Setup mocks
                     mock_referee = AsyncMock()
@@ -261,7 +274,9 @@ class TestComponentLauncher:
         mock_state_sync.start = AsyncMock()
 
         with patch("src.launcher.component_launcher.get_service_registry"):
-            with patch("src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync):
+            with patch(
+                "src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync
+            ):
                 launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
                 launcher.component_type = invalid_type
 
@@ -298,8 +313,13 @@ class TestComponentLauncherEdgeCases:
     @pytest.mark.asyncio
     async def test_start_already_running(self, mock_config, mock_service_registry, mock_state_sync):
         """Test starting a component that's already running."""
-        with patch("src.launcher.component_launcher.get_service_registry", return_value=mock_service_registry):
-            with patch("src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync):
+        with patch(
+            "src.launcher.component_launcher.get_service_registry",
+            return_value=mock_service_registry,
+        ):
+            with patch(
+                "src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync
+            ):
                 with patch("src.launcher.component_launcher.RefereeAgent") as MockReferee:
                     mock_referee = AsyncMock()
                     mock_referee.url = "http://localhost:8001"
@@ -322,8 +342,13 @@ class TestComponentLauncherEdgeCases:
     @pytest.mark.asyncio
     async def test_stop_not_running(self, mock_config, mock_service_registry, mock_state_sync):
         """Test stopping a component that's not running."""
-        with patch("src.launcher.component_launcher.get_service_registry", return_value=mock_service_registry):
-            with patch("src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync):
+        with patch(
+            "src.launcher.component_launcher.get_service_registry",
+            return_value=mock_service_registry,
+        ):
+            with patch(
+                "src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync
+            ):
                 launcher = ComponentLauncher(ComponentType.REFEREE, mock_config)
 
                 # Stop without starting - should handle gracefully
@@ -333,10 +358,17 @@ class TestComponentLauncherEdgeCases:
                 assert launcher.component is None
 
     @pytest.mark.asyncio
-    async def test_start_with_port_conflict(self, mock_config, mock_service_registry, mock_state_sync):
+    async def test_start_with_port_conflict(
+        self, mock_config, mock_service_registry, mock_state_sync
+    ):
         """Test starting with a port that's already in use."""
-        with patch("src.launcher.component_launcher.get_service_registry", return_value=mock_service_registry):
-            with patch("src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync):
+        with patch(
+            "src.launcher.component_launcher.get_service_registry",
+            return_value=mock_service_registry,
+        ):
+            with patch(
+                "src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync
+            ):
                 with patch("src.launcher.component_launcher.RefereeAgent") as MockReferee:
                     # Simulate port conflict
                     mock_referee = AsyncMock()
@@ -350,10 +382,17 @@ class TestComponentLauncherEdgeCases:
                         await launcher.start(referee_id="REF01", port=8001)
 
     @pytest.mark.asyncio
-    async def test_player_registration_timeout(self, mock_config, mock_service_registry, mock_state_sync):
+    async def test_player_registration_timeout(
+        self, mock_config, mock_service_registry, mock_state_sync
+    ):
         """Test player registration timeout."""
-        with patch("src.launcher.component_launcher.get_service_registry", return_value=mock_service_registry):
-            with patch("src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync):
+        with patch(
+            "src.launcher.component_launcher.get_service_registry",
+            return_value=mock_service_registry,
+        ):
+            with patch(
+                "src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync
+            ):
                 with patch("src.launcher.component_launcher.PlayerAgent") as MockPlayer:
                     with patch("src.launcher.component_launcher.RandomStrategy"):
                         # Simulate registration timeout
@@ -370,17 +409,21 @@ class TestComponentLauncherEdgeCases:
                         # Should raise TimeoutError
                         with pytest.raises(asyncio.TimeoutError):
                             await launcher.start(
-                                name="TestPlayer",
-                                port=8101,
-                                strategy="random",
-                                auto_register=True
+                                name="TestPlayer", port=8101, strategy="random", auto_register=True
                             )
 
     @pytest.mark.asyncio
-    async def test_league_manager_with_dashboard_error(self, mock_config, mock_service_registry, mock_state_sync):
+    async def test_league_manager_with_dashboard_error(
+        self, mock_config, mock_service_registry, mock_state_sync
+    ):
         """Test league manager start when dashboard fails."""
-        with patch("src.launcher.component_launcher.get_service_registry", return_value=mock_service_registry):
-            with patch("src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync):
+        with patch(
+            "src.launcher.component_launcher.get_service_registry",
+            return_value=mock_service_registry,
+        ):
+            with patch(
+                "src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync
+            ):
                 with patch("src.launcher.component_launcher.LeagueManager") as MockLeagueManager:
                     with patch("src.visualization.get_dashboard") as mock_get_dashboard:
                         # League manager starts fine

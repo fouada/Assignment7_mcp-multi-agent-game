@@ -36,25 +36,25 @@ async def registry_with_services(registry):
         service_id="league_manager",
         service_type="league_manager",
         endpoint="http://localhost:8000",
-        metadata={"league_id": "test_league"}
+        metadata={"league_id": "test_league"},
     )
     await registry.register_service(
         service_id="REF01",
         service_type="referee",
         endpoint="http://localhost:8001",
-        metadata={"league_id": "test_league"}
+        metadata={"league_id": "test_league"},
     )
     await registry.register_service(
         service_id="REF02",
         service_type="referee",
         endpoint="http://localhost:8002",
-        metadata={"league_id": "test_league"}
+        metadata={"league_id": "test_league"},
     )
     await registry.register_service(
         service_id="Player_1",
         service_type="player",
         endpoint="http://localhost:8101",
-        metadata={"strategy": "random"}
+        metadata={"strategy": "random"},
     )
     return registry
 
@@ -79,10 +79,7 @@ class TestServiceRegistry:
         metadata = {"key": "value"}
 
         await registry.register_service(
-            service_id=service_id,
-            service_type=service_type,
-            endpoint=endpoint,
-            metadata=metadata
+            service_id=service_id, service_type=service_type, endpoint=endpoint, metadata=metadata
         )
 
         # Verify service is registered
@@ -177,9 +174,7 @@ class TestServiceRegistry:
         """Test health monitoring marks services as unhealthy."""
         # Register a service
         await registry.register_service(
-            service_id="test_service",
-            service_type="test",
-            endpoint="http://localhost:9000"
+            service_id="test_service", service_type="test", endpoint="http://localhost:9000"
         )
 
         # Manually set old heartbeat (simulate no heartbeat for 2 minutes)
@@ -235,16 +230,12 @@ class TestServiceRegistryEdgeCases:
 
         # Register first time
         await registry.register_service(
-            service_id=service_id,
-            service_type="type1",
-            endpoint="http://localhost:9000"
+            service_id=service_id, service_type="type1", endpoint="http://localhost:9000"
         )
 
         # Register again with same ID
         await registry.register_service(
-            service_id=service_id,
-            service_type="type2",
-            endpoint="http://localhost:9001"
+            service_id=service_id, service_type="type2", endpoint="http://localhost:9001"
         )
 
         # Latest registration should overwrite
@@ -256,9 +247,7 @@ class TestServiceRegistryEdgeCases:
     async def test_register_empty_service_id(self, registry):
         """Test registering a service with empty ID."""
         await registry.register_service(
-            service_id="",
-            service_type="test",
-            endpoint="http://localhost:9000"
+            service_id="", service_type="test", endpoint="http://localhost:9000"
         )
 
         service = await registry.get_service("")
@@ -269,10 +258,7 @@ class TestServiceRegistryEdgeCases:
     async def test_register_with_none_metadata(self, registry):
         """Test registering a service with None metadata."""
         await registry.register_service(
-            service_id="test",
-            service_type="test",
-            endpoint="http://localhost:9000",
-            metadata=None
+            service_id="test", service_type="test", endpoint="http://localhost:9000", metadata=None
         )
 
         service = await registry.get_service("test")
@@ -289,14 +275,10 @@ class TestServiceRegistryEdgeCases:
         """Test that find_services only returns active services."""
         # Register services
         await registry.register_service(
-            service_id="healthy",
-            service_type="test",
-            endpoint="http://localhost:9000"
+            service_id="healthy", service_type="test", endpoint="http://localhost:9000"
         )
         await registry.register_service(
-            service_id="unhealthy",
-            service_type="test",
-            endpoint="http://localhost:9001"
+            service_id="unhealthy", service_type="test", endpoint="http://localhost:9001"
         )
 
         # Mark one as unhealthy
@@ -311,11 +293,12 @@ class TestServiceRegistryEdgeCases:
     @pytest.mark.asyncio
     async def test_concurrent_registration(self, registry):
         """Test concurrent service registration."""
+
         async def register_service(i):
             await registry.register_service(
                 service_id=f"service_{i}",
                 service_type="test",
-                endpoint=f"http://localhost:{9000 + i}"
+                endpoint=f"http://localhost:{9000 + i}",
             )
 
         # Register 10 services concurrently
@@ -333,14 +316,13 @@ class TestServiceRegistryEdgeCases:
             await registry.register_service(
                 service_id=f"service_{i}",
                 service_type="test",
-                endpoint=f"http://localhost:{9000 + i}"
+                endpoint=f"http://localhost:{9000 + i}",
             )
 
         # Unregister concurrently
-        results = await asyncio.gather(*[
-            registry.unregister_service(f"service_{i}")
-            for i in range(10)
-        ])
+        results = await asyncio.gather(
+            *[registry.unregister_service(f"service_{i}") for i in range(10)]
+        )
 
         # All should succeed
         assert all(results)
@@ -356,9 +338,7 @@ class TestServiceInfo:
     def test_service_info_creation(self):
         """Test creating ServiceInfo."""
         service = ServiceInfo(
-            service_id="test",
-            service_type="test_type",
-            endpoint="http://localhost:9000"
+            service_id="test", service_type="test_type", endpoint="http://localhost:9000"
         )
 
         assert service.service_id == "test"
@@ -375,7 +355,7 @@ class TestServiceInfo:
             service_id="test",
             service_type="test_type",
             endpoint="http://localhost:9000",
-            metadata=metadata
+            metadata=metadata,
         )
 
         assert service.metadata == metadata

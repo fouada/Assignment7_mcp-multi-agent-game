@@ -116,18 +116,14 @@ class ServiceRegistry:
 
             self._services[service_id] = service_info
 
-            logger.info(
-                f"Service registered: {service_id} ({service_type}) at {endpoint}"
-            )
+            logger.info(f"Service registered: {service_id} ({service_type}) at {endpoint}")
 
     async def unregister_service(self, service_id: str) -> bool:
         """Unregister a service."""
         async with self._lock:
             if service_id in self._services:
                 service_info = self._services.pop(service_id)
-                logger.info(
-                    f"Service unregistered: {service_id} ({service_info.service_type})"
-                )
+                logger.info(f"Service unregistered: {service_id} ({service_info.service_type})")
                 return True
             return False
 

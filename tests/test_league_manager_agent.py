@@ -973,10 +973,10 @@ class TestLeagueManagerToolHandlers:
 
         # Add players
         for i in range(2):
-            manager._players[f"P0{i+1}"] = RegisteredPlayer(
-                player_id=f"P0{i+1}",
-                display_name=f"Player{i+1}",
-                endpoint=f"http://localhost:810{i+1}/mcp",
+            manager._players[f"P0{i + 1}"] = RegisteredPlayer(
+                player_id=f"P0{i + 1}",
+                display_name=f"Player{i + 1}",
+                endpoint=f"http://localhost:810{i + 1}/mcp",
             )
 
         # Get the tool handler
@@ -997,16 +997,20 @@ class TestLeagueManagerToolHandlers:
 
         # Setup
         for i in range(2):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
-        await manager._handle_referee_registration({
-            "referee_id": "REF01",
-            "endpoint": "http://localhost:8001/mcp",
-        })
+        await manager._handle_referee_registration(
+            {
+                "referee_id": "REF01",
+                "endpoint": "http://localhost:8001/mcp",
+            }
+        )
 
         await manager._start_league()
 
@@ -1036,16 +1040,20 @@ class TestLeagueManagerToolHandlers:
 
         # Setup
         for i in range(2):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
-        await manager._handle_referee_registration({
-            "referee_id": "REF01",
-            "endpoint": "http://localhost:8001/mcp",
-        })
+        await manager._handle_referee_registration(
+            {
+                "referee_id": "REF01",
+                "endpoint": "http://localhost:8001/mcp",
+            }
+        )
 
         await manager._start_league()
 
@@ -1075,11 +1083,13 @@ class TestLeagueManagerToolHandlers:
 
         # Setup
         for i in range(2):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
         await manager._start_league()
 
@@ -1177,10 +1187,12 @@ class TestLeagueManagerToolHandlers:
         manager = LeagueManager(league_id="test_league", port=8000)
 
         # Add a referee
-        await manager._handle_referee_registration({
-            "referee_id": "REF01",
-            "endpoint": "http://localhost:8001/mcp",
-        })
+        await manager._handle_referee_registration(
+            {
+                "referee_id": "REF01",
+                "endpoint": "http://localhost:8001/mcp",
+            }
+        )
 
         # Get the tool handler
         tool_handler = None
@@ -1291,10 +1303,12 @@ class TestLeagueManagerEdgeCasesAdvanced:
         manager = LeagueManager(league_id="test_league", port=8000)
         manager.state = LeagueState.COMPLETED
 
-        result = await manager._handle_referee_registration({
-            "referee_id": "REF01",
-            "endpoint": "http://localhost:8001/mcp",
-        })
+        result = await manager._handle_referee_registration(
+            {
+                "referee_id": "REF01",
+                "endpoint": "http://localhost:8001/mcp",
+            }
+        )
 
         assert result["status"] == RegistrationStatus.REJECTED.value
         assert "completed" in result.get("reason", "").lower()
@@ -1306,16 +1320,20 @@ class TestLeagueManagerEdgeCasesAdvanced:
 
         # Setup
         for i in range(2):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
-        await manager._handle_referee_registration({
-            "referee_id": "REF01",
-            "endpoint": "http://localhost:8001/mcp",
-        })
+        await manager._handle_referee_registration(
+            {
+                "referee_id": "REF01",
+                "endpoint": "http://localhost:8001/mcp",
+            }
+        )
 
         await manager._start_league()
 
@@ -1344,16 +1362,20 @@ class TestLeagueManagerEdgeCasesAdvanced:
 
         # Setup
         for i in range(2):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
-        await manager._handle_referee_registration({
-            "referee_id": "REF01",
-            "endpoint": "http://localhost:8001/mcp",
-        })
+        await manager._handle_referee_registration(
+            {
+                "referee_id": "REF01",
+                "endpoint": "http://localhost:8001/mcp",
+            }
+        )
 
         await manager._start_league()
 
@@ -1364,6 +1386,7 @@ class TestLeagueManagerEdgeCasesAdvanced:
 
         # Mock start_next_round to fail on second call
         call_count = 0
+
         async def mock_start_next_round():
             nonlocal call_count
             call_count += 1
@@ -1386,16 +1409,20 @@ class TestLeagueManagerEdgeCasesAdvanced:
 
         # Setup
         for i in range(2):
-            await manager._handle_registration({
-                "display_name": f"Player{i+1}",
-                "endpoint": f"http://localhost:810{i+1}/mcp",
-                "game_types": ["even_odd"],
-            })
+            await manager._handle_registration(
+                {
+                    "display_name": f"Player{i + 1}",
+                    "endpoint": f"http://localhost:810{i + 1}/mcp",
+                    "game_types": ["even_odd"],
+                }
+            )
 
-        await manager._handle_referee_registration({
-            "referee_id": "REF01",
-            "endpoint": "http://localhost:8001/mcp",
-        })
+        await manager._handle_referee_registration(
+            {
+                "referee_id": "REF01",
+                "endpoint": "http://localhost:8001/mcp",
+            }
+        )
 
         await manager._start_league()
 
