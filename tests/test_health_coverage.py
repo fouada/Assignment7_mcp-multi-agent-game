@@ -15,7 +15,9 @@ from src.observability.health import (
     LivenessCheck,
     ReadinessCheck,
     ResourceCheck,
+    get_health_monitor,
 )
+
 
 class TestHealthCheckEdgeCases:
     """Test health check edge cases."""

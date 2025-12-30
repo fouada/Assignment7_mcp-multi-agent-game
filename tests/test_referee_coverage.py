@@ -10,6 +10,7 @@ import pytest
 from src.agents.referee import RefereeAgent
 from src.client.mcp_client import MCPClient
 
+
 class TestRefereeAgentErrorHandling:
     """Test referee error handling scenarios."""
 

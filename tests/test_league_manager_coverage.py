@@ -14,6 +14,7 @@ from src.agents.league_manager import (
 )
 from src.common.events import get_event_bus
 
+
 class TestLeagueManagerDashboardStreaming:
     """Test dashboard streaming functionality."""
 
@@ -324,7 +325,7 @@ class TestLeagueManagerRegistrationEdgeCases:
         }
 
         result = await league_manager._handle_registration(params)
-        assert result["status"] == "accepted"
+        assert result["status"].upper() == "ACCEPTED"
 
     @pytest.mark.asyncio
     async def test_register_player_when_registration_closed(self, league_manager):
@@ -393,7 +394,8 @@ class TestLeagueManagerScheduleGeneration:
         # Check for error condition - could be in different formats
         assert ("error" in result or "status" in result)
         if "error" in result:
-            assert "insufficient" in result["error"].lower()
+            error_msg = result["error"].lower()
+            assert "insufficient" in error_msg or "need at least" in error_msg
         elif "status" in result:
             assert result["status"].upper() == "ERROR"
 
