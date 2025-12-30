@@ -104,7 +104,7 @@ class TestStateSyncService:
         assert len(captured_events) == 1
         assert captured_events[0].event_type == event_type
         assert captured_events[0].source == source
-        assert captured_events[0].data == data
+        assert captured_events[0].metadata == data
 
     @pytest.mark.asyncio
     async def test_subscribe_to_events(self, running_state_sync):
