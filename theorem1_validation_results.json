@@ -1,0 +1,38 @@
+{
+  "experiment_1": {
+    "n_values": [
+      2,
+      5,
+      10,
+      20,
+      50
+    ],
+    "results": {
+      "2": {
+        "quantum_mean": 518.84,
+        "classical_mean": 766.99,
+        "speedup": 1.4787644787644787
+      },
+      "5": {
+        "quantum_mean": 1020.32,
+        "classical_mean": 2425.54,
+        "speedup": 2.377450980392157
+      },
+      "10": {
+        "quantum_mean": 1687.18,
+        "classical_mean": 5124.83,
+        "speedup": 3.037344398340249
+      },
+      "20": {
+        "quantum_mean": 2495.57,
+        "classical_mean": 11623.7,
+        "speedup": 4.6585170340681366
+      },
+      "50": {
+        "quantum_mean": 4828.94,
+        "classical_mean": 32887.22,
+        "speedup": 6.81172328086164
+      }
+    },
+    "slope": 0.6855447653750821,
+    "passed": 

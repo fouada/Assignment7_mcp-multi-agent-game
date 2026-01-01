@@ -1,0 +1,140 @@
+{
+  "experiment1": {
+    "experiment": "convergence_scaling",
+    "results": [
+      {
+        "m": 5,
+        "mean_time": 1.1145833333333333,
+        "std_time": 0.8148337211085189,
+        "ci_lower": 0.9486160003521715,
+        "ci_upper": 1.280550666314495,
+        "theoretical": 8.997031444420006,
+        "normalized": 0.12388345425030188,
+        "success_rate": 0.96
+      },
+      {
+        "m": 10,
+        "mean_time": 2.0,
+        "std_time": 0.0,
+        "ci_lower": NaN,
+        "ci_upper": NaN,
+        "theoretical": 18.203533500529506,
+        "normalized": 0.10986877904456428,
+        "success_rate": 0.87
+      },
+      {
+        "m": 20,
+        "mean_time": 3.111111111111111,
+        "std_time": 0.8748897637790904,
+        "ci_lower": 2.889003164774069,
+        "ci_upper": 3.3332190574481535,
+        "theoretical": 33.493305030283594,
+        "normalized": 0.09288755195398431,
+        "success_rate": 0.63
+      },
+      {
+        "m": 50,
+        "mean_time": 5.0,
+        "std_time": 0.0,
+        "ci_lower": NaN,
+        "ci_upper": NaN,
+        "theoretical": 69.1554498824005,
+        "normalized": 0.07230088168759725,
+        "success_rate": 0.09
+      }
+    ],
+    "slope": 0.64575183013199
+  },
+  "experiment2": {
+    "experiment": "byzantine_tolerance",
+    "results": [
+      {
+        "f": 0,
+        "n": 10,
+        "tolerance": true,
+        "success_rate": 1.0,
+        "mean_time": 3.0,
+        "safety_violations": 0
+      },
+      {
+        "f": 1,
+        "n": 10,
+        "tolerance": true,
+        "success_rate": 1.0,
+        "mean_time": 3.0,
+        "safety_violations": 0
+      },
+      {
+        "f": 2,
+        "n": 10,
+        "tolerance": true,
+        "success_rate": 1.0,
+        "mean_time": 3.0,
+        "safety_violations": 0
+      },
+      {
+        "f": 3,
+        "n": 10,
+        "tolerance": true,
+        "success_rate": 1.0,
+        "mean_time": 3.0,
+        "safety_violations": 0
+      }
+    ]
+  },
+  "experiment3": {
+    "experiment": "speedup_vs_classical",
+    "results": [
+      {
+        "m": 10,
+        "brqc_time": 2.0,
+        "classical_time": 50.0,
+        "speedup": 25.0,
+        "theoretical_speedup": 3.1622776601683795,
+        "normalized_speedup": 7.905694150420948
+      },
+      {
+        "m": 20,
+        "brqc_time": 3.0,
+        "classical_time": 100.0,
+        "speedup": 33.333333333333336,
+        "theoretical_speedup": 4.47213595499958,
+        "normalized_speedup": 7.453559924999299
+      },
+      {
+        "m": 50,
+        "brqc_time": 5.0,
+        "classical_time": 250.0,
+        "speedup": 50.0,
+        "theoretical_speedup": 7.0710678118654755,
+        "normalized_speedup": 7.071067811865475
+      }
+    ]
+  },
+  "experiment4": {
+    "experiment": "byzantine_strategies",
+    "results": [
+      {
+        "strategy": "random",
+        "success_rate": 0.61,
+        "mean_time": 4.934426229508197,
+        "safety_violations": 0,
+        "timeouts": 39
+      },
+      {
+        "strategy": "adversarial",
+        "success_rate": 1.0,
+        "mean_time": 3.0,
+        "safety_violations": 0,
+        "timeouts": 0
+      },
+      {
+        "strategy": "misleading",
+        "success_rate": 1.0,
+        "mean_time": 4.0,
+        "safety_violations": 0,
+        "timeouts": 0
+      }
+    ]
+  }
+}
