@@ -348,7 +348,7 @@ class BaseGameServer(MCPServer):
 
         # Start tracing span (if observability enabled)
         if self.enable_observability:
-            tracing_context = self.tracing.span(
+            tracing_context = self.tracing.async_span(
                 f"protocol.{msg_type}",
                 attributes={
                     "message_type": msg_type,

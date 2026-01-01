@@ -290,6 +290,11 @@ class GameOrchestrator:
             self.event_bus.on("game.round.start", integration.on_round_start)
             self.event_bus.on("game.move.decision", integration.on_move_decision)
             self.event_bus.on("game.round.complete", integration.on_round_complete)
+            self.event_bus.on("match.completed", integration.on_match_completed)
+            
+            # Connect strategy learning events
+            self.event_bus.on("opponent.model.update", integration.on_opponent_model_update)
+            self.event_bus.on("counterfactual.analysis", integration.on_counterfactual_analysis)
 
             logger.info("✓ Dashboard enabled at http://localhost:8050")
 

@@ -249,11 +249,24 @@ class Strategy(ABC):
     def __init__(self, config: StrategyConfig | None = None):
         self.config = config or StrategyConfig()
         self._name = self.__class__.__name__
+        self._player_id: str | None = None  # Set by player agent
+        self._event_bus = None  # Set by player agent
 
     @property
     def name(self) -> str:
         """Strategy name for logging and display."""
         return self._name
+
+    def set_player_context(self, player_id: str, event_bus: Any = None) -> None:
+        """
+        Set player context for event emission.
+        
+        Args:
+            player_id: ID of the player using this strategy
+            event_bus: Event bus for emitting learning events
+        """
+        self._player_id = player_id
+        self._event_bus = event_bus
 
     @abstractmethod
     async def decide_move(

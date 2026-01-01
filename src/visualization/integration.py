@@ -364,6 +364,128 @@ class DashboardIntegration:
 
         logger.debug(f"Streamed round_end event for round {round_num}")
 
+    async def on_match_completed(self, event):
+        """Handle match completed event to update matchup matrix."""
+        if not self.enabled:
+            return
+
+        try:
+            # Extract match data from event
+            match_id = event.match_id
+            winner = event.winner
+            final_scores = event.final_scores
+            total_rounds = event.total_rounds
+
+            # Get player IDs from final_scores
+            if len(final_scores) >= 2:
+                players = list(final_scores.keys())
+                player1_id = players[0]
+                player2_id = players[1]
+
+                # Update matchup matrix in analytics engine
+                # Note: We use the total_rounds as the "current round" 
+                # since this is the cumulative result
+                moves = {}  # Moves not available in match.completed event
+                await self.analytics_engine.on_round_complete(
+                    total_rounds, player1_id, player2_id, moves, final_scores
+                )
+
+                # Broadcast matchup matrix update
+                matchup_data = self.analytics_engine.get_matchup_matrix()
+                await self.dashboard.broadcast({
+                    "type": "matchup_matrix_update",
+                    "data": matchup_data
+                })
+
+                logger.info(f"Updated matchup matrix for match {match_id}: {player1_id} vs {player2_id}, winner: {winner}")
+
+        except Exception as e:
+            logger.error(f"Error handling match completed event: {e}", exc_info=True)
+
+    async def on_opponent_model_update(self, event):
+        """Handle opponent model update event from strategies."""
+        if not self.enabled:
+            return
+
+        try:
+            # Extract data from event
+            player_id = event.player_id
+            opponent_id = event.opponent_id
+            confidence = event.confidence
+            mean_belief = event.mean_belief
+            std_dev_belief = event.std_dev_belief
+            round_number = event.round_number
+
+            # Update analytics engine
+            await self.analytics_engine.on_opponent_model_update(
+                player_id=player_id,
+                opponent_id=opponent_id,
+                confidence=confidence,
+                accuracy=0.0,  # Not provided in event, will be calculated later
+                predicted_strategy="unknown",  # Will be inferred from beliefs
+                beliefs={"mean": mean_belief, "std": std_dev_belief},
+            )
+
+            # Broadcast to dashboard
+            await self.dashboard.connection_manager.broadcast(
+                {
+                    "type": "opponent_model_update",
+                    "player_id": player_id,
+                    "opponent_id": opponent_id,
+                    "data": {
+                        "confidence": confidence,
+                        "mean_belief": mean_belief,
+                        "std_dev_belief": std_dev_belief,
+                        "round_number": round_number,
+                    },
+                }
+            )
+
+            logger.debug(f"Processed opponent model update: {player_id} -> {opponent_id} (confidence: {confidence:.2f})")
+
+        except Exception as e:
+            logger.error(f"Error handling opponent model update event: {e}", exc_info=True)
+
+    async def on_counterfactual_analysis(self, event):
+        """Handle counterfactual analysis event from strategies."""
+        if not self.enabled:
+            return
+
+        try:
+            # Extract data from event
+            player_id = event.player_id
+            game_id = event.game_id
+            round_number = event.round_number
+            counterfactuals = event.counterfactuals
+            cumulative_regret = event.cumulative_regret
+
+            # Update analytics engine with correct signature
+            await self.analytics_engine.on_counterfactual_update(
+                player_id=player_id,
+                actual_move="unknown",  # Not provided in event
+                counterfactuals=counterfactuals,  # Already in correct format
+                cumulative_regret=cumulative_regret,
+            )
+
+            # Broadcast to dashboard
+            await self.dashboard.connection_manager.broadcast(
+                {
+                    "type": "counterfactual_update",
+                    "player_id": player_id,
+                    "game_id": game_id,
+                    "data": {
+                        "round_number": round_number,
+                        "counterfactuals": counterfactuals,
+                        "cumulative_regret": cumulative_regret,
+                    },
+                }
+            )
+
+            logger.debug(f"Processed counterfactual analysis: {player_id} round {round_number}")
+
+        except Exception as e:
+            logger.error(f"Error handling counterfactual analysis event: {e}", exc_info=True)
+
     # ========================================================================
     # Opponent Modeling Integration
     # ========================================================================

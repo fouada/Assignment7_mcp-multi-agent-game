@@ -25,6 +25,7 @@ import random
 from dataclasses import dataclass
 from typing import Any
 
+from ...common.events import CounterfactualAnalysisEvent, OpponentModelUpdateEvent
 from ...common.logger import get_logger
 from ...game.odd_even import GameRole
 from .base import (
@@ -300,6 +301,23 @@ class AdaptiveBayesianStrategy(GameTheoryStrategy):
         belief = self._update_belief(game_id, history)
         self._update_opponent_model(game_id, history, my_role)
 
+        # Emit opponent model update event for dashboard
+        if self._event_bus and self._player_id and belief.observations > 0:
+            try:
+                await self._event_bus.emit(
+                    "opponent.model.update",
+                    OpponentModelUpdateEvent(
+                        player_id=self._player_id,
+                        opponent_id=game_id,  # Using game_id as proxy for opponent
+                        confidence=belief.confidence_in_bias(),
+                        predicted_strategy="biased" if belief.confidence_in_bias() > 0.5 else "balanced",
+                        observations=belief.observations,
+                        source=f"strategy:{self.name}",
+                    )
+                )
+            except Exception as e:
+                logger.debug(f"Failed to emit opponent model event: {e}")
+
         # Exploration: play random with probability ε
         if random.random() < self.config.exploration_rate:
             parity = ParityChoice.ODD if random.random() < 0.5 else ParityChoice.EVEN
@@ -537,6 +555,30 @@ class RegretMatchingStrategy(GameTheoryStrategy):
 
         # Calculate probabilities from regrets
         p_odd, p_even = self._regret_matching_probabilities(regrets)
+
+        # Emit counterfactual analysis event for dashboard
+        if self._event_bus and self._player_id and history:
+            try:
+                # Calculate cumulative regret magnitude
+                total_regret = abs(regrets["odd"]) + abs(regrets["even"])
+                
+                await self._event_bus.emit(
+                    "counterfactual.analysis",
+                    CounterfactualAnalysisEvent(
+                        player_id=self._player_id,
+                        game_id=game_id,
+                        round_number=round_number,
+                        actual_move="odd" if p_odd > p_even else "even",
+                        counterfactuals={
+                            "odd": {"regret": regrets["odd"], "probability": p_odd},
+                            "even": {"regret": regrets["even"], "probability": p_even},
+                        },
+                        cumulative_regret=total_regret,
+                        source=f"strategy:{self.name}",
+                    )
+                )
+            except Exception as e:
+                logger.debug(f"Failed to emit counterfactual event: {e}")
 
         # Sample action
         if random.random() < p_odd:

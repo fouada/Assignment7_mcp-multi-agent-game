@@ -249,6 +249,14 @@ class PlayerAgent(BaseGameServer):
         """Initialize player."""
         self._client = MCPClient(name=f"{self.player_name}_client")
         await self._client.start()
+        
+        # Set player context on strategy for event emission
+        if hasattr(self.strategy, 'set_player_context'):
+            self.strategy.set_player_context(
+                player_id=self.player_name,
+                event_bus=get_event_bus()
+            )
+        
         logger.info(f"Player agent {self.player_name} started")
 
     async def on_stop(self) -> None:

@@ -142,3 +142,4 @@ class TestPatternStrategyBehavior:
 
         assert "name" in stats or "strategy" in stats
         assert isinstance(stats, dict)
+
