@@ -108,13 +108,15 @@ jobs:
       run: |
         uv sync
     
+    # Integration tests focus on workflows, not code coverage
+    # Coverage is measured in the main test job which runs ALL tests
     - name: Run integration tests
       run: |
-        uv run pytest tests/test_integration*.py tests/test_complete_game_flow.py tests/test_functional_real_flow.py -v
+        uv run pytest tests/test_integration*.py tests/test_complete_game_flow.py tests/test_functional_real_flow.py -v --no-cov
     
     - name: Test full league flow
       run: |
-        uv run pytest tests/launcher/test_integration_modular_flow.py -v
+        uv run pytest tests/launcher/test_integration_modular_flow.py -v --no-cov
 
   security:
     name: Security Scan
