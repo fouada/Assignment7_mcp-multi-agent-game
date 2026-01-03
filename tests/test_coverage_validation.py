@@ -249,7 +249,7 @@ import pytest
 
 class TestCoverageValidation:
     """Validate that project meets coverage standards."""
-    
+
     def test_critical_modules_exist(self):
         """Verify all critical modules are present."""
         critical_modules = [
@@ -262,40 +262,40 @@ class TestCoverageValidation:
             "src.game.match",
             "src.game.odd_even",
         ]
-        
+
         for module in critical_modules:
             try:
                 __import__(module)
             except ImportError as e:
                 pytest.fail(f"Critical module {module} not found: {e}")
-    
+
     def test_test_files_exist(self):
         """Verify all new test files exist."""
         import os
-        
+
         test_files = [
             "tests/test_dashboard_api.py",
             "tests/test_analytics_engine_reset.py",
             "tests/test_performance_comprehensive.py",
             "tests/test_functional_comprehensive.py",
         ]
-        
+
         for test_file in test_files:
             assert os.path.exists(test_file), f"Test file {test_file} not found"
-    
+
     def test_ci_pipeline_configured(self):
         """Verify CI/CD pipeline is configured."""
         import os
-        
+
         ci_file = ".github/workflows/test.yml"
         assert os.path.exists(ci_file), "CI pipeline configuration not found"
-        
+
         with open(ci_file) as f:
             content = f.read()
             assert "pytest" in content
             assert "--cov" in content
             assert "85" in content  # Coverage threshold
-    
+
     def test_coverage_config_present(self):
         """Verify coverage configuration is present."""
         try:
@@ -303,27 +303,27 @@ class TestCoverageValidation:
         except ImportError:
             # Python < 3.11
             import tomli as tomllib
-        
+
         with open("pyproject.toml", "rb") as f:
             config = tomllib.load(f)
-        
+
         assert "tool" in config
         assert "coverage" in config["tool"]
         assert "run" in config["tool"]["coverage"]
         assert "report" in config["tool"]["coverage"]
-        
+
         # Verify fail_under is set to 85
         assert config["tool"]["coverage"]["report"]["fail_under"] == 85
 
 
 class TestPerformanceStandards:
     """Validate performance standards are met."""
-    
+
     def test_performance_tests_exist(self):
         """Verify performance test file exists."""
         import os
         assert os.path.exists("tests/test_performance_comprehensive.py")
-    
+
     def test_functional_tests_exist(self):
         """Verify functional test file exists."""
         import os
@@ -332,11 +332,11 @@ class TestPerformanceStandards:
 
 class TestMITStandards:
     """Validate MIT-level standards are met."""
-    
+
     def test_sufficient_test_count(self):
         """Verify sufficient number of tests exist."""
         import subprocess
-        
+
         try:
             result = subprocess.run(
                 ["pytest", "--co", "-q"],
@@ -344,25 +344,25 @@ class TestMITStandards:
                 text=True,
                 timeout=30
             )
-            
+
             # Should have 1000+ tests
-            output = result.stdout + result.stderr
+            _output = result.stdout + result.stderr
             # This is a smoke test - actual count verified by CI
             assert True
         except (subprocess.TimeoutExpired, FileNotFoundError):
             # If pytest not available, skip
             pytest.skip("pytest not available")
-    
+
     def test_project_structure(self):
         """Verify proper project structure."""
         import os
-        
+
         required_dirs = [
             "src",
             "tests",
             ".github/workflows",
         ]
-        
+
         for dir_path in required_dirs:
             assert os.path.exists(dir_path), f"Required directory {dir_path} not found"
 

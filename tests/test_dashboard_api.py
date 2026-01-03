@@ -3,7 +3,7 @@ Comprehensive tests for Dashboard API endpoints.
 
 Testing:
 - Start tournament endpoint
-- Run round endpoint  
+- Run round endpoint
 - Reset tournament endpoint
 - WebSocket connections
 - Analytics integration
@@ -24,11 +24,11 @@ from src.visualization.dashboard import DashboardAPI
 
 class TestDashboardAPIInitialization:
     """Test dashboard API initialization."""
-    
+
     def test_dashboard_api_creation(self):
         """Test basic dashboard API creation."""
         dashboard = DashboardAPI()
-        
+
         assert dashboard.app is not None
         assert dashboard.connection_manager is not None
         assert isinstance(dashboard.tournament_states, dict)
@@ -36,26 +36,26 @@ class TestDashboardAPIInitialization:
         assert isinstance(dashboard.strategy_performance, dict)
         assert isinstance(dashboard.opponent_models, dict)
         assert isinstance(dashboard.counterfactuals, dict)
-    
+
     def test_dashboard_app_metadata(self):
         """Test FastAPI app metadata."""
         dashboard = DashboardAPI()
-        
+
         assert dashboard.app.title == "MCP Game League Dashboard"
         assert dashboard.app.version == "1.0.0"
 
 
 class TestDashboardStartTournament:
     """Test start tournament endpoint."""
-    
+
     @pytest.fixture
     def dashboard(self):
         return DashboardAPI()
-    
+
     @pytest.fixture
     def client(self, dashboard):
         return TestClient(dashboard.app)
-    
+
     @pytest.mark.asyncio
     async def test_start_tournament_success(self, client):
         """Test successful tournament start."""
@@ -70,14 +70,14 @@ class TestDashboardStartTournament:
             }
             mock_response.raise_for_status = Mock()
             mock_client.return_value.post = AsyncMock(return_value=mock_response)
-            
+
             response = client.post("/api/league/start")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is True
             assert "data" in data
-    
+
     @pytest.mark.asyncio
     async def test_start_tournament_league_not_ready(self, client):
         """Test start when league manager not ready."""
@@ -91,36 +91,35 @@ class TestDashboardStartTournament:
             }
             mock_response.raise_for_status = Mock()
             mock_client.return_value.post = AsyncMock(return_value=mock_response)
-            
+
             response = client.post("/api/league/start")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is False
             assert "error" in data
-    
+
     @pytest.mark.asyncio
     async def test_start_tournament_connection_error(self, client):
         """Test start with connection error."""
         with patch('httpx.AsyncClient') as mock_client:
             mock_client.return_value.post = AsyncMock(side_effect=Exception("Connection refused"))
-            
+
             response = client.post("/api/league/start")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is False
             assert "Connection refused" in data["error"]
-    
+
     @pytest.mark.asyncio
     async def test_start_tournament_timeout(self, client):
         """Test start with timeout."""
-        import asyncio
         with patch('httpx.AsyncClient') as mock_client:
-            mock_client.return_value.post = AsyncMock(side_effect=asyncio.TimeoutError())
-            
+            mock_client.return_value.post = AsyncMock(side_effect=TimeoutError())
+
             response = client.post("/api/league/start")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is False
@@ -128,15 +127,15 @@ class TestDashboardStartTournament:
 
 class TestDashboardRunRound:
     """Test run round endpoint."""
-    
+
     @pytest.fixture
     def dashboard(self):
         return DashboardAPI()
-    
+
     @pytest.fixture
     def client(self, dashboard):
         return TestClient(dashboard.app)
-    
+
     @pytest.mark.asyncio
     async def test_run_round_success(self, client):
         """Test successful round execution."""
@@ -153,15 +152,15 @@ class TestDashboardRunRound:
             }
             mock_response.raise_for_status = Mock()
             mock_client.return_value.post = AsyncMock(return_value=mock_response)
-            
+
             response = client.post("/api/league/run_round")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is True
             assert "data" in data
             assert data["data"]["round"] == 1
-    
+
     @pytest.mark.asyncio
     async def test_run_round_all_completed(self, client):
         """Test run round when all rounds completed."""
@@ -175,14 +174,14 @@ class TestDashboardRunRound:
             }
             mock_response.raise_for_status = Mock()
             mock_client.return_value.post = AsyncMock(return_value=mock_response)
-            
+
             response = client.post("/api/league/run_round")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is False
             assert "All rounds completed" in data["error"]
-    
+
     @pytest.mark.asyncio
     async def test_run_round_no_tournament(self, client):
         """Test run round when no tournament started."""
@@ -196,9 +195,9 @@ class TestDashboardRunRound:
             }
             mock_response.raise_for_status = Mock()
             mock_client.return_value.post = AsyncMock(return_value=mock_response)
-            
+
             response = client.post("/api/league/run_round")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is False
@@ -206,15 +205,15 @@ class TestDashboardRunRound:
 
 class TestDashboardResetTournament:
     """Test reset tournament endpoint."""
-    
+
     @pytest.fixture
     def dashboard(self):
         return DashboardAPI()
-    
+
     @pytest.fixture
     def client(self, dashboard):
         return TestClient(dashboard.app)
-    
+
     @pytest.mark.asyncio
     async def test_reset_tournament_success(self, client):
         """Test successful tournament reset."""
@@ -227,13 +226,13 @@ class TestDashboardResetTournament:
             }
             mock_response.raise_for_status = Mock()
             mock_client.return_value.post = AsyncMock(return_value=mock_response)
-            
+
             response = client.post("/api/league/reset")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is True
-    
+
     @pytest.mark.asyncio
     async def test_reset_clears_dashboard_data(self, client, dashboard):
         """Test that reset clears dashboard data structures."""
@@ -241,7 +240,7 @@ class TestDashboardResetTournament:
         dashboard.tournament_states["test"] = Mock()
         dashboard.game_events["test"] = [Mock()]
         dashboard.strategy_performance["test"] = Mock()
-        
+
         with patch('httpx.AsyncClient') as mock_client:
             mock_response = Mock()
             mock_response.json.return_value = {
@@ -251,24 +250,24 @@ class TestDashboardResetTournament:
             }
             mock_response.raise_for_status = Mock()
             mock_client.return_value.post = AsyncMock(return_value=mock_response)
-            
+
             response = client.post("/api/league/reset")
-            
+
             assert response.status_code == 200
             assert len(dashboard.tournament_states) == 0
             assert len(dashboard.game_events) == 0
             assert len(dashboard.strategy_performance) == 0
-    
+
     @pytest.mark.asyncio
     async def test_reset_calls_analytics_engine_reset(self, client):
         """Test that reset calls analytics engine reset."""
         with patch('httpx.AsyncClient') as mock_client, \
              patch('src.visualization.analytics.get_analytics_engine') as mock_get_engine:
-            
+
             mock_engine = Mock()
             mock_engine.reset = Mock()
             mock_get_engine.return_value = mock_engine
-            
+
             mock_response = Mock()
             mock_response.json.return_value = {
                 "result": {
@@ -277,24 +276,24 @@ class TestDashboardResetTournament:
             }
             mock_response.raise_for_status = Mock()
             mock_client.return_value.post = AsyncMock(return_value=mock_response)
-            
+
             response = client.post("/api/league/reset")
-            
+
             assert response.status_code == 200
             mock_engine.reset.assert_called_once()
 
 
 class TestDashboardAnalyticsEndpoints:
     """Test analytics endpoints."""
-    
+
     @pytest.fixture
     def dashboard(self):
         return DashboardAPI()
-    
+
     @pytest.fixture
     def client(self, dashboard):
         return TestClient(dashboard.app)
-    
+
     def test_get_analytics_strategies(self, client):
         """Test get all strategies analytics."""
         with patch('src.visualization.analytics.get_analytics_engine') as mock_get_engine:
@@ -303,13 +302,13 @@ class TestDashboardAnalyticsEndpoints:
                 "adaptive": Mock(strategy_name="adaptive", total_rounds=10)
             }
             mock_get_engine.return_value = mock_engine
-            
+
             response = client.get("/api/analytics/strategies")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert "strategies" in data
-    
+
     def test_get_matchup_matrix(self, client):
         """Test get matchup matrix."""
         with patch('src.visualization.analytics.get_analytics_engine') as mock_get_engine:
@@ -317,9 +316,9 @@ class TestDashboardAnalyticsEndpoints:
             mock_engine.all_players = {"P01", "P02"}
             mock_engine.matchup_matrix = {}
             mock_get_engine.return_value = mock_engine
-            
+
             response = client.get("/api/analytics/matchup_matrix")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert "players" in data
@@ -328,29 +327,29 @@ class TestDashboardAnalyticsEndpoints:
 
 class TestDashboardEdgeCases:
     """Test edge cases and error conditions."""
-    
+
     @pytest.fixture
     def dashboard(self):
         return DashboardAPI()
-    
+
     @pytest.fixture
     def client(self, dashboard):
         return TestClient(dashboard.app)
-    
+
     def test_dashboard_home_returns_html(self, client):
         """Test that home endpoint returns HTML."""
         response = client.get("/")
-        
+
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
         assert "MCP Game League" in response.text
-    
+
     def test_invalid_endpoint_returns_404(self, client):
         """Test invalid endpoint returns 404."""
         response = client.get("/api/invalid/endpoint")
-        
+
         assert response.status_code == 404
-    
+
     @pytest.mark.asyncio
     async def test_concurrent_start_requests(self, client):
         """Test multiple concurrent start requests."""
@@ -365,15 +364,15 @@ class TestDashboardEdgeCases:
             }
             mock_response.raise_for_status = Mock()
             mock_client.return_value.post = AsyncMock(return_value=mock_response)
-            
+
             # Make concurrent requests
             responses = []
             for _ in range(3):
                 responses.append(client.post("/api/league/start"))
-            
+
             for response in responses:
                 assert response.status_code == 200
-    
+
     @pytest.mark.asyncio
     async def test_start_with_invalid_json_response(self, client):
         """Test handling of invalid JSON response from league manager."""
@@ -382,9 +381,9 @@ class TestDashboardEdgeCases:
             mock_response.json.side_effect = json.JSONDecodeError("Invalid JSON", "", 0)
             mock_response.raise_for_status = Mock()
             mock_client.return_value.post = AsyncMock(return_value=mock_response)
-            
+
             response = client.post("/api/league/start")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is False
