@@ -64,11 +64,18 @@ class TestPerformanceMatchExecution:
     @pytest.mark.asyncio
     async def test_match_execution_speed(self):
         """Test single match execution time."""
-        game = OddEvenGame(total_rounds=5)
+        game = OddEvenGame(
+            player1_id="P1",
+            player2_id="P2",
+            total_rounds=5
+        )
+        game.start()
 
         start = time.time()
         for _ in range(5):
-            game.play_round(5, 3)
+            game.submit_move("P1", 5)
+            game.submit_move("P2", 3)
+            game.resolve_round()
         duration = time.time() - start
 
         assert duration < 0.1  # 5 rounds in < 100ms
@@ -77,10 +84,18 @@ class TestPerformanceMatchExecution:
     async def test_concurrent_matches(self):
         """Test multiple concurrent matches."""
         async def run_match():
-            game = OddEvenGame(total_rounds=5)
+            game = OddEvenGame(
+                player1_id="P1",
+                player2_id="P2",
+                total_rounds=5
+            )
+            game.start()
             for _ in range(5):
-                game.play_round(5, 3)
-            return game.get_winner()
+                game.submit_move("P1", 5)
+                game.submit_move("P2", 3)
+                game.resolve_round()
+            result = game.get_result()
+            return result.winner_id if result else None
 
         start = time.time()
         results = await asyncio.gather(*[run_match() for _ in range(20)])
@@ -257,12 +272,19 @@ class TestPerformanceResponseTime:
 
     def test_game_move_validation_response_time(self):
         """Test move validation is fast."""
-        game = OddEvenGame(total_rounds=10)
-
         times = []
         for _ in range(100):
+            game = OddEvenGame(
+                player1_id="P1",
+                player2_id="P2",
+                total_rounds=1
+            )
+            game.start()
+            
             start = time.time()
-            game.play_round(5, 5)
+            game.submit_move("P1", 5)
+            game.submit_move("P2", 5)
+            game.resolve_round()
             times.append(time.time() - start)
 
         avg_time = sum(times) / len(times)

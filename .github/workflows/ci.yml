@@ -49,7 +49,7 @@ jobs:
 
       - name: Run Bandit security scan
         run: |
-          bandit -r src/ -lm  # Check Medium+ severity issues only
+          bandit -r src/ --severity-level medium  # Check Medium+ severity issues only
 
   unit-tests:
     name: 🧪 Unit Tests (Python ${{ matrix.python-version }}, ${{ matrix.os }})

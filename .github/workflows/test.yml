@@ -79,13 +79,14 @@ jobs:
       run: |
         uv sync
     
+    # Performance tests focus on speed, not code coverage
     - name: Run performance tests
       run: |
-        uv run pytest tests/test_performance_comprehensive.py -v --durations=10
+        uv run pytest tests/test_performance_comprehensive.py -v --durations=10 --no-cov
     
     - name: Performance benchmark
       run: |
-        uv run pytest tests/test_performance_comprehensive.py --benchmark-only --benchmark-json=benchmark.json
+        uv run pytest tests/test_performance_comprehensive.py --benchmark-only --benchmark-json=benchmark.json --no-cov
       continue-on-error: true
 
   integration:
