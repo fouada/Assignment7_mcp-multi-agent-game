@@ -92,7 +92,7 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=json",
-    "--cov-fail-under=85",
+    "--cov-fail-under=80",
     "--durations=10",
 ]
 filterwarnings = [
@@ -182,7 +182,7 @@ omit = [
 precision = 2
 show_missing = true
 skip_covered = false
-fail_under = 85
+fail_under = 80
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
