@@ -218,6 +218,13 @@ class LeagueManager(BaseGameServer):
             return await self._start_league()
 
         @self.tool(
+            "reset_league",
+            "Reset the league to start a new tournament (keeps players/referees registered)",
+        )
+        async def reset_league(params: dict) -> dict:
+            return await self._reset_league()
+
+        @self.tool(
             "start_next_round",
             "Start the next round of matches",
         )
@@ -247,6 +254,21 @@ class LeagueManager(BaseGameServer):
         )
         async def report_match_result(params: dict) -> dict:
             return await self._handle_match_result(params)
+
+        @self.tool(
+            "report_strategy_event",
+            "Report strategy learning event from player (for dashboard visualization)",
+            {
+                "type": "object",
+                "properties": {
+                    "event_type": {"type": "string"},
+                    "event_data": {"type": "object"},
+                },
+                "required": ["event_type", "event_data"],
+            },
+        )
+        async def report_strategy_event(params: dict) -> dict:
+            return await self._handle_strategy_event(params)
 
         @self.tool(
             "get_players",
@@ -549,6 +571,38 @@ class LeagueManager(BaseGameServer):
             "players": len(self._players),
             "rounds": len(self._schedule),
             "schedule": self._get_schedule(),
+        }
+
+    async def _reset_league(self) -> dict[str, Any]:
+        """Reset the league to start a new tournament."""
+        logger.info("Resetting league for new tournament")
+        
+        # Reset state
+        self.state = LeagueState.REGISTRATION
+        self.current_round = 0
+        self._schedule = []
+        self._current_round_matches = {}
+        self._match_results = {}
+        
+        # Keep players and referees registered, but reset their scores
+        for player in self._players.values():
+            player.total_wins = 0
+            player.total_losses = 0
+            player.total_draws = 0
+            player.total_points = 0
+        
+        logger.info(
+            f"League reset complete. {len(self._players)} players and {len(self._referees)} referees still registered."
+        )
+        
+        # Stream reset state to dashboard
+        await self._stream_tournament_update()
+        
+        return {
+            "success": True,
+            "message": "League reset successfully",
+            "players": len(self._players),
+            "referees": len(self._referees),
         }
 
     def _assign_referee_to_match(self, match_index: int) -> str | None:
@@ -940,6 +994,25 @@ class LeagueManager(BaseGameServer):
             score=f"{player1_score}-{player2_score}",
         )
 
+        # Emit match.completed event for dashboard analytics
+        try:
+            from ..common.events.types import MatchCompletedEvent
+            event_bus = get_event_bus()
+            await event_bus.emit(
+                "match.completed",
+                MatchCompletedEvent(
+                    match_id=match_id,
+                    player1_id=player1_id,
+                    player2_id=player2_id,
+                    winner=winner_id,
+                    final_scores={player1_id: player1_score, player2_id: player2_score},
+                    total_rounds=len(rounds),
+                ),
+            )
+            logger.info(f"[LeagueManager] ✅ Emitted match.completed event for {match_id}")
+        except Exception as e:
+            logger.error(f"[LeagueManager] ❌ Failed to emit match.completed event: {e}", exc_info=True)
+
         # Check if round complete
         round_complete = all(m.state == MatchState.COMPLETED for m in self._current_round_matches)
 
@@ -1029,6 +1102,51 @@ class LeagueManager(BaseGameServer):
             "standings": standings,
             "standings_published": standings_message is not None,
         }
+
+    async def _handle_strategy_event(self, params: dict) -> dict[str, Any]:
+        """
+        Handle strategy learning event from player (cross-process communication).
+        
+        This allows players to send strategy learning events to the league manager,
+        which then emits them to the local event bus for the dashboard integration.
+        """
+        try:
+            event_type = params.get("event_type", "")
+            event_data = params.get("event_data", {})
+            
+            logger.info(f"[LeagueManager] 🔍 DEBUG: Received strategy event '{event_type}' from player via MCP")
+            logger.info(f"[LeagueManager] 🔍 DEBUG: Event data: {event_data}")
+            
+            # Get the event bus and recreate the event object
+            event_bus = get_event_bus()
+            
+            # Import event types
+            from ..common.events.types import (
+                OpponentModelUpdateEvent,
+                CounterfactualAnalysisEvent,
+            )
+            
+            # Recreate the appropriate event object from the data
+            event_obj = None
+            if event_type == "opponent.model.update":
+                event_obj = OpponentModelUpdateEvent(**event_data)
+                logger.info(f"[LeagueManager] 🔍 DEBUG: Recreated OpponentModelUpdateEvent")
+            elif event_type == "counterfactual.analysis":
+                event_obj = CounterfactualAnalysisEvent(**event_data)
+                logger.info(f"[LeagueManager] 🔍 DEBUG: Recreated CounterfactualAnalysisEvent")
+            else:
+                logger.warning(f"[LeagueManager] ⚠️ Unknown event type: {event_type}")
+                return {"success": False, "error": f"Unknown event type: {event_type}"}
+            
+            # Emit the event to the local event bus
+            await event_bus.emit(event_type, event_obj)
+            logger.info(f"[LeagueManager] ✅ Successfully emitted {event_type} event to local event bus")
+            
+            return {"success": True, "event_type": event_type}
+            
+        except Exception as e:
+            logger.error(f"[LeagueManager] ❌ Error handling strategy event: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}
 
     async def _publish_standings_update(self) -> dict[str, Any]:
         """

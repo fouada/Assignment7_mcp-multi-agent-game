@@ -205,6 +205,19 @@ class AnalyticsEngine:
 
         logger.info("AnalyticsEngine initialized")
 
+    def reset(self):
+        """Reset all analytics data (for tournament reset)."""
+        self.strategy_performance.clear()
+        self.player_strategies.clear()
+        self.opponent_models.clear()
+        self.counterfactual_analytics.clear()
+        self.matchup_matrix.clear()
+        self.all_players.clear()
+        self.replay_history.clear()
+        self.current_round = 0
+        self.performance_timeseries.clear()
+        logger.info("AnalyticsEngine reset complete")
+
     # ========================================================================
     # Player & Strategy Registration
     # ========================================================================
@@ -244,6 +257,8 @@ class AnalyticsEngine:
         self.current_round = round_num
         timestamp = datetime.now().isoformat()
 
+        logger.info(f"[Analytics] 🔍 DEBUG: on_round_complete called: round={round_num}, players={player1_id} vs {player2_id}, scores={scores}")
+
         # Update strategy performance
         await self._update_strategy_performance(round_num, player1_id, player2_id, scores)
 
@@ -253,7 +268,8 @@ class AnalyticsEngine:
         # Add to replay history
         await self._capture_replay_state(round_num, timestamp)
 
-        logger.debug(f"Analytics updated for round {round_num}")
+        logger.info(f"[Analytics] ✅ Analytics updated for round {round_num}")
+
 
     async def on_opponent_model_update(
         self,

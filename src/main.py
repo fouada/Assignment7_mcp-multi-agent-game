@@ -807,6 +807,12 @@ Examples:
     )
 
     parser.add_argument(
+        "--reset-league",
+        action="store_true",
+        help="Reset the league to start a new tournament",
+    )
+
+    parser.add_argument(
         "--get-standings",
         action="store_true",
         help="Get current league standings",
@@ -829,6 +835,8 @@ Examples:
     # Handle utility commands first
     if args.start_league:
         asyncio.run(send_league_command("start_league"))
+    elif args.reset_league:
+        asyncio.run(send_league_command("reset_league"))
     elif args.get_standings:
         asyncio.run(send_league_command("get_standings"))
     elif args.run_round:

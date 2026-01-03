@@ -304,19 +304,23 @@ class AdaptiveBayesianStrategy(GameTheoryStrategy):
         # Emit opponent model update event for dashboard
         if self._event_bus and self._player_id and belief.observations > 0:
             try:
-                await self._event_bus.emit(
-                    "opponent.model.update",
-                    OpponentModelUpdateEvent(
-                        player_id=self._player_id,
-                        opponent_id=game_id,  # Using game_id as proxy for opponent
-                        confidence=belief.confidence_in_bias(),
-                        predicted_strategy="biased" if belief.confidence_in_bias() > 0.5 else "balanced",
-                        observations=belief.observations,
-                        source=f"strategy:{self.name}",
-                    )
+                logger.info(f"[AdaptiveBayesian] 🔍 DEBUG: About to emit opponent model event for {self._player_id} -> {game_id}")
+                event = OpponentModelUpdateEvent(
+                    player_id=self._player_id,
+                    opponent_id=game_id,  # Using game_id as proxy for opponent
+                    confidence=belief.confidence_in_bias(),
+                    predicted_strategy="biased" if belief.confidence_in_bias() > 0.5 else "balanced",
+                    belief_distribution={
+                        "mean": float(belief.mean),
+                        "std": float(belief.std),
+                        "observations": float(belief.observations),
+                    },
+                    accuracy=0.0,  # Will be calculated later
                 )
+                await self._event_bus.emit("opponent.model.update", event)
+                logger.info(f"[AdaptiveBayesian] ✅ Successfully emitted opponent model event: {self._player_id} -> {game_id}, confidence={event.confidence:.2f}")
             except Exception as e:
-                logger.debug(f"Failed to emit opponent model event: {e}")
+                logger.error(f"[AdaptiveBayesian] ❌ Failed to emit opponent model event: {e}", exc_info=True)
 
         # Exploration: play random with probability ε
         if random.random() < self.config.exploration_rate:
@@ -559,26 +563,37 @@ class RegretMatchingStrategy(GameTheoryStrategy):
         # Emit counterfactual analysis event for dashboard
         if self._event_bus and self._player_id and history:
             try:
+                logger.info(f"[RegretMatching] 🔍 DEBUG: About to emit counterfactual event for {self._player_id} -> {game_id}")
+                
+                # Get last round info
+                last_round = history[-1]
+                actual_move_value = last_round.get('my_move', 5)  # Default to 5
+                actual_payoff_value = 1 if last_round.get('winner') == self._player_id else 0
+                
                 # Calculate cumulative regret magnitude
                 total_regret = abs(regrets["odd"]) + abs(regrets["even"])
                 
-                await self._event_bus.emit(
-                    "counterfactual.analysis",
-                    CounterfactualAnalysisEvent(
-                        player_id=self._player_id,
-                        game_id=game_id,
-                        round_number=round_number,
-                        actual_move="odd" if p_odd > p_even else "even",
-                        counterfactuals={
-                            "odd": {"regret": regrets["odd"], "probability": p_odd},
-                            "even": {"regret": regrets["even"], "probability": p_even},
-                        },
-                        cumulative_regret=total_regret,
-                        source=f"strategy:{self.name}",
-                    )
+                # Create proper event with correct types
+                event = CounterfactualAnalysisEvent(
+                    player_id=self._player_id,
+                    game_id=game_id,
+                    round_number=round_number,
+                    actual_move=actual_move_value,  # Must be int
+                    actual_payoff=actual_payoff_value,  # Must be int
+                    alternative_moves={
+                        1: 0,  # odd move (value 1 for odd parity)
+                        0: 0,  # even move (value 0 for even parity)
+                    },
+                    regret={
+                        1: float(regrets["odd"]),  # Convert to float
+                        0: float(regrets["even"]),  # Convert to float
+                    },
+                    cumulative_regret=total_regret,
                 )
+                await self._event_bus.emit("counterfactual.analysis", event)
+                logger.info(f"[RegretMatching] ✅ Successfully emitted counterfactual event: {self._player_id} -> {game_id}, regret={total_regret:.2f}")
             except Exception as e:
-                logger.debug(f"Failed to emit counterfactual event: {e}")
+                logger.error(f"[RegretMatching] ❌ Failed to emit counterfactual event: {e}", exc_info=True)
 
         # Sample action
         if random.random() < p_odd:

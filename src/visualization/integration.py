@@ -367,8 +367,10 @@ class DashboardIntegration:
     async def on_match_completed(self, event):
         """Handle match completed event to update matchup matrix."""
         if not self.enabled:
+            logger.info("[Integration] 🔍 DEBUG: on_match_completed called but integration disabled")
             return
 
+        logger.info(f"[Integration] 🔍 DEBUG: on_match_completed received match {event.match_id}")
         try:
             # Extract match data from event
             match_id = event.match_id
@@ -376,11 +378,43 @@ class DashboardIntegration:
             final_scores = event.final_scores
             total_rounds = event.total_rounds
 
+            logger.info(f"[Integration] 🔍 DEBUG: Match {match_id}, winner={winner}, scores={final_scores}, rounds={total_rounds}")
+
             # Get player IDs from final_scores
             if len(final_scores) >= 2:
                 players = list(final_scores.keys())
                 player1_id = players[0]
                 player2_id = players[1]
+
+                # Auto-register players if not already registered
+                for player_id in [player1_id, player2_id]:
+                    if player_id not in self.analytics_engine.player_strategies:
+                        # Try to get strategy from dashboard's tournament states
+                        strategy_name = "Unknown"
+                        if hasattr(self.dashboard, 'tournament_states') and self.dashboard.tournament_states:
+                            # Get the first (likely only) tournament state
+                            for tournament_id, state in self.dashboard.tournament_states.items():
+                                standings = state.standings if hasattr(state, 'standings') else []
+                                for standing in standings:
+                                    if isinstance(standing, dict):
+                                        pid = standing.get('player_id') or standing.get('player')
+                                    else:
+                                        pid = getattr(standing, 'player_id', None) or getattr(standing, 'player', None)
+                                    
+                                    if pid == player_id:
+                                        if isinstance(standing, dict):
+                                            strategy_name = standing.get('strategy', 'Unknown')
+                                        else:
+                                            strategy_name = getattr(standing, 'strategy', 'Unknown')
+                                        break
+                                
+                                if strategy_name != "Unknown":
+                                    break
+                        
+                        logger.info(f"[Integration] 🔧 Auto-registering player {player_id} with strategy '{strategy_name}'")
+                        self.analytics_engine.register_player(player_id, strategy_name)
+
+                logger.info(f"[Integration] 🔍 DEBUG: Calling analytics_engine.on_round_complete with players {player1_id} vs {player2_id}")
 
                 # Update matchup matrix in analytics engine
                 # Note: We use the total_rounds as the "current round" 
@@ -390,12 +424,39 @@ class DashboardIntegration:
                     total_rounds, player1_id, player2_id, moves, final_scores
                 )
 
+                logger.info(f"[Integration] ✅ Successfully updated analytics for match {match_id}")
+
                 # Broadcast matchup matrix update
+                from dataclasses import asdict, is_dataclass
                 matchup_data = self.analytics_engine.get_matchup_matrix()
-                await self.dashboard.broadcast({
+                
+                logger.info(f"[Integration] 🔍 DEBUG: Broadcasting matchup matrix, players={matchup_data.players}, matrix_size={len(matchup_data.matrix)}")
+                
+                # Convert dataclass or Pydantic model to dict
+                if is_dataclass(matchup_data):
+                    matchup_dict = asdict(matchup_data)
+                elif hasattr(matchup_data, 'model_dump'):
+                    matchup_dict = matchup_data.model_dump()
+                elif hasattr(matchup_data, 'dict'):
+                    matchup_dict = matchup_data.dict()
+                else:
+                    matchup_dict = matchup_data
+                
+                # Convert tuple keys to string keys for JSON serialization
+                if 'matrix' in matchup_dict and isinstance(matchup_dict['matrix'], dict):
+                    matchup_dict['matrix'] = {
+                        f"{k[0]}_vs_{k[1]}" if isinstance(k, tuple) else k: v
+                        for k, v in matchup_dict['matrix'].items()
+                    }
+                
+                logger.info(f"[Integration] 🔍 DEBUG: About to broadcast matchup_matrix_update with {len(matchup_dict.get('matrix', {}))} matchups")
+                
+                await self.dashboard.connection_manager.broadcast({
                     "type": "matchup_matrix_update",
-                    "data": matchup_data
+                    "data": matchup_dict
                 })
+                
+                logger.info(f"[Integration] ✅ Successfully broadcasted matchup matrix update")
 
                 logger.info(f"Updated matchup matrix for match {match_id}: {player1_id} vs {player2_id}, winner: {winner}")
 
@@ -405,25 +466,33 @@ class DashboardIntegration:
     async def on_opponent_model_update(self, event):
         """Handle opponent model update event from strategies."""
         if not self.enabled:
+            logger.info("[Integration] 🔍 DEBUG: on_opponent_model_update called but integration disabled")
             return
 
+        logger.info(f"[Integration] 🔍 DEBUG: on_opponent_model_update received event from {event.player_id}")
         try:
             # Extract data from event
             player_id = event.player_id
             opponent_id = event.opponent_id
             confidence = event.confidence
-            mean_belief = event.mean_belief
-            std_dev_belief = event.std_dev_belief
-            round_number = event.round_number
+            predicted_strategy = event.predicted_strategy
+            belief_distribution = event.belief_distribution
+            accuracy = event.accuracy
+            
+            logger.info(f"[Integration] 🔍 DEBUG: belief_distribution = {belief_distribution}")
+            
+            # Extract mean and std from belief distribution (handle both 'std' and 'std_dev')
+            mean_belief = belief_distribution.get('mean', 0.5)
+            std_dev_belief = belief_distribution.get('std', belief_distribution.get('std_dev', 0.0))
 
             # Update analytics engine
             await self.analytics_engine.on_opponent_model_update(
                 player_id=player_id,
                 opponent_id=opponent_id,
                 confidence=confidence,
-                accuracy=0.0,  # Not provided in event, will be calculated later
-                predicted_strategy="unknown",  # Will be inferred from beliefs
-                beliefs={"mean": mean_belief, "std": std_dev_belief},
+                accuracy=accuracy,
+                predicted_strategy=predicted_strategy,
+                beliefs=belief_distribution,
             )
 
             # Broadcast to dashboard
@@ -436,12 +505,13 @@ class DashboardIntegration:
                         "confidence": confidence,
                         "mean_belief": mean_belief,
                         "std_dev_belief": std_dev_belief,
-                        "round_number": round_number,
+                        "predicted_strategy": predicted_strategy,
+                        "belief_distribution": belief_distribution,
                     },
                 }
             )
 
-            logger.debug(f"Processed opponent model update: {player_id} -> {opponent_id} (confidence: {confidence:.2f})")
+            logger.info(f"✓ Processed opponent model update: {player_id} -> {opponent_id} (confidence: {confidence:.2f}, mean: {mean_belief:.2f})")
 
         except Exception as e:
             logger.error(f"Error handling opponent model update event: {e}", exc_info=True)
@@ -449,22 +519,43 @@ class DashboardIntegration:
     async def on_counterfactual_analysis(self, event):
         """Handle counterfactual analysis event from strategies."""
         if not self.enabled:
+            logger.info("[Integration] 🔍 DEBUG: on_counterfactual_analysis called but integration disabled")
             return
 
+        logger.info(f"[Integration] 🔍 DEBUG: on_counterfactual_analysis received event from {event.player_id}")
         try:
             # Extract data from event
             player_id = event.player_id
             game_id = event.game_id
             round_number = event.round_number
-            counterfactuals = event.counterfactuals
+            actual_move = event.actual_move
+            actual_payoff = event.actual_payoff
+            alternative_moves = event.alternative_moves
+            regret = event.regret
             cumulative_regret = event.cumulative_regret
+            
+            logger.info(f"[Integration] 🔍 DEBUG: regret dict = {regret}, cumulative={cumulative_regret}")
+            
+            # Convert regret dict to counterfactuals format for analytics engine
+            # Analytics expects: list[dict] with "move" and "regret" keys
+            counterfactuals_list = []
+            cumulative_regret_dict = {}
+            
+            if regret:
+                for move, reg_val in regret.items():
+                    move_str = str(move)
+                    counterfactuals_list.append({
+                        "move": move_str,
+                        "regret": float(reg_val)
+                    })
+                    cumulative_regret_dict[move_str] = float(reg_val)
 
             # Update analytics engine with correct signature
             await self.analytics_engine.on_counterfactual_update(
                 player_id=player_id,
-                actual_move="unknown",  # Not provided in event
-                counterfactuals=counterfactuals,  # Already in correct format
-                cumulative_regret=cumulative_regret,
+                actual_move=str(actual_move),
+                counterfactuals=counterfactuals_list,
+                cumulative_regret=cumulative_regret_dict,
             )
 
             # Broadcast to dashboard
@@ -475,13 +566,15 @@ class DashboardIntegration:
                     "game_id": game_id,
                     "data": {
                         "round_number": round_number,
-                        "counterfactuals": counterfactuals,
+                        "actual_move": str(actual_move),
+                        "actual_payoff": actual_payoff,
+                        "counterfactuals": counterfactuals_list,
                         "cumulative_regret": cumulative_regret,
                     },
                 }
             )
 
-            logger.debug(f"Processed counterfactual analysis: {player_id} round {round_number}")
+            logger.info(f"✓ Processed counterfactual analysis: {player_id} round {round_number}, cumulative_regret: {cumulative_regret:.2f}")
 
         except Exception as e:
             logger.error(f"Error handling counterfactual analysis event: {e}", exc_info=True)

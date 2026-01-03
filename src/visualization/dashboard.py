@@ -574,6 +574,131 @@ class DashboardAPI:
             engine = get_analytics_engine()
             return engine.export_for_research()
 
+        @self.app.post("/api/league/start")
+        async def start_league():
+            """Start the league tournament (proxy to league manager)."""
+            try:
+                import httpx
+                
+                # Call league manager's start_league tool via MCP
+                response = await httpx.AsyncClient().post(
+                    "http://localhost:8000/mcp",
+                    json={
+                        "jsonrpc": "2.0",
+                        "method": "tools/call",
+                        "params": {
+                            "name": "start_league",
+                            "arguments": {}
+                        },
+                        "id": 1
+                    },
+                    timeout=10.0
+                )
+                response.raise_for_status()
+                result = response.json()
+                
+                if result.get("result", {}).get("success"):
+                    logger.info("[Dashboard] Tournament started successfully")
+                    return {
+                        "success": True, 
+                        "message": "Tournament started successfully",
+                        "data": result.get("result", {})
+                    }
+                else:
+                    error_msg = result.get("result", {}).get("error", "Unknown error")
+                    logger.error(f"[Dashboard] Start failed: {error_msg}")
+                    return {"success": False, "error": error_msg}
+                    
+            except Exception as e:
+                logger.error(f"[Dashboard] Error starting tournament: {e}", exc_info=True)
+                return {"success": False, "error": str(e)}
+
+        @self.app.post("/api/league/run_round")
+        async def run_round():
+            """Run the next round (proxy to league manager)."""
+            try:
+                import httpx
+                
+                # Call league manager's start_next_round tool via MCP
+                response = await httpx.AsyncClient().post(
+                    "http://localhost:8000/mcp",
+                    json={
+                        "jsonrpc": "2.0",
+                        "method": "tools/call",
+                        "params": {
+                            "name": "start_next_round",
+                            "arguments": {}
+                        },
+                        "id": 1
+                    },
+                    timeout=30.0  # Longer timeout for round execution
+                )
+                response.raise_for_status()
+                result = response.json()
+                
+                if result.get("result", {}).get("success"):
+                    logger.info("[Dashboard] Round started successfully")
+                    return {
+                        "success": True, 
+                        "message": "Round started successfully",
+                        "data": result.get("result", {})
+                    }
+                else:
+                    error_msg = result.get("result", {}).get("error", "Unknown error")
+                    logger.error(f"[Dashboard] Run round failed: {error_msg}")
+                    return {"success": False, "error": error_msg}
+                    
+            except Exception as e:
+                logger.error(f"[Dashboard] Error running round: {e}", exc_info=True)
+                return {"success": False, "error": str(e)}
+
+        @self.app.post("/api/league/reset")
+        async def reset_league():
+            """Reset the league tournament (proxy to league manager)."""
+            try:
+                import httpx
+                
+                # Call league manager's reset_league tool via MCP
+                response = await httpx.AsyncClient().post(
+                    "http://localhost:8000/mcp",
+                    json={
+                        "jsonrpc": "2.0",
+                        "method": "tools/call",
+                        "params": {
+                            "name": "reset_league",
+                            "arguments": {}
+                        },
+                        "id": 1
+                    },
+                    timeout=10.0
+                )
+                response.raise_for_status()
+                result = response.json()
+                
+                if result.get("result", {}).get("success"):
+                    # Clear dashboard data
+                    self.tournament_states.clear()
+                    self.game_events.clear()
+                    self.strategy_performance.clear()
+                    self.opponent_models.clear()
+                    self.counterfactuals.clear()
+                    
+                    # Clear analytics engine
+                    from .analytics import get_analytics_engine
+                    engine = get_analytics_engine()
+                    engine.reset()
+                    
+                    logger.info("[Dashboard] Tournament reset successful")
+                    return {"success": True, "message": "Tournament reset successfully"}
+                else:
+                    error_msg = result.get("result", {}).get("error", "Unknown error")
+                    logger.error(f"[Dashboard] Reset failed: {error_msg}")
+                    return {"success": False, "error": error_msg}
+                    
+            except Exception as e:
+                logger.error(f"[Dashboard] Error resetting tournament: {e}", exc_info=True)
+                return {"success": False, "error": str(e)}
+
     async def stream_event(self, event: GameEvent):
         """Stream event to all connected clients."""
         message = {"type": "game_event", "data": asdict(event)}
@@ -1679,7 +1804,9 @@ class DashboardAPI:
     <div class="container">
         <div class="controls">
             <button onclick="connectWebSocket()">Connect</button>
-            <button onclick="clearData()">Clear Data</button>
+            <button onclick="startTournament()" style="background: #27ae60;">🚀 Start Tournament</button>
+            <button onclick="runRound()" style="background: #3498db;">▶️ Run Round</button>
+            <button onclick="clearData()" style="background: #e74c3c;">🔄 Reset Tournament</button>
             <button onclick="exportData()">Export Data</button>
         </div>
 
@@ -2144,6 +2271,9 @@ class DashboardAPI:
         }
 
         function handleTournamentUpdate(data) {
+            // Store tournament state globally for other functions to access
+            window.tournamentState = data;
+            
             document.getElementById('game-type').textContent = data.game_type || 'even_odd';
             document.getElementById('current-round').textContent =
                 `${data.current_round || 0} / ${data.total_rounds || 0}`;
@@ -2158,6 +2288,23 @@ class DashboardAPI:
             // Update active matches if present
             if (data.active_matches && data.active_matches.length > 0) {
                 updateGameArena(data.active_matches);
+            }
+
+            // Update Standings Race chart if it's visible
+            const standingsView = document.getElementById('tournament-standings');
+            if (standingsView && !standingsView.classList.contains('hidden')) {
+                createStandingsRace();
+            }
+
+            // Initialize learning evolution charts if we have player data
+            if (data.standings && data.standings.length > 0) {
+                // Trigger initial chart updates after a short delay to allow data to load
+                setTimeout(() => {
+                    updateBeliefsChart();
+                    updateConfidenceEvolutionChart();
+                    updateRegretEvolutionChart();
+                    updateLearningCurve();
+                }, 500);
             }
         }
 
@@ -2261,10 +2408,14 @@ class DashboardAPI:
         function handleMatchupMatrixUpdate(data) {
             // Store matchup matrix data
             window.matchupMatrixData = data;
-            // Update matrix view if currently visible
-            const matrixView = document.getElementById('tournament-matrix');
-            if (matrixView && !matrixView.classList.contains('hidden')) {
-                createMatchupMatrix();
+            // Always update matrix view to keep data fresh
+            // (Even if not currently visible, it will be ready when user clicks the tab)
+            createMatchupMatrix();
+            
+            // Also update head-to-head stats if it's visible or needs updating
+            const statsView = document.getElementById('tournament-stats');
+            if (statsView && !statsView.classList.contains('hidden')) {
+                createHeadToHeadStats();
             }
         }
 
@@ -2494,8 +2645,15 @@ class DashboardAPI:
         }
 
         function updateBeliefsChart() {
-            // Fetch real data from opponent models
-            const players = Object.keys(opponentModelData);
+            // Get player list from either WebSocket data OR tournament state
+            let players = Object.keys(opponentModelData);
+            
+            // If no WebSocket data, try getting players from tournament state standings
+            // Use display_name (Alice, Bob, etc.) not player_id (P01, P02, etc.)
+            if (players.length === 0 && window.tournamentState && window.tournamentState.standings) {
+                players = window.tournamentState.standings.map(s => s.display_name || s.player_id || s.player || s.name);
+                console.log('[Beliefs] Using player names from standings:', players);
+            }
 
             if (players.length === 0) {
                 // Show placeholder
@@ -2558,60 +2716,84 @@ class DashboardAPI:
         }
 
         function updateConfidenceEvolutionChart() {
-            // Fetch from API
-            fetch('/api/analytics/strategies')
-                .then(r => r.json())
-                .then(data => {
-                    const strategies = data.strategies || [];
+            // Get player list from tournament state standings
+            let players = [];
+            if (window.tournamentState && window.tournamentState.standings) {
+                players = window.tournamentState.standings.map(s => s.display_name || s.player_id || s.player || s.name);
+                console.log('[Confidence] Using player names from standings:', players);
+            }
 
-                    if (strategies.length === 0) {
-                        Plotly.newPlot('confidence-chart', [], {
-                            title: 'Opponent Model Confidence Evolution - Waiting for data...',
-                            xaxis: { title: 'Round' },
-                            yaxis: { title: 'Confidence', range: [0, 1] },
-                            template: 'plotly_dark',
-                            paper_bgcolor: '#1a1f3a',
-                            plot_bgcolor: '#1a1f3a'
-                        });
-                        return;
-                    }
-
-                    // Get confidence data from opponent models
-                    const players = Object.keys(opponentModelData);
-                    if (players.length === 0) {
-                        // Fallback to consistency metric from strategy performance
-                        const traces = strategies.map(strategy => ({
-                            x: strategy.time_series.rounds,
-                            y: strategy.time_series.rounds.map((_, i) =>
-                                Math.min(1.0, 0.5 + (i * 0.05))  // Simple increasing confidence
-                            ),
-                            name: strategy.strategy_name,
-                            mode: 'lines+markers',
-                            line: { width: 2 },
-                            marker: { size: 6 }
-                        }));
-
-                        Plotly.newPlot('confidence-chart', traces, {
-                            title: 'Strategy Consistency Over Time',
-                            xaxis: { title: 'Round' },
-                            yaxis: { title: 'Consistency', range: [0, 1] },
-                            template: 'plotly_dark',
-                            paper_bgcolor: '#1a1f3a',
-                            plot_bgcolor: '#1a1f3a'
-                        });
-                    } else {
-                        // Use actual confidence data
-                        updateBeliefsChart();  // Reuse beliefs chart logic
-                    }
-                })
-                .catch(error => {
-                    console.error('Failed to fetch confidence data:', error);
+            if (players.length === 0) {
+                Plotly.newPlot('confidence-chart', [], {
+                    title: 'Opponent Model Confidence Evolution - Waiting for data...',
+                    xaxis: { title: 'Round' },
+                    yaxis: { title: 'Confidence', range: [0, 1] },
+                    template: 'plotly_dark',
+                    paper_bgcolor: '#1a1f3a',
+                    plot_bgcolor: '#1a1f3a'
                 });
+                return;
+            }
+
+            // Fetch detailed opponent model analytics from API (same as Bayesian Beliefs)
+            Promise.all(players.map(pid =>
+                fetch(`/api/analytics/opponent_models/${pid}`)
+                    .then(r => r.json())
+                    .catch(() => null)
+            )).then(results => {
+                const traces = [];
+
+                results.forEach((data, idx) => {
+                    if (!data || !data.opponent_models) return;
+
+                    const playerId = players[idx];
+                    Object.entries(data.opponent_models).forEach(([oppId, model]) => {
+                        if (model.time_series && model.time_series.rounds.length > 0) {
+                            traces.push({
+                                x: model.time_series.rounds,
+                                y: model.time_series.confidence_history,
+                                name: `${playerId.substring(0, 8)} → ${oppId.substring(0, 8)}`,
+                                mode: 'lines+markers',
+                                line: { width: 2 },
+                                marker: { size: 6 }
+                            });
+                        }
+                    });
+                });
+
+                if (traces.length === 0) {
+                    traces.push({
+                        x: [0],
+                        y: [0.5],
+                        mode: 'markers',
+                        name: 'No data yet',
+                        marker: { size: 1, opacity: 0 }
+                    });
+                }
+
+                Plotly.newPlot('confidence-chart', traces, {
+                    title: 'Opponent Model Confidence Evolution',
+                    xaxis: { title: 'Round' },
+                    yaxis: { title: 'Model Confidence', range: [0, 1] },
+                    template: 'plotly_dark',
+                    paper_bgcolor: '#1a1f3a',
+                    plot_bgcolor: '#1a1f3a'
+                });
+            }).catch(error => {
+                console.error('Failed to fetch confidence data:', error);
+            });
         }
 
         function updateRegretEvolutionChart() {
-            // Fetch counterfactual data from all players
-            const players = Object.keys(regretData);
+            // Get player list from either WebSocket data OR tournament state
+            let players = Object.keys(regretData);
+            
+            // If no WebSocket data, try getting players from tournament state standings
+            // Use display_name (Alice, Bob, etc.) not player_id (P01, P02, etc.)
+            if (players.length === 0 && window.tournamentState && window.tournamentState.standings) {
+                players = window.tournamentState.standings.map(s => s.display_name || s.player_id || s.player || s.name);
+                console.log('[Regret] Using player names from standings:', players);
+            }
 
             if (players.length === 0) {
                 Plotly.newPlot('regret-chart-evolution', [], {
@@ -2689,10 +2871,12 @@ class DashboardAPI:
 
         function updateLearningCurve() {
             // Fetch from analytics API
+            console.log('[LearningCurve] Fetching strategies data...');
             fetch('/api/analytics/strategies')
                 .then(r => r.json())
                 .then(data => {
                     const strategies = data.strategies || [];
+                    console.log('[LearningCurve] Strategies data:', strategies);
 
                     if (strategies.length === 0) {
                         Plotly.newPlot('learning-chart', [], {
@@ -2712,6 +2896,7 @@ class DashboardAPI:
                     strategies.forEach(strategy => {
                         const rounds = strategy.time_series.rounds || [];
                         const winRates = strategy.time_series.win_rates || [];
+                        console.log(`[LearningCurve] Strategy ${strategy.strategy_name}: rounds=${rounds.length}, winRates=${winRates.length}`);
 
                         if (rounds.length > 0 && winRates.length > 0) {
                             maxRound = Math.max(maxRound, ...rounds);
@@ -2742,6 +2927,8 @@ class DashboardAPI:
                             }
                         }
                     });
+
+                    console.log(`[LearningCurve] Total traces: ${traces.length}`);
 
                     if (traces.length === 0) {
                         traces.push({
@@ -2777,7 +2964,7 @@ class DashboardAPI:
                     });
                 })
                 .catch(error => {
-                    console.error('Failed to fetch learning curve data:', error);
+                    console.error('[LearningCurve] Failed to fetch learning curve data:', error);
                 });
         }
 
@@ -2822,34 +3009,62 @@ class DashboardAPI:
         }
 
         function createMatchupMatrix() {
+            // Show loading message
+            document.getElementById('matchup-matrix').innerHTML = 
+                '<p style="text-align: center; color: #a0aec0; padding: 40px;">Loading matchup matrix...</p>';
+            
             // Use real data from analytics engine via WebSocket or fetch from API
             if (!window.matchupMatrixData || !window.matchupMatrixData.players) {
                 // Fetch from API if not available
+                console.log('[MatchupMatrix] Fetching from API...');
                 fetch('/api/analytics/matchup_matrix')
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) throw new Error('Failed to fetch');
+                        return response.json();
+                    })
                     .then(data => {
+                        console.log('[MatchupMatrix] Fetched data:', data);
                         window.matchupMatrixData = data;
                         renderMatchupMatrix(data);
                     })
                     .catch(error => {
-                        console.error('Failed to fetch matchup matrix:', error);
+                        console.error('[MatchupMatrix] Failed to fetch:', error);
                         // Fallback to sample data
                         renderMatchupMatrixFallback();
                     });
             } else {
+                console.log('[MatchupMatrix] Using cached data:', window.matchupMatrixData);
                 renderMatchupMatrix(window.matchupMatrixData);
             }
         }
 
         function renderMatchupMatrix(data) {
             const players = data.players || [];
-            const matchups = data.matchups || {};
+            // Check both 'matchups' and 'matrix' fields for compatibility
+            const matchups = data.matchups || data.matrix || {};
+
+            console.log('[MatchupMatrix] Rendering with players:', players, 'matchups:', matchups);
 
             if (players.length === 0) {
                 document.getElementById('matchup-matrix').innerHTML =
                     '<p style="text-align: center; color: #a0aec0; padding: 40px;">No matchup data available yet</p>';
                 return;
             }
+
+            // Create player ID to display name mapping from tournament state
+            const playerNames = {};
+            if (window.tournamentState && window.tournamentState.standings) {
+                window.tournamentState.standings.forEach(s => {
+                    const playerId = s.player_id || s.player;
+                    const displayName = s.display_name || s.player_name || playerId;
+                    playerNames[playerId] = displayName;
+                });
+            }
+
+            // Function to get display name (fallback to ID if not found)
+            const getDisplayName = (playerId) => {
+                return playerNames[playerId] || playerId;
+            };
 
             // Build matrix
             const matrix = [];
@@ -2923,13 +3138,13 @@ class DashboardAPI:
                         <thead>
                             <tr>
                                 <th></th>
-                                ${players.map(p => `<th>${p}</th>`).join('')}
+                                ${players.map(p => `<th>${getDisplayName(p)}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
                             ${players.map((p1, i) => `
                                 <tr>
-                                    <td>${p1}</td>
+                                    <td>${getDisplayName(p1)}</td>
                                     ${matrix[i].map((cell, j) => `
                                         <td class="${cell.cssClass}"
                                             ${cell.value ? `onclick="showMatchDetails('${cell.p1}', '${cell.p2}')"` : ''}
@@ -2960,140 +3175,175 @@ class DashboardAPI:
         }
 
         function createStandingsRace() {
-            // Sample data - standings progression over rounds
-            const rounds = [1, 2, 3, 4, 5];
-            const standingsHistory = [
-                [
-                    { player_id: 'Player_1', points: 3 },
-                    { player_id: 'Player_2', points: 3 },
-                    { player_id: 'Player_3', points: 0 },
-                    { player_id: 'Player_4', points: 0 }
-                ],
-                [
-                    { player_id: 'Player_1', points: 3 },
-                    { player_id: 'Player_2', points: 6 },
-                    { player_id: 'Player_3', points: 3 },
-                    { player_id: 'Player_4', points: 0 }
-                ],
-                [
-                    { player_id: 'Player_1', points: 6 },
-                    { player_id: 'Player_2', points: 7 },
-                    { player_id: 'Player_3', points: 6 },
-                    { player_id: 'Player_4', points: 0 }
-                ],
-                [
-                    { player_id: 'Player_1', points: 9 },
-                    { player_id: 'Player_2', points: 7 },
-                    { player_id: 'Player_3', points: 9 },
-                    { player_id: 'Player_4', points: 1 }
-                ],
-                [
-                    { player_id: 'Player_1', points: 12 },
-                    { player_id: 'Player_2', points: 8 },
-                    { player_id: 'Player_3', points: 12 },
-                    { player_id: 'Player_4', points: 1 }
-                ]
-            ];
+            // Use real tournament data if available
+            if (!window.tournamentState || !window.tournamentState.standings) {
+                // Fallback message
+                document.getElementById('standings-race-chart').innerHTML = 
+                    '<p style="text-align: center; color: #a0aec0; padding: 40px;">No tournament data available yet</p>';
+                return;
+            }
 
-            // Create animated frames
-            const frames = standingsHistory.map((standings, idx) => {
-                // Sort by points descending
-                const sorted = [...standings].sort((a, b) => b.points - a.points);
-                return {
-                    name: `Round ${idx + 1}`,
-                    data: [{
-                        x: sorted.map(p => p.points),
-                        y: sorted.map(p => p.player_id),
-                        type: 'bar',
-                        orientation: 'h',
-                        marker: {
-                            color: sorted.map((_, i) => {
-                                const hue = (i * 360 / sorted.length);
-                                return `hsl(${hue}, 70%, 50%)`;
-                            })
-                        },
-                        text: sorted.map(p => p.points.toString()),
-                        textposition: 'outside'
-                    }],
-                    layout: {
-                        title: `Tournament Standings - Round ${idx + 1}`,
-                        xaxis: { title: 'Points', range: [0, Math.max(...sorted.map(p => p.points)) + 2] },
-                        yaxis: { title: '' },
-                        template: 'plotly_dark',
-                        paper_bgcolor: '#1a1f3a',
-                        plot_bgcolor: '#1a1f3a',
-                        height: 400
-                    }
-                };
+            // Create player ID to display name mapping
+            const playerNames = {};
+            window.tournamentState.standings.forEach(s => {
+                const playerId = s.player_id || s.player;
+                const displayName = s.display_name || s.player_name || playerId;
+                playerNames[playerId] = displayName;
             });
 
-            // Plot initial frame
-            Plotly.newPlot('standings-race-chart', frames[0].data, frames[0].layout);
+            // Get current standings snapshot
+            const currentStandings = window.tournamentState.standings.map(s => ({
+                player_id: s.player_id || s.player,
+                display_name: playerNames[s.player_id || s.player],
+                points: s.points || 0
+            }));
 
-            // Animate through rounds
-            let currentFrame = 0;
-            const animationInterval = setInterval(() => {
-                if (currentFrame < frames.length - 1) {
-                    currentFrame++;
-                    Plotly.react('standings-race-chart',
-                        frames[currentFrame].data,
-                        frames[currentFrame].layout,
-                        { transition: { duration: 500 } }
-                    );
-                } else {
-                    clearInterval(animationInterval);
-                }
-            }, 1500);
+            // For now, show current standings as a bar chart
+            // TODO: Store standings history for animated progression
+            const sorted = [...currentStandings].sort((a, b) => b.points - a.points);
+            
+            const data = [{
+                x: sorted.map(p => p.points),
+                y: sorted.map(p => p.display_name),
+                type: 'bar',
+                orientation: 'h',
+                marker: {
+                    color: sorted.map((_, i) => {
+                        const colors = ['#667eea', '#48c9b0', '#f39c12', '#e74c3c'];
+                        return colors[i % colors.length];
+                    })
+                },
+                text: sorted.map(p => p.points.toString()),
+                textposition: 'outside'
+            }];
+
+            const layout = {
+                title: `Tournament Standings - Round ${window.tournamentState.current_round || 0}`,
+                xaxis: { 
+                    title: 'Points', 
+                    range: [0, Math.max(...sorted.map(p => p.points), 10) + 2],
+                    color: '#a0aec0',
+                    gridcolor: '#2a2f4a'
+                },
+                yaxis: { 
+                    title: '',
+                    color: '#a0aec0',
+                    gridcolor: '#2a2f4a'
+                },
+                paper_bgcolor: '#0f1321',
+                plot_bgcolor: '#0f1321',
+                font: { color: '#e0e0e0' },
+                height: 400,
+                margin: { l: 100, r: 50, t: 60, b: 60 }
+            };
+
+            Plotly.newPlot('standings-race-chart', data, layout, {responsive: true});
         }
 
         function createHeadToHeadStats() {
-            // Sample head-to-head statistics
-            const h2hData = [
-                {
-                    matchup: 'Player_1 vs Player_2',
-                    stats: {
-                        'Total Matches': 3,
-                        'Player_1 Wins': 2,
-                        'Player_2 Wins': 1,
-                        'Draws': 0,
-                        'Avg Score Diff': '1.3',
-                        'Last Winner': 'Player_1'
-                    }
-                },
-                {
-                    matchup: 'Player_1 vs Player_3',
-                    stats: {
-                        'Total Matches': 2,
-                        'Player_1 Wins': 1,
-                        'Player_3 Wins': 1,
-                        'Draws': 0,
-                        'Avg Score Diff': '0.5',
-                        'Last Winner': 'Player_3'
-                    }
-                },
-                {
-                    matchup: 'Player_2 vs Player_3',
-                    stats: {
-                        'Total Matches': 3,
-                        'Player_2 Wins': 1,
-                        'Player_3 Wins': 1,
-                        'Draws': 1,
-                        'Avg Score Diff': '0.7',
-                        'Last Winner': 'Draw'
-                    }
-                },
-                {
-                    matchup: 'Player_3 vs Player_4',
-                    stats: {
-                        'Total Matches': 2,
-                        'Player_3 Wins': 2,
-                        'Player_4 Wins': 0,
-                        'Draws': 0,
-                        'Avg Score Diff': '2.5',
-                        'Last Winner': 'Player_3'
-                    }
+            // Show loading message
+            document.getElementById('head-to-head-stats').innerHTML = `
+                <div style="text-align: center; color: #a0aec0; padding: 40px;">
+                    Loading head-to-head statistics...
+                </div>
+            `;
+            
+            // Get actual matchup data from matchup matrix
+            const matchupData = window.matchupMatrixData;
+            
+            if (!matchupData || !matchupData.matrix || Object.keys(matchupData.matrix).length === 0) {
+                // Try to fetch from API if not in memory
+                console.log('[H2H] Fetching matchup matrix from API...');
+                fetch('/api/analytics/matchup_matrix')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Failed to fetch');
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('[H2H] Fetched matchup matrix:', data);
+                        window.matchupMatrixData = data;
+                        // Retry rendering with fetched data
+                        renderHeadToHeadStats(data);
+                    })
+                    .catch(error => {
+                        console.error('[H2H] Failed to fetch matchup matrix:', error);
+                        document.getElementById('head-to-head-stats').innerHTML = `
+                            <div style="text-align: center; color: #a0aec0; padding: 40px;">
+                                No head-to-head statistics available yet.<br>
+                                Complete some matches to see statistics.
+                            </div>
+                        `;
+                    });
+                return;
+            }
+
+            console.log('[H2H] Using cached matchup matrix:', matchupData);
+            renderHeadToHeadStats(matchupData);
+        }
+
+        function renderHeadToHeadStats(matchupData) {
+            console.log('[H2H] Rendering with matchupData:', matchupData);
+            
+            // Validate input
+            if (!matchupData || !matchupData.matrix) {
+                console.log('[H2H] No valid matchup data available');
+                document.getElementById('head-to-head-stats').innerHTML = `
+                    <div style="text-align: center; color: #a0aec0; padding: 40px;">
+                        No head-to-head statistics available yet.<br>
+                        Complete some matches to see statistics.
+                    </div>
+                `;
+                return;
+            }
+            
+            // Create player ID to display name mapping
+            const playerNames = {};
+            if (window.tournamentState && window.tournamentState.standings) {
+                window.tournamentState.standings.forEach(s => {
+                    const playerId = s.player_id || s.player;
+                    const displayName = s.display_name || s.player_name || playerId;
+                    playerNames[playerId] = displayName;
+                });
+            }
+
+            // Function to get display name (fallback to ID if not found)
+            const getDisplayName = (playerId) => {
+                return playerNames[playerId] || playerId;
+            };
+
+            // Convert matchup matrix to h2h data
+            const h2hData = [];
+            const matrix = matchupData.matrix || {};
+            for (const [key, matchup] of Object.entries(matrix)) {
+                if (matchup.total_matches > 0) {
+                    const player1 = matchup.player_a;
+                    const player2 = matchup.player_b;
+                    const p1Name = getDisplayName(player1);
+                    const p2Name = getDisplayName(player2);
+                    
+                    h2hData.push({
+                        matchup: `${p1Name} vs ${p2Name}`,
+                        stats: {
+                            'Total Matches': matchup.total_matches,
+                            [`${p1Name} Wins`]: matchup.player_a_wins,
+                            [`${p2Name} Wins`]: matchup.player_b_wins,
+                            'Draws': matchup.draws || 0,
+                            'Avg Score Diff': matchup.avg_score_diff ? matchup.avg_score_diff.toFixed(1) : '0.0',
+                            'Last Winner': matchup.last_winner ? getDisplayName(matchup.last_winner) : 'N/A'
+                        }
+                    });
                 }
-            ];
+            }
+
+            if (h2hData.length === 0) {
+                document.getElementById('head-to-head-stats').innerHTML = `
+                    <div style="text-align: center; color: #a0aec0; padding: 40px;">
+                        No head-to-head statistics available yet.<br>
+                        Complete some matches to see statistics.
+                    </div>
+                `;
+                return;
+            }
 
             const html = `
                 <div class="h2h-stats-grid">
@@ -3474,13 +3724,204 @@ Round Difference: ${snap2.round - snap1.round}
             }
         }
 
+        function startTournament() {
+            // Show loading indicator
+            const statusEl = document.getElementById('status');
+            const originalText = statusEl.textContent;
+            statusEl.textContent = 'Starting...';
+            statusEl.className = 'connection-status';
+            statusEl.style.background = '#27ae60';
+            
+            addLog('🚀 Starting tournament...', 'info');
+            
+            // Call dashboard's start API (which proxies to league manager)
+            fetch('/api/league/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(r => r.json())
+            .then(response => {
+                console.log('Start response:', response);
+                if (response.success) {
+                    // Restore status
+                    statusEl.textContent = 'Connected';
+                    statusEl.className = 'connection-status connected';
+                    statusEl.style.background = '';
+                    
+                    const data = response.data || {};
+                    const players = data.players || 0;
+                    const rounds = data.rounds || 0;
+                    
+                    addLog('✅ Tournament started successfully!', 'success');
+                    addLog(`👥 Players: ${players} | 🎯 Rounds: ${rounds}`, 'info');
+                    addLog('💡 Run rounds: uv run python -m src.main --run-round', 'info');
+                    
+                    // Show success message
+                    alert(`Tournament started successfully!\\n\\nPlayers: ${players}\\nRounds: ${rounds}\\n\\nYou can now run rounds with:\\nuv run python -m src.main --run-round`);
+                } else {
+                    statusEl.textContent = originalText;
+                    statusEl.className = 'connection-status connected';
+                    statusEl.style.background = '';
+                    const errorMsg = response.error || 'Unknown error';
+                    addLog('❌ Failed to start: ' + errorMsg, 'error');
+                    alert('Failed to start tournament:\\n' + errorMsg);
+                }
+            })
+            .catch(error => {
+                console.error('Start error:', error);
+                statusEl.textContent = originalText;
+                statusEl.className = 'connection-status connected';
+                statusEl.style.background = '';
+                addLog('❌ Error starting tournament: ' + error.message, 'error');
+                alert('Error starting tournament:\\n' + error.message);
+            });
+        }
+
+        function runRound() {
+            // Show loading indicator
+            const statusEl = document.getElementById('status');
+            const originalText = statusEl.textContent;
+            statusEl.textContent = 'Running Round...';
+            statusEl.className = 'connection-status';
+            statusEl.style.background = '#3498db';
+            
+            addLog('▶️ Running next round...', 'info');
+            
+            // Call dashboard's run_round API (which proxies to league manager)
+            fetch('/api/league/run_round', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(r => r.json())
+            .then(response => {
+                console.log('Run round response:', response);
+                if (response.success) {
+                    // Restore status
+                    statusEl.textContent = 'Connected';
+                    statusEl.className = 'connection-status connected';
+                    statusEl.style.background = '';
+                    
+                    const data = response.data || {};
+                    const roundNum = data.round || '?';
+                    const matches = data.matches || [];
+                    
+                    addLog(`✅ Round ${roundNum} started with ${matches.length} matches!`, 'success');
+                    addLog('🎮 Matches are now playing...', 'info');
+                } else {
+                    statusEl.textContent = originalText;
+                    statusEl.className = 'connection-status connected';
+                    statusEl.style.background = '';
+                    const errorMsg = response.error || 'Unknown error';
+                    addLog('❌ Failed to run round: ' + errorMsg, 'error');
+                    
+                    // Check if it's "all rounds completed" message
+                    if (errorMsg.includes('All rounds completed') || errorMsg.includes('already completed')) {
+                        alert('All rounds have been completed!\\n\\nReset the tournament to start a new one.');
+                    } else {
+                        alert('Failed to run round:\\n' + errorMsg);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Run round error:', error);
+                statusEl.textContent = originalText;
+                statusEl.className = 'connection-status connected';
+                statusEl.style.background = '';
+                addLog('❌ Error running round: ' + error.message, 'error');
+                alert('Error running round:\\n' + error.message);
+            });
+        }
+
         function clearData() {
-            performanceData = {};
-            opponentModelData = {};
-            regretData = {};
-            events = [];
-            document.getElementById('event-log').innerHTML = '';
-            addLog('Data cleared');
+            if (!confirm('Are you sure you want to reset the tournament? This will clear all match history and scores, but keep players registered.')) {
+                return;
+            }
+
+            // Show loading indicator
+            const statusEl = document.getElementById('status');
+            const originalText = statusEl.textContent;
+            statusEl.textContent = 'Resetting...';
+            statusEl.className = 'connection-status';
+            statusEl.style.background = '#f39c12';
+            
+            addLog('🔄 Resetting tournament...', 'info');
+            
+            // Call dashboard's reset API (which proxies to league manager)
+            fetch('/api/league/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(r => r.json())
+            .then(response => {
+                console.log('Reset response:', response);
+                if (response.success) {
+                    // Clear frontend data
+                    performanceData = {};
+                    opponentModelData = {};
+                    regretData = {};
+                    events = [];
+                    currentMatches = {};
+                    playerLastMoves = {};
+                    window.matchupMatrixData = null;
+                    window.tournamentState = null;
+                    
+                    // Clear displays
+                    document.getElementById('event-log').innerHTML = '';
+                    document.getElementById('standings-tbody').innerHTML = '<tr><td colspan="9" style="text-align: center; color: #a0aec0; padding: 40px;">Tournament reset. Waiting for new league...</td></tr>';
+                    document.getElementById('active-matches').innerHTML = '<p style="text-align: center; color: #a0aec0;">No active matches</p>';
+                    document.getElementById('game-type').textContent = '-';
+                    document.getElementById('current-round').textContent = '-';
+                    document.getElementById('active-players').textContent = '-';
+                    
+                    // Clear tournament flow sections
+                    document.getElementById('matchup-matrix').innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 40px;">No matches yet</p>';
+                    document.getElementById('head-to-head-stats').innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 40px;">No statistics yet</p>';
+                    document.getElementById('standings-race-chart').innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 40px;">No standings yet</p>';
+                    
+                    // Purge all Plotly charts in Strategy Learning Evolution
+                    try {
+                        Plotly.purge('beliefs-chart');
+                        Plotly.purge('confidence-chart');
+                        Plotly.purge('regret-chart-evolution');
+                        Plotly.purge('learning-chart');
+                        Plotly.purge('performance-chart');
+                        console.log('[Reset] All Plotly charts purged');
+                    } catch (e) {
+                        console.error('[Reset] Error purging charts:', e);
+                    }
+                    
+                    // Clear chart containers
+                    document.getElementById('beliefs-chart').innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 40px;">Waiting for data...</p>';
+                    document.getElementById('confidence-chart').innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 40px;">Waiting for data...</p>';
+                    document.getElementById('regret-chart-evolution').innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 40px;">Waiting for data...</p>';
+                    document.getElementById('learning-chart').innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 40px;">Waiting for data...</p>';
+                    
+                    // Restore status
+                    statusEl.textContent = 'Connected';
+                    statusEl.className = 'connection-status connected';
+                    statusEl.style.background = '';
+                    
+                    addLog('✅ Tournament reset successfully!', 'success');
+                    addLog('💡 Run: uv run python -m src.main --start-league', 'info');
+                    
+                    // Show success message
+                    alert('Tournament reset successfully!\\n\\nYou can now start a new league by running:\\nuv run python -m src.main --start-league');
+                } else {
+                    statusEl.textContent = originalText;
+                    statusEl.className = 'connection-status connected';
+                    statusEl.style.background = '';
+                    addLog('Failed to reset: ' + (response.result?.error || response.error?.message || 'Unknown error'), 'error');
+                    alert('Failed to reset tournament:\\n' + (response.result?.error || response.error?.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Reset error:', error);
+                statusEl.textContent = originalText;
+                statusEl.className = 'connection-status connected';
+                statusEl.style.background = '';
+                addLog('Error resetting tournament: ' + error.message, 'error');
+                alert('Error resetting tournament:\\n' + error.message);
+            });
         }
 
         function exportData() {

@@ -257,6 +257,12 @@ class PlayerAgent(BaseGameServer):
                 event_bus=get_event_bus()
             )
         
+        # Subscribe to strategy learning events and relay them to league manager
+        event_bus = get_event_bus()
+        event_bus.on("opponent.model.update", self._relay_strategy_event)
+        event_bus.on("counterfactual.analysis", self._relay_strategy_event)
+        logger.info(f"✓ {self.player_name}: Subscribed to strategy learning events for relay to league manager")
+        
         logger.info(f"Player agent {self.player_name} started")
 
     async def on_stop(self) -> None:
@@ -264,6 +270,48 @@ class PlayerAgent(BaseGameServer):
         if self._client:
             await self._client.stop()
         logger.info(f"Player agent {self.player_name} stopped")
+
+    async def _relay_strategy_event(self, event: Any) -> None:
+        """
+        Relay strategy learning events from local event bus to league manager via MCP.
+        
+        This enables cross-process communication for dashboard visualization.
+        """
+        try:
+            event_type = event.event_type
+            logger.info(f"[{self.player_name}] 🔍 DEBUG: _relay_strategy_event called for event type: {event_type}")
+            
+            # Connect to league manager if not already connected
+            if not self._client:
+                logger.warning(f"[{self.player_name}] ⚠️ No MCP client available to relay event")
+                return
+            
+            # Connect to league manager
+            await self._client.connect("league_manager", self.league_manager_url)
+            logger.info(f"[{self.player_name}] 🔍 DEBUG: Connected to league manager at {self.league_manager_url}")
+            
+            # Convert event to dict for transmission (with JSON serialization)
+            if hasattr(event, 'model_dump'):
+                event_data = event.model_dump(mode='json')  # Use mode='json' to serialize datetime
+            else:
+                event_data = dict(event)
+            
+            logger.info(f"[{self.player_name}] 🔍 DEBUG: Event data prepared (keys): {list(event_data.keys())}")
+            
+            # Send event to league manager via MCP tool
+            result = await self._client.call_tool(
+                "league_manager",
+                "report_strategy_event",
+                {
+                    "event_type": event_type,
+                    "event_data": event_data,
+                }
+            )
+            
+            logger.info(f"[{self.player_name}] ✅ Successfully relayed {event_type} event to league manager: {result}")
+            
+        except Exception as e:
+            logger.error(f"[{self.player_name}] ❌ Failed to relay strategy event: {e}", exc_info=True)
 
     async def register_with_league(self) -> bool:
         """Register with the league manager."""
