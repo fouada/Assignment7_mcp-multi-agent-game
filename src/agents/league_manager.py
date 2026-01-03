@@ -1122,18 +1122,18 @@ class LeagueManager(BaseGameServer):
 
             # Import event types
             from ..common.events.types import (
-                OpponentModelUpdateEvent,
                 CounterfactualAnalysisEvent,
+                OpponentModelUpdateEvent,
             )
 
             # Recreate the appropriate event object from the data
             event_obj = None
             if event_type == "opponent.model.update":
                 event_obj = OpponentModelUpdateEvent(**event_data)
-                logger.info(f"[LeagueManager] 🔍 DEBUG: Recreated OpponentModelUpdateEvent")
+                logger.info("[LeagueManager] 🔍 DEBUG: Recreated OpponentModelUpdateEvent")
             elif event_type == "counterfactual.analysis":
                 event_obj = CounterfactualAnalysisEvent(**event_data)
-                logger.info(f"[LeagueManager] 🔍 DEBUG: Recreated CounterfactualAnalysisEvent")
+                logger.info("[LeagueManager] 🔍 DEBUG: Recreated CounterfactualAnalysisEvent")
             else:
                 logger.warning(f"[LeagueManager] ⚠️ Unknown event type: {event_type}")
                 return {"success": False, "error": f"Unknown event type: {event_type}"}

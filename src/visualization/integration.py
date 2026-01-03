@@ -393,7 +393,7 @@ class DashboardIntegration:
                         strategy_name = "Unknown"
                         if hasattr(self.dashboard, 'tournament_states') and self.dashboard.tournament_states:
                             # Get the first (likely only) tournament state
-                            for tournament_id, state in self.dashboard.tournament_states.items():
+                            for _, state in self.dashboard.tournament_states.items():
                                 standings = state.standings if hasattr(state, 'standings') else []
                                 for standing in standings:
                                     if isinstance(standing, dict):
@@ -456,7 +456,7 @@ class DashboardIntegration:
                     "data": matchup_dict
                 })
 
-                logger.info(f"[Integration] ✅ Successfully broadcasted matchup matrix update")
+                logger.info("[Integration] ✅ Successfully broadcasted matchup matrix update")
 
                 logger.info(f"Updated matchup matrix for match {match_id}: {player1_id} vs {player2_id}, winner: {winner}")
 
@@ -530,7 +530,7 @@ class DashboardIntegration:
             round_number = event.round_number
             actual_move = event.actual_move
             actual_payoff = event.actual_payoff
-            alternative_moves = event.alternative_moves
+            _alternative_moves = event.alternative_moves
             regret = event.regret
             cumulative_regret = event.cumulative_regret
 

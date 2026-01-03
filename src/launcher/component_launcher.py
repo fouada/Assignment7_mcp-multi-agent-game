@@ -241,9 +241,9 @@ class ComponentLauncher:
         try:
             if self._integration:
                 await self._integration.on_opponent_model_update(event)
-                logger.info(f"[Launcher] ✅ Successfully forwarded opponent_model_update to integration")
+                logger.info("[Launcher] ✅ Successfully forwarded opponent_model_update to integration")
             else:
-                logger.warning(f"[Launcher] ⚠️ No integration available to forward opponent_model_update")
+                logger.warning("[Launcher] ⚠️ No integration available to forward opponent_model_update")
         except Exception as e:
             logger.error(f"[Launcher] ❌ Error forwarding opponent model update event: {e}", exc_info=True)
 
@@ -253,15 +253,15 @@ class ComponentLauncher:
         try:
             if self._integration:
                 await self._integration.on_counterfactual_analysis(event)
-                logger.info(f"[Launcher] ✅ Successfully forwarded counterfactual_analysis to integration")
+                logger.info("[Launcher] ✅ Successfully forwarded counterfactual_analysis to integration")
             else:
-                logger.warning(f"[Launcher] ⚠️ No integration available to forward counterfactual_analysis")
+                logger.warning("[Launcher] ⚠️ No integration available to forward counterfactual_analysis")
         except Exception as e:
             logger.error(f"[Launcher] ❌ Error forwarding counterfactual analysis event: {e}", exc_info=True)
 
     async def _on_match_completed(self, event: Any) -> None:
         """Forward match completed event to integration."""
-        logger.info(f"[Launcher] 🔍 DEBUG: Received match_completed event")
+        logger.info("[Launcher] 🔍 DEBUG: Received match_completed event")
         try:
             if self._integration:
                 # Extract match data and forward to integration
@@ -274,9 +274,9 @@ class ComponentLauncher:
 
                 # Forward to integration
                 await self._integration.on_match_completed(event)
-                logger.info(f"[Launcher] ✅ Successfully forwarded match_completed to integration")
+                logger.info("[Launcher] ✅ Successfully forwarded match_completed to integration")
             else:
-                logger.warning(f"[Launcher] ⚠️ No integration available to forward match_completed")
+                logger.warning("[Launcher] ⚠️ No integration available to forward match_completed")
         except Exception as e:
             logger.error(f"[Launcher] ❌ Error forwarding match completed event: {e}", exc_info=True)
 
@@ -315,9 +315,9 @@ class ComponentLauncher:
 
                         logger.info(f"[Launcher] ✅ Broadcasted updated tournament state for {tournament_id}")
                 else:
-                    logger.warning(f"[Launcher] ⚠️ No tournament states available to broadcast")
+                    logger.warning("[Launcher] ⚠️ No tournament states available to broadcast")
             else:
-                logger.warning(f"[Launcher] ⚠️ No integration available to forward standings_updated")
+                logger.warning("[Launcher] ⚠️ No integration available to forward standings_updated")
         except Exception as e:
             logger.error(f"[Launcher] ❌ Error handling standings updated event: {e}", exc_info=True)
 
