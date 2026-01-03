@@ -1584,7 +1584,8 @@ class UltimateDashboard:
         """Start the dashboard server."""
         runner = web.AppRunner(self.app)
         await runner.setup()
-        site = web.TCPSite(runner, "0.0.0.0", self.port)
+        # Bind to all interfaces for Docker/development - intentional for local dashboard
+        site = web.TCPSite(runner, "0.0.0.0", self.port)  # nosec B104
         await site.start()
         print(f"\n🎮 Ultimate MIT-Level Dashboard running at: http://localhost:{self.port}")
         print(f"   Open this URL in your browser to see all innovations visualized!")
