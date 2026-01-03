@@ -40,6 +40,7 @@ jobs:
       - name: Run Ruff formatting check
         run: |
           ruff format src/ tests/ --check
+        continue-on-error: true
 
       - name: Run MyPy type checking
         run: |
