@@ -525,7 +525,7 @@ class TestRefereeEdgeCases:
     @pytest.mark.asyncio
     async def test_concurrent_match_handling(self):
         """Test handling multiple concurrent matches."""
-        referee = RefereeAgent(auto_register=False)
+        _referee = RefereeAgent(auto_register=False)
 
         matches = []
         for i in range(3):
