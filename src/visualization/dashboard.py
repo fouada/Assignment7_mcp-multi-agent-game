@@ -579,7 +579,7 @@ class DashboardAPI:
             """Start the league tournament (proxy to league manager)."""
             try:
                 import httpx
-                
+
                 # Call league manager's start_league tool via MCP
                 response = await httpx.AsyncClient().post(
                     "http://localhost:8000/mcp",
@@ -596,11 +596,11 @@ class DashboardAPI:
                 )
                 response.raise_for_status()
                 result = response.json()
-                
+
                 if result.get("result", {}).get("success"):
                     logger.info("[Dashboard] Tournament started successfully")
                     return {
-                        "success": True, 
+                        "success": True,
                         "message": "Tournament started successfully",
                         "data": result.get("result", {})
                     }
@@ -608,7 +608,7 @@ class DashboardAPI:
                     error_msg = result.get("result", {}).get("error", "Unknown error")
                     logger.error(f"[Dashboard] Start failed: {error_msg}")
                     return {"success": False, "error": error_msg}
-                    
+
             except Exception as e:
                 logger.error(f"[Dashboard] Error starting tournament: {e}", exc_info=True)
                 return {"success": False, "error": str(e)}
@@ -618,7 +618,7 @@ class DashboardAPI:
             """Run the next round (proxy to league manager)."""
             try:
                 import httpx
-                
+
                 # Call league manager's start_next_round tool via MCP
                 response = await httpx.AsyncClient().post(
                     "http://localhost:8000/mcp",
@@ -635,11 +635,11 @@ class DashboardAPI:
                 )
                 response.raise_for_status()
                 result = response.json()
-                
+
                 if result.get("result", {}).get("success"):
                     logger.info("[Dashboard] Round started successfully")
                     return {
-                        "success": True, 
+                        "success": True,
                         "message": "Round started successfully",
                         "data": result.get("result", {})
                     }
@@ -647,7 +647,7 @@ class DashboardAPI:
                     error_msg = result.get("result", {}).get("error", "Unknown error")
                     logger.error(f"[Dashboard] Run round failed: {error_msg}")
                     return {"success": False, "error": error_msg}
-                    
+
             except Exception as e:
                 logger.error(f"[Dashboard] Error running round: {e}", exc_info=True)
                 return {"success": False, "error": str(e)}
@@ -657,7 +657,7 @@ class DashboardAPI:
             """Reset the league tournament (proxy to league manager)."""
             try:
                 import httpx
-                
+
                 # Call league manager's reset_league tool via MCP
                 response = await httpx.AsyncClient().post(
                     "http://localhost:8000/mcp",
@@ -674,7 +674,7 @@ class DashboardAPI:
                 )
                 response.raise_for_status()
                 result = response.json()
-                
+
                 if result.get("result", {}).get("success"):
                     # Clear dashboard data
                     self.tournament_states.clear()
@@ -682,19 +682,19 @@ class DashboardAPI:
                     self.strategy_performance.clear()
                     self.opponent_models.clear()
                     self.counterfactuals.clear()
-                    
+
                     # Clear analytics engine
                     from .analytics import get_analytics_engine
                     engine = get_analytics_engine()
                     engine.reset()
-                    
+
                     logger.info("[Dashboard] Tournament reset successful")
                     return {"success": True, "message": "Tournament reset successfully"}
                 else:
                     error_msg = result.get("result", {}).get("error", "Unknown error")
                     logger.error(f"[Dashboard] Reset failed: {error_msg}")
                     return {"success": False, "error": error_msg}
-                    
+
             except Exception as e:
                 logger.error(f"[Dashboard] Error resetting tournament: {e}", exc_info=True)
                 return {"success": False, "error": str(e)}
@@ -2273,7 +2273,7 @@ class DashboardAPI:
         function handleTournamentUpdate(data) {
             // Store tournament state globally for other functions to access
             window.tournamentState = data;
-            
+
             document.getElementById('game-type').textContent = data.game_type || 'even_odd';
             document.getElementById('current-round').textContent =
                 `${data.current_round || 0} / ${data.total_rounds || 0}`;
@@ -2411,7 +2411,7 @@ class DashboardAPI:
             // Always update matrix view to keep data fresh
             // (Even if not currently visible, it will be ready when user clicks the tab)
             createMatchupMatrix();
-            
+
             // Also update head-to-head stats if it's visible or needs updating
             const statsView = document.getElementById('tournament-stats');
             if (statsView && !statsView.classList.contains('hidden')) {
@@ -2647,7 +2647,7 @@ class DashboardAPI:
         function updateBeliefsChart() {
             // Get player list from either WebSocket data OR tournament state
             let players = Object.keys(opponentModelData);
-            
+
             // If no WebSocket data, try getting players from tournament state standings
             // Use display_name (Alice, Bob, etc.) not player_id (P01, P02, etc.)
             if (players.length === 0 && window.tournamentState && window.tournamentState.standings) {
@@ -2787,7 +2787,7 @@ class DashboardAPI:
         function updateRegretEvolutionChart() {
             // Get player list from either WebSocket data OR tournament state
             let players = Object.keys(regretData);
-            
+
             // If no WebSocket data, try getting players from tournament state standings
             // Use display_name (Alice, Bob, etc.) not player_id (P01, P02, etc.)
             if (players.length === 0 && window.tournamentState && window.tournamentState.standings) {
@@ -3010,9 +3010,9 @@ class DashboardAPI:
 
         function createMatchupMatrix() {
             // Show loading message
-            document.getElementById('matchup-matrix').innerHTML = 
+            document.getElementById('matchup-matrix').innerHTML =
                 '<p style="text-align: center; color: #a0aec0; padding: 40px;">Loading matchup matrix...</p>';
-            
+
             // Use real data from analytics engine via WebSocket or fetch from API
             if (!window.matchupMatrixData || !window.matchupMatrixData.players) {
                 // Fetch from API if not available
@@ -3178,7 +3178,7 @@ class DashboardAPI:
             // Use real tournament data if available
             if (!window.tournamentState || !window.tournamentState.standings) {
                 // Fallback message
-                document.getElementById('standings-race-chart').innerHTML = 
+                document.getElementById('standings-race-chart').innerHTML =
                     '<p style="text-align: center; color: #a0aec0; padding: 40px;">No tournament data available yet</p>';
                 return;
             }
@@ -3201,7 +3201,7 @@ class DashboardAPI:
             // For now, show current standings as a bar chart
             // TODO: Store standings history for animated progression
             const sorted = [...currentStandings].sort((a, b) => b.points - a.points);
-            
+
             const data = [{
                 x: sorted.map(p => p.points),
                 y: sorted.map(p => p.display_name),
@@ -3219,13 +3219,13 @@ class DashboardAPI:
 
             const layout = {
                 title: `Tournament Standings - Round ${window.tournamentState.current_round || 0}`,
-                xaxis: { 
-                    title: 'Points', 
+                xaxis: {
+                    title: 'Points',
                     range: [0, Math.max(...sorted.map(p => p.points), 10) + 2],
                     color: '#a0aec0',
                     gridcolor: '#2a2f4a'
                 },
-                yaxis: { 
+                yaxis: {
                     title: '',
                     color: '#a0aec0',
                     gridcolor: '#2a2f4a'
@@ -3247,10 +3247,10 @@ class DashboardAPI:
                     Loading head-to-head statistics...
                 </div>
             `;
-            
+
             // Get actual matchup data from matchup matrix
             const matchupData = window.matchupMatrixData;
-            
+
             if (!matchupData || !matchupData.matrix || Object.keys(matchupData.matrix).length === 0) {
                 // Try to fetch from API if not in memory
                 console.log('[H2H] Fetching matchup matrix from API...');
@@ -3283,7 +3283,7 @@ class DashboardAPI:
 
         function renderHeadToHeadStats(matchupData) {
             console.log('[H2H] Rendering with matchupData:', matchupData);
-            
+
             // Validate input
             if (!matchupData || !matchupData.matrix) {
                 console.log('[H2H] No valid matchup data available');
@@ -3295,7 +3295,7 @@ class DashboardAPI:
                 `;
                 return;
             }
-            
+
             // Create player ID to display name mapping
             const playerNames = {};
             if (window.tournamentState && window.tournamentState.standings) {
@@ -3320,7 +3320,7 @@ class DashboardAPI:
                     const player2 = matchup.player_b;
                     const p1Name = getDisplayName(player1);
                     const p2Name = getDisplayName(player2);
-                    
+
                     h2hData.push({
                         matchup: `${p1Name} vs ${p2Name}`,
                         stats: {
@@ -3731,9 +3731,9 @@ Round Difference: ${snap2.round - snap1.round}
             statusEl.textContent = 'Starting...';
             statusEl.className = 'connection-status';
             statusEl.style.background = '#27ae60';
-            
+
             addLog('🚀 Starting tournament...', 'info');
-            
+
             // Call dashboard's start API (which proxies to league manager)
             fetch('/api/league/start', {
                 method: 'POST',
@@ -3747,15 +3747,15 @@ Round Difference: ${snap2.round - snap1.round}
                     statusEl.textContent = 'Connected';
                     statusEl.className = 'connection-status connected';
                     statusEl.style.background = '';
-                    
+
                     const data = response.data || {};
                     const players = data.players || 0;
                     const rounds = data.rounds || 0;
-                    
+
                     addLog('✅ Tournament started successfully!', 'success');
                     addLog(`👥 Players: ${players} | 🎯 Rounds: ${rounds}`, 'info');
                     addLog('💡 Run rounds: uv run python -m src.main --run-round', 'info');
-                    
+
                     // Show success message
                     alert(`Tournament started successfully!\\n\\nPlayers: ${players}\\nRounds: ${rounds}\\n\\nYou can now run rounds with:\\nuv run python -m src.main --run-round`);
                 } else {
@@ -3784,9 +3784,9 @@ Round Difference: ${snap2.round - snap1.round}
             statusEl.textContent = 'Running Round...';
             statusEl.className = 'connection-status';
             statusEl.style.background = '#3498db';
-            
+
             addLog('▶️ Running next round...', 'info');
-            
+
             // Call dashboard's run_round API (which proxies to league manager)
             fetch('/api/league/run_round', {
                 method: 'POST',
@@ -3800,11 +3800,11 @@ Round Difference: ${snap2.round - snap1.round}
                     statusEl.textContent = 'Connected';
                     statusEl.className = 'connection-status connected';
                     statusEl.style.background = '';
-                    
+
                     const data = response.data || {};
                     const roundNum = data.round || '?';
                     const matches = data.matches || [];
-                    
+
                     addLog(`✅ Round ${roundNum} started with ${matches.length} matches!`, 'success');
                     addLog('🎮 Matches are now playing...', 'info');
                 } else {
@@ -3813,7 +3813,7 @@ Round Difference: ${snap2.round - snap1.round}
                     statusEl.style.background = '';
                     const errorMsg = response.error || 'Unknown error';
                     addLog('❌ Failed to run round: ' + errorMsg, 'error');
-                    
+
                     // Check if it's "all rounds completed" message
                     if (errorMsg.includes('All rounds completed') || errorMsg.includes('already completed')) {
                         alert('All rounds have been completed!\\n\\nReset the tournament to start a new one.');
@@ -3843,9 +3843,9 @@ Round Difference: ${snap2.round - snap1.round}
             statusEl.textContent = 'Resetting...';
             statusEl.className = 'connection-status';
             statusEl.style.background = '#f39c12';
-            
+
             addLog('🔄 Resetting tournament...', 'info');
-            
+
             // Call dashboard's reset API (which proxies to league manager)
             fetch('/api/league/reset', {
                 method: 'POST',
@@ -3864,7 +3864,7 @@ Round Difference: ${snap2.round - snap1.round}
                     playerLastMoves = {};
                     window.matchupMatrixData = null;
                     window.tournamentState = null;
-                    
+
                     // Clear displays
                     document.getElementById('event-log').innerHTML = '';
                     document.getElementById('standings-tbody').innerHTML = '<tr><td colspan="9" style="text-align: center; color: #a0aec0; padding: 40px;">Tournament reset. Waiting for new league...</td></tr>';
@@ -3872,12 +3872,12 @@ Round Difference: ${snap2.round - snap1.round}
                     document.getElementById('game-type').textContent = '-';
                     document.getElementById('current-round').textContent = '-';
                     document.getElementById('active-players').textContent = '-';
-                    
+
                     // Clear tournament flow sections
                     document.getElementById('matchup-matrix').innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 40px;">No matches yet</p>';
                     document.getElementById('head-to-head-stats').innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 40px;">No statistics yet</p>';
                     document.getElementById('standings-race-chart').innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 40px;">No standings yet</p>';
-                    
+
                     // Purge all Plotly charts in Strategy Learning Evolution
                     try {
                         Plotly.purge('beliefs-chart');
@@ -3889,21 +3889,21 @@ Round Difference: ${snap2.round - snap1.round}
                     } catch (e) {
                         console.error('[Reset] Error purging charts:', e);
                     }
-                    
+
                     // Clear chart containers
                     document.getElementById('beliefs-chart').innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 40px;">Waiting for data...</p>';
                     document.getElementById('confidence-chart').innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 40px;">Waiting for data...</p>';
                     document.getElementById('regret-chart-evolution').innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 40px;">Waiting for data...</p>';
                     document.getElementById('learning-chart').innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 40px;">Waiting for data...</p>';
-                    
+
                     // Restore status
                     statusEl.textContent = 'Connected';
                     statusEl.className = 'connection-status connected';
                     statusEl.style.background = '';
-                    
+
                     addLog('✅ Tournament reset successfully!', 'success');
                     addLog('💡 Run: uv run python -m src.main --start-league', 'info');
-                    
+
                     // Show success message
                     alert('Tournament reset successfully!\\n\\nYou can now start a new league by running:\\nuv run python -m src.main --start-league');
                 } else {

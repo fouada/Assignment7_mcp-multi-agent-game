@@ -564,15 +564,15 @@ class RegretMatchingStrategy(GameTheoryStrategy):
         if self._event_bus and self._player_id and history:
             try:
                 logger.info(f"[RegretMatching] 🔍 DEBUG: About to emit counterfactual event for {self._player_id} -> {game_id}")
-                
+
                 # Get last round info
                 last_round = history[-1]
                 actual_move_value = last_round.get('my_move', 5)  # Default to 5
                 actual_payoff_value = 1 if last_round.get('winner') == self._player_id else 0
-                
+
                 # Calculate cumulative regret magnitude
                 total_regret = abs(regrets["odd"]) + abs(regrets["even"])
-                
+
                 # Create proper event with correct types
                 event = CounterfactualAnalysisEvent(
                     player_id=self._player_id,

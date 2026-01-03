@@ -33,13 +33,23 @@ def fix_file(filepath: Path) -> tuple[int, int]:
 
 
 def main():
-    # Files to fix
+    # Files to fix - get all Python files with whitespace issues
     files = [
+        # Test files
         "tests/test_dashboard_api.py",
         "tests/test_analytics_engine_reset.py",
         "tests/test_performance_comprehensive.py",
         "tests/test_functional_comprehensive.py",
         "tests/test_coverage_validation.py",
+        # Source files with whitespace issues
+        "src/agents/league_manager.py",
+        "src/agents/player.py",
+        "src/agents/strategies/base.py",
+        "src/agents/strategies/game_theory.py",
+        "src/launcher/component_launcher.py",
+        "src/main.py",
+        "src/visualization/dashboard.py",
+        "src/visualization/integration.py",
     ]
     
     total_fixed = 0

@@ -400,24 +400,24 @@ class DashboardIntegration:
                                         pid = standing.get('player_id') or standing.get('player')
                                     else:
                                         pid = getattr(standing, 'player_id', None) or getattr(standing, 'player', None)
-                                    
+
                                     if pid == player_id:
                                         if isinstance(standing, dict):
                                             strategy_name = standing.get('strategy', 'Unknown')
                                         else:
                                             strategy_name = getattr(standing, 'strategy', 'Unknown')
                                         break
-                                
+
                                 if strategy_name != "Unknown":
                                     break
-                        
+
                         logger.info(f"[Integration] 🔧 Auto-registering player {player_id} with strategy '{strategy_name}'")
                         self.analytics_engine.register_player(player_id, strategy_name)
 
                 logger.info(f"[Integration] 🔍 DEBUG: Calling analytics_engine.on_round_complete with players {player1_id} vs {player2_id}")
 
                 # Update matchup matrix in analytics engine
-                # Note: We use the total_rounds as the "current round" 
+                # Note: We use the total_rounds as the "current round"
                 # since this is the cumulative result
                 moves = {}  # Moves not available in match.completed event
                 await self.analytics_engine.on_round_complete(
@@ -429,9 +429,9 @@ class DashboardIntegration:
                 # Broadcast matchup matrix update
                 from dataclasses import asdict, is_dataclass
                 matchup_data = self.analytics_engine.get_matchup_matrix()
-                
+
                 logger.info(f"[Integration] 🔍 DEBUG: Broadcasting matchup matrix, players={matchup_data.players}, matrix_size={len(matchup_data.matrix)}")
-                
+
                 # Convert dataclass or Pydantic model to dict
                 if is_dataclass(matchup_data):
                     matchup_dict = asdict(matchup_data)
@@ -441,21 +441,21 @@ class DashboardIntegration:
                     matchup_dict = matchup_data.dict()
                 else:
                     matchup_dict = matchup_data
-                
+
                 # Convert tuple keys to string keys for JSON serialization
                 if 'matrix' in matchup_dict and isinstance(matchup_dict['matrix'], dict):
                     matchup_dict['matrix'] = {
                         f"{k[0]}_vs_{k[1]}" if isinstance(k, tuple) else k: v
                         for k, v in matchup_dict['matrix'].items()
                     }
-                
+
                 logger.info(f"[Integration] 🔍 DEBUG: About to broadcast matchup_matrix_update with {len(matchup_dict.get('matrix', {}))} matchups")
-                
+
                 await self.dashboard.connection_manager.broadcast({
                     "type": "matchup_matrix_update",
                     "data": matchup_dict
                 })
-                
+
                 logger.info(f"[Integration] ✅ Successfully broadcasted matchup matrix update")
 
                 logger.info(f"Updated matchup matrix for match {match_id}: {player1_id} vs {player2_id}, winner: {winner}")
@@ -478,9 +478,9 @@ class DashboardIntegration:
             predicted_strategy = event.predicted_strategy
             belief_distribution = event.belief_distribution
             accuracy = event.accuracy
-            
+
             logger.info(f"[Integration] 🔍 DEBUG: belief_distribution = {belief_distribution}")
-            
+
             # Extract mean and std from belief distribution (handle both 'std' and 'std_dev')
             mean_belief = belief_distribution.get('mean', 0.5)
             std_dev_belief = belief_distribution.get('std', belief_distribution.get('std_dev', 0.0))
@@ -533,14 +533,14 @@ class DashboardIntegration:
             alternative_moves = event.alternative_moves
             regret = event.regret
             cumulative_regret = event.cumulative_regret
-            
+
             logger.info(f"[Integration] 🔍 DEBUG: regret dict = {regret}, cumulative={cumulative_regret}")
-            
+
             # Convert regret dict to counterfactuals format for analytics engine
             # Analytics expects: list[dict] with "move" and "regret" keys
             counterfactuals_list = []
             cumulative_regret_dict = {}
-            
+
             if regret:
                 for move, reg_val in regret.items():
                     move_str = str(move)

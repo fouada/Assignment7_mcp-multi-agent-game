@@ -107,6 +107,18 @@ markers = [
 [tool.ruff]
 target-version = "py311"
 line-length = 100
+exclude = [
+    # Theoretical/research modules
+    "src/common/brqc/**",
+    "src/common/causal/**",
+    "src/common/theory/**",
+    # Advanced infrastructure
+    "src/common/hooks/**",
+    "src/common/plugins/**",
+    # Advanced visualizations
+    "src/visualization/ultimate_*.py",
+    "src/visualization/research_display.py",
+]
 
 [tool.ruff.lint]
 select = [

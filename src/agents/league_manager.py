@@ -576,28 +576,28 @@ class LeagueManager(BaseGameServer):
     async def _reset_league(self) -> dict[str, Any]:
         """Reset the league to start a new tournament."""
         logger.info("Resetting league for new tournament")
-        
+
         # Reset state
         self.state = LeagueState.REGISTRATION
         self.current_round = 0
         self._schedule = []
         self._current_round_matches = {}
         self._match_results = {}
-        
+
         # Keep players and referees registered, but reset their scores
         for player in self._players.values():
             player.total_wins = 0
             player.total_losses = 0
             player.total_draws = 0
             player.total_points = 0
-        
+
         logger.info(
             f"League reset complete. {len(self._players)} players and {len(self._referees)} referees still registered."
         )
-        
+
         # Stream reset state to dashboard
         await self._stream_tournament_update()
-        
+
         return {
             "success": True,
             "message": "League reset successfully",
@@ -1106,26 +1106,26 @@ class LeagueManager(BaseGameServer):
     async def _handle_strategy_event(self, params: dict) -> dict[str, Any]:
         """
         Handle strategy learning event from player (cross-process communication).
-        
+
         This allows players to send strategy learning events to the league manager,
         which then emits them to the local event bus for the dashboard integration.
         """
         try:
             event_type = params.get("event_type", "")
             event_data = params.get("event_data", {})
-            
+
             logger.info(f"[LeagueManager] 🔍 DEBUG: Received strategy event '{event_type}' from player via MCP")
             logger.info(f"[LeagueManager] 🔍 DEBUG: Event data: {event_data}")
-            
+
             # Get the event bus and recreate the event object
             event_bus = get_event_bus()
-            
+
             # Import event types
             from ..common.events.types import (
                 OpponentModelUpdateEvent,
                 CounterfactualAnalysisEvent,
             )
-            
+
             # Recreate the appropriate event object from the data
             event_obj = None
             if event_type == "opponent.model.update":
@@ -1137,13 +1137,13 @@ class LeagueManager(BaseGameServer):
             else:
                 logger.warning(f"[LeagueManager] ⚠️ Unknown event type: {event_type}")
                 return {"success": False, "error": f"Unknown event type: {event_type}"}
-            
+
             # Emit the event to the local event bus
             await event_bus.emit(event_type, event_obj)
             logger.info(f"[LeagueManager] ✅ Successfully emitted {event_type} event to local event bus")
-            
+
             return {"success": True, "event_type": event_type}
-            
+
         except Exception as e:
             logger.error(f"[LeagueManager] ❌ Error handling strategy event: {e}", exc_info=True)
             return {"success": False, "error": str(e)}

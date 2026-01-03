@@ -185,7 +185,7 @@ class ComponentLauncher:
         self.event_bus.on("round.started", self._on_round_started)
         self.event_bus.on("player.move.after", self._on_player_move)
         self.event_bus.on("round.completed", self._on_round_completed)
-        
+
         # Connect strategy learning events for dashboard visualization
         self.event_bus.on("opponent.model.update", self._on_opponent_model_update)
         self.event_bus.on("counterfactual.analysis", self._on_counterfactual_analysis)
@@ -269,9 +269,9 @@ class ComponentLauncher:
                 player1_id = getattr(event, 'player1_id', 'unknown')
                 player2_id = getattr(event, 'player2_id', 'unknown')
                 winner_id = getattr(event, 'winner', None)
-                
+
                 logger.info(f"[Launcher] Match completed: {match_id} ({player1_id} vs {player2_id}), winner: {winner_id}")
-                
+
                 # Forward to integration
                 await self._integration.on_match_completed(event)
                 logger.info(f"[Launcher] ✅ Successfully forwarded match_completed to integration")
@@ -287,14 +287,14 @@ class ComponentLauncher:
             if self._integration:
                 # Get the dashboard instance
                 dashboard = self._integration.dashboard
-                
+
                 # Get current tournament state from dashboard's stored states
                 if dashboard.tournament_states:
                     # Broadcast the updated tournament state to all connected clients
                     for tournament_id, state in dashboard.tournament_states.items():
                         from dataclasses import asdict
                         state_dict = asdict(state)
-                        
+
                         # Convert datetimes
                         def convert_datetimes(obj):
                             if isinstance(obj, dict):
@@ -304,15 +304,15 @@ class ComponentLauncher:
                             elif hasattr(obj, 'isoformat'):
                                 return obj.isoformat()
                             return obj
-                        
+
                         serializable_state = convert_datetimes(state_dict)
-                        
+
                         await dashboard.connection_manager.broadcast({
                             "type": "tournament_state",
                             "tournament_id": tournament_id,
                             "data": serializable_state
                         })
-                        
+
                         logger.info(f"[Launcher] ✅ Broadcasted updated tournament state for {tournament_id}")
                 else:
                     logger.warning(f"[Launcher] ⚠️ No tournament states available to broadcast")

@@ -260,7 +260,7 @@ class Strategy(ABC):
     def set_player_context(self, player_id: str, event_bus: Any = None) -> None:
         """
         Set player context for event emission.
-        
+
         Args:
             player_id: ID of the player using this strategy
             event_bus: Event bus for emitting learning events
