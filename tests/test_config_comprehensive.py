@@ -35,7 +35,7 @@ class TestSystemConfig:
             environment="test",
             debug=True
         )
-        
+
         assert config.version == "1.0.0"
         assert config.environment == "test"
         assert config.debug is True
@@ -43,7 +43,7 @@ class TestSystemConfig:
     def test_system_config_defaults(self):
         """Test SystemConfig defaults."""
         config = SystemConfig()
-        
+
         assert config.version is not None
         assert config.environment in ["development", "production", "test"]
 
@@ -51,7 +51,7 @@ class TestSystemConfig:
         """Test converting SystemConfig to dict."""
         config = SystemConfig(version="1.0.0")
         config_dict = config.to_dict()
-        
+
         assert isinstance(config_dict, dict)
         assert "version" in config_dict
 
@@ -66,7 +66,7 @@ class TestNetworkConfig:
             port=8000,
             timeout=30
         )
-        
+
         assert config.host == "localhost"
         assert config.port == 8000
         assert config.timeout == 30
@@ -74,7 +74,7 @@ class TestNetworkConfig:
     def test_network_config_defaults(self):
         """Test NetworkConfig defaults."""
         config = NetworkConfig()
-        
+
         assert config.host is not None
         assert config.port > 0
 
@@ -87,7 +87,7 @@ class TestNetworkConfig:
         """Test URL generation from NetworkConfig."""
         config = NetworkConfig(host="localhost", port=8000)
         url = f"http://{config.host}:{config.port}"
-        
+
         assert url == "http://localhost:8000"
 
 
@@ -102,7 +102,7 @@ class TestTimeoutConfig:
             registration=30,
             heartbeat=60
         )
-        
+
         assert config.move == 10
         assert config.response == 5
         assert config.registration == 30
@@ -111,7 +111,7 @@ class TestTimeoutConfig:
     def test_timeout_config_defaults(self):
         """Test TimeoutConfig defaults."""
         config = TimeoutConfig()
-        
+
         assert config.move > 0
         assert config.response > 0
 
@@ -131,7 +131,7 @@ class TestAgentConfig:
             agent_type="player",
             strategy="random"
         )
-        
+
         assert config.agent_id == "player_1"
         assert config.agent_type == "player"
         assert config.strategy == "random"
@@ -144,7 +144,7 @@ class TestAgentConfig:
             agent_type="player",
             network=network
         )
-        
+
         assert config.network.host == "localhost"
         assert config.network.port == 8001
 
@@ -158,14 +158,14 @@ class TestStrategyConfig:
             name="random",
             params={"min_value": 1, "max_value": 10}
         )
-        
+
         assert config.name == "random"
         assert config.params["min_value"] == 1
 
     def test_strategy_config_defaults(self):
         """Test StrategyConfig defaults."""
         config = StrategyConfig(name="adaptive")
-        
+
         assert config.name == "adaptive"
         assert isinstance(config.params, dict)
 
@@ -181,7 +181,7 @@ class TestGameConfig:
             min_players=2,
             max_players=2
         )
-        
+
         assert config.game_type == "odd_even"
         assert config.num_rounds == 5
 
@@ -205,7 +205,7 @@ class TestLeagueConfig:
             max_players=10,
             min_players=2
         )
-        
+
         assert config.league_id == "test_league"
         assert config.name == "Test League"
 
@@ -216,7 +216,7 @@ class TestLeagueConfig:
             league_id="test_league",
             game=game
         )
-        
+
         assert config.game.game_type == "odd_even"
 
 
@@ -229,7 +229,7 @@ class TestServerConfig:
             server_type="league_manager",
             network=NetworkConfig(port=8000)
         )
-        
+
         assert config.server_type == "league_manager"
         assert config.network.port == 8000
 
@@ -244,7 +244,7 @@ class TestPluginConfig:
             plugins_dir="./plugins",
             auto_discover=True
         )
-        
+
         assert config.enabled is True
         assert config.auto_discover is True
 
@@ -259,7 +259,7 @@ class TestObservabilityConfig:
             tracing_enabled=True,
             logging_level="INFO"
         )
-        
+
         assert config.metrics_enabled is True
         assert config.tracing_enabled is True
 
@@ -277,7 +277,7 @@ class TestConfigLoading:
                 "port": 8000
             }
         }
-        
+
         config = load_config(config_dict)
         assert config is not None
 
@@ -286,7 +286,7 @@ class TestConfigLoading:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
             f.write('{"version": "1.0.0", "environment": "test"}')
             temp_file = f.name
-        
+
         try:
             config = load_config(temp_file)
             assert config is not None
@@ -303,9 +303,9 @@ class TestConfigLoading:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
             f.write('invalid json {{{')
             temp_file = f.name
-        
+
         try:
-            with pytest.raises(Exception):
+            with pytest.raises((ValueError, OSError, RuntimeError)):
                 load_config(temp_file)
         finally:
             os.unlink(temp_file)
@@ -318,14 +318,14 @@ class TestConfigValidation:
         """Test validating a valid config."""
         config = SystemConfig(version="1.0.0")
         errors = validate_config(config)
-        
+
         assert len(errors) == 0
 
     def test_validate_invalid_config(self):
         """Test validating an invalid config."""
         config = SystemConfig(version="")  # Empty version
         errors = validate_config(config)
-        
+
         # May or may not have errors depending on validation rules
         assert isinstance(errors, list)
 
@@ -333,7 +333,7 @@ class TestConfigValidation:
         """Test validating network config."""
         config = NetworkConfig(host="localhost", port=8000)
         errors = validate_config(config)
-        
+
         assert isinstance(errors, list)
 
 
@@ -344,7 +344,7 @@ class TestConfigGetter:
         """Test that get_config returns singleton."""
         config1 = get_config()
         config2 = get_config()
-        
+
         # May or may not be singleton depending on implementation
         assert config1 is not None
         assert config2 is not None
@@ -352,7 +352,7 @@ class TestConfigGetter:
     def test_get_config_returns_system_config(self):
         """Test that get_config returns SystemConfig."""
         config = get_config()
-        
+
         assert config is not None
         assert isinstance(config, (SystemConfig, dict))
 
@@ -364,10 +364,10 @@ class TestConfigMerging:
         """Test merging two configs."""
         base = {"a": 1, "b": 2}
         override = {"b": 3, "c": 4}
-        
+
         # Manual merge for testing
         merged = {**base, **override}
-        
+
         assert merged["a"] == 1
         assert merged["b"] == 3
         assert merged["c"] == 4
@@ -376,12 +376,12 @@ class TestConfigMerging:
         """Test deep merging configs."""
         base = {"network": {"host": "localhost", "port": 8000}}
         override = {"network": {"port": 9000}}
-        
+
         # Manual deep merge for testing
         merged = {**base}
         if "network" in override:
             merged["network"] = {**merged.get("network", {}), **override["network"]}
-        
+
         assert merged["network"]["host"] == "localhost"
         assert merged["network"]["port"] == 9000
 
@@ -393,11 +393,11 @@ class TestConfigEnvironmentVariables:
         """Test loading config from environment variables."""
         os.environ["MCP_GAME_HOST"] = "0.0.0.0"
         os.environ["MCP_GAME_PORT"] = "9000"
-        
+
         # Test that env vars can be used
         assert os.getenv("MCP_GAME_HOST") == "0.0.0.0"
         assert os.getenv("MCP_GAME_PORT") == "9000"
-        
+
         # Cleanup
         del os.environ["MCP_GAME_HOST"]
         del os.environ["MCP_GAME_PORT"]
@@ -405,10 +405,10 @@ class TestConfigEnvironmentVariables:
     def test_config_env_override(self):
         """Test that env vars override config file."""
         os.environ["MCP_GAME_DEBUG"] = "true"
-        
+
         # Test env var is set
         assert os.getenv("MCP_GAME_DEBUG") == "true"
-        
+
         # Cleanup
         del os.environ["MCP_GAME_DEBUG"]
 
@@ -433,10 +433,10 @@ class TestConfigEdgeCases:
     def test_config_serialization(self):
         """Test config serialization and deserialization."""
         config = SystemConfig(version="1.0.0")
-        
+
         # Convert to dict
         config_dict = config.to_dict() if hasattr(config, 'to_dict') else {}
-        
+
         assert isinstance(config_dict, dict)
 
     def test_config_with_special_characters(self):
@@ -445,7 +445,7 @@ class TestConfigEdgeCases:
             agent_id="player-1",
             agent_type="player"
         )
-        
+
         assert "-" in config.agent_id
 
 

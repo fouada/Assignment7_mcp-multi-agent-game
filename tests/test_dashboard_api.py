@@ -343,7 +343,7 @@ class TestDashboardAnalyticsEndpoints:
             mock_matrix.total_matches = 2
             mock_matrix.finished_matches = 2
             mock_matrix.pending_matches = 0
-            
+
             mock_engine.get_matchup_matrix.return_value = mock_matrix
             mock_get_engine.return_value = mock_engine
 
