@@ -280,7 +280,7 @@ class TestPerformanceResponseTime:
                 total_rounds=1
             )
             game.start()
-            
+
             start = time.time()
             game.submit_move("P1", 5)
             game.submit_move("P2", 5)
