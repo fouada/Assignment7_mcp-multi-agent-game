@@ -298,9 +298,19 @@ class TestDashboardAnalyticsEndpoints:
         """Test get all strategies analytics."""
         with patch('src.visualization.analytics.get_analytics_engine') as mock_get_engine:
             mock_engine = Mock()
-            mock_engine.strategy_performance = {
-                "adaptive": Mock(strategy_name="adaptive", total_rounds=10)
-            }
+            mock_analytics = Mock(
+                strategy_name="adaptive",
+                rounds=[1, 2],
+                win_rates=[0.5, 0.6],
+                avg_scores=[1.5, 1.6],
+                cumulative_scores=[1.5, 3.1],
+                total_matches=2,
+                win_rate=0.55,
+                learning_rate=0.1,
+                consistency=0.8,
+                improvement_trend=0.05
+            )
+            mock_engine.get_all_strategy_analytics.return_value = [mock_analytics]
             mock_get_engine.return_value = mock_engine
 
             response = client.get("/api/analytics/strategies")
@@ -313,8 +323,28 @@ class TestDashboardAnalyticsEndpoints:
         """Test get matchup matrix."""
         with patch('src.visualization.analytics.get_analytics_engine') as mock_get_engine:
             mock_engine = Mock()
-            mock_engine.all_players = {"P01", "P02"}
-            mock_engine.matchup_matrix = {}
+            # Create a proper mock matrix with dict that can be iterated
+            matrix_data = {
+                ("P01", "P02"): {
+                    "player_a": "P01",
+                    "player_b": "P02",
+                    "total_matches": 2,
+                    "player_a_wins": 1,
+                    "player_b_wins": 1,
+                    "draws": 0,
+                    "total_score_a": 10,
+                    "total_score_b": 8,
+                    "match_history": []
+                }
+            }
+            mock_matrix = Mock()
+            mock_matrix.players = ["P01", "P02"]
+            mock_matrix.matrix = matrix_data  # Make matrix a real dict
+            mock_matrix.total_matches = 2
+            mock_matrix.finished_matches = 2
+            mock_matrix.pending_matches = 0
+            
+            mock_engine.get_matchup_matrix.return_value = mock_matrix
             mock_get_engine.return_value = mock_engine
 
             response = client.get("/api/analytics/matchup_matrix")
@@ -322,7 +352,7 @@ class TestDashboardAnalyticsEndpoints:
             assert response.status_code == 200
             data = response.json()
             assert "players" in data
-            assert "matrix" in data
+            assert "matchups" in data
 
 
 class TestDashboardEdgeCases:

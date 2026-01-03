@@ -581,15 +581,16 @@ class LeagueManager(BaseGameServer):
         self.state = LeagueState.REGISTRATION
         self.current_round = 0
         self._schedule = []
-        self._current_round_matches = {}
-        self._match_results = {}
+        self._current_round_matches = []
+        self._match_results: dict[str, Any] = {}
 
         # Keep players and referees registered, but reset their scores
         for player in self._players.values():
-            player.total_wins = 0
-            player.total_losses = 0
-            player.total_draws = 0
-            player.total_points = 0
+            player.wins = 0
+            player.losses = 0
+            player.draws = 0
+            player.points = 0
+            player.played = 0
 
         logger.info(
             f"League reset complete. {len(self._players)} players and {len(self._referees)} referees still registered."
@@ -1001,9 +1002,7 @@ class LeagueManager(BaseGameServer):
             await event_bus.emit(
                 "match.completed",
                 MatchCompletedEvent(
-                    match_id=match_id,
-                    player1_id=player1_id,
-                    player2_id=player2_id,
+                    match_id=match_id or "unknown",
                     winner=winner_id,
                     final_scores={player1_id: player1_score, player2_id: player2_score},
                     total_rounds=len(rounds),
@@ -1126,20 +1125,18 @@ class LeagueManager(BaseGameServer):
                 OpponentModelUpdateEvent,
             )
 
-            # Recreate the appropriate event object from the data
-            event_obj = None
+            # Recreate the appropriate event object from the data and emit
             if event_type == "opponent.model.update":
                 event_obj = OpponentModelUpdateEvent(**event_data)
                 logger.info("[LeagueManager] 🔍 DEBUG: Recreated OpponentModelUpdateEvent")
+                await event_bus.emit(event_type, event_obj)
             elif event_type == "counterfactual.analysis":
                 event_obj = CounterfactualAnalysisEvent(**event_data)
                 logger.info("[LeagueManager] 🔍 DEBUG: Recreated CounterfactualAnalysisEvent")
+                await event_bus.emit(event_type, event_obj)
             else:
                 logger.warning(f"[LeagueManager] ⚠️ Unknown event type: {event_type}")
                 return {"success": False, "error": f"Unknown event type: {event_type}"}
-
-            # Emit the event to the local event bus
-            await event_bus.emit(event_type, event_obj)
             logger.info(f"[LeagueManager] ✅ Successfully emitted {event_type} event to local event bus")
 
             return {"success": True, "event_type": event_type}

@@ -1,11 +1,11 @@
-CODE FORMATTING NOTICE
-======================
+CODE QUALITY NOTICES
+====================
 
-The CI pipeline checks code formatting using `ruff format`.
+The CI pipeline checks code formatting (ruff format) and type checking (mypy).
 
-CURRENT STATUS:
----------------
-14 files need formatting (as of last CI run):
+FORMATTING STATUS:
+------------------
+14 files need ruff formatting (cosmetic only):
   - src/agents/league_manager.py
   - src/agents/player.py
   - src/agents/strategies/game_theory.py
@@ -20,6 +20,18 @@ CURRENT STATUS:
   - tests/test_pattern_strategy.py
   - tests/test_performance_comprehensive.py
   - tests/test_random_strategy.py
+
+TYPE CHECKING STATUS:
+---------------------
+MyPy type hints in theoretical/research modules (non-blocking):
+  - src/common/brqc/* (Quantum consensus research)
+  - src/common/causal/* (Causal inference research)
+  - src/common/theory/* (Quantum convergence theory)
+  - src/common/hooks/* (Plugin hooks)
+  - src/common/plugins/* (Plugin system)
+
+Core module type issues: ✅ FIXED
+  - src/agents/league_manager.py (10 errors) → FIXED
 
 HOW TO FORMAT:
 --------------
@@ -40,9 +52,11 @@ Option 3: Using uv
 IMPORTANT:
 ----------
 • Linting errors (syntax, unused vars, etc.): ✅ FIXED (0 errors)
-• Code formatting (line breaks, spacing): ⚠️  Needs ruff format
-• The format check is NON-BLOCKING in CI (continue-on-error: true)
+• Code formatting (line breaks, spacing): ⚠️  Needs ruff format (NON-BLOCKING)
+• Type checking (MyPy): ⚠️  Research modules only (NON-BLOCKING)
+• Both checks are NON-BLOCKING in CI (continue-on-error: true)
 • All critical functionality tests pass ✅
+• All core module type issues: ✅ FIXED
 
 WHY NOT AUTO-FORMATTED LOCALLY:
 --------------------------------

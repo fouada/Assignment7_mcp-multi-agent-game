@@ -44,7 +44,7 @@ class TestFunctionalTournamentLifecycle:
         # Run matches
         results = []
         for p1, p2 in matches:
-            game = OddEvenGame(num_rounds=5)
+            game = OddEvenGame(total_rounds=5)
             for _ in range(5):
                 game.play_round(5, 3)
             winner = game.get_winner()
@@ -178,7 +178,7 @@ class TestFunctionalMatchExecution:
 
     def test_match_with_all_move_combinations(self):
         """Test match with various move combinations."""
-        game = OddEvenGame(num_rounds=10)
+        game = OddEvenGame(total_rounds=10)
 
         test_cases = [
             (0, 0),   # Both minimum
@@ -197,7 +197,7 @@ class TestFunctionalMatchExecution:
 
     def test_match_scoring_accuracy(self):
         """Test match scoring is accurate."""
-        game = OddEvenGame(num_rounds=5)
+        game = OddEvenGame(total_rounds=5)
 
         # Player A should win all
         for _ in range(5):
@@ -235,7 +235,7 @@ class TestFunctionalErrorRecovery:
     @pytest.mark.asyncio
     async def test_invalid_move_recovery(self):
         """Test system recovers from invalid moves."""
-        game = OddEvenGame(num_rounds=1)
+        game = OddEvenGame(total_rounds=1)
 
         # Valid move
         game_result = game.play_round(5, 5)
@@ -251,7 +251,7 @@ class TestFunctionalConcurrency:
     async def test_concurrent_match_execution(self):
         """Test multiple concurrent matches."""
         async def run_match(match_id):
-            game = OddEvenGame(num_rounds=3)
+            game = OddEvenGame(total_rounds=3)
             for _ in range(3):
                 game.play_round(5, 5)
             return {
@@ -312,7 +312,7 @@ class TestFunctionalDataConsistency:
 
     def test_game_state_consistency(self):
         """Test game maintains consistent state."""
-        game = OddEvenGame(num_rounds=5)
+        game = OddEvenGame(total_rounds=5)
 
         for _ in range(5):
             game.play_round(5, 5)
@@ -348,7 +348,7 @@ class TestFunctionalUserScenarios:
         ]
 
         for p1, p2 in matches:
-            game = OddEvenGame(num_rounds=3)
+            game = OddEvenGame(total_rounds=3)
             for _ in range(3):
                 game.play_round(5, 3)
 

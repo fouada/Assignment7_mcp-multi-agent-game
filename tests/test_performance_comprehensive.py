@@ -64,7 +64,7 @@ class TestPerformanceMatchExecution:
     @pytest.mark.asyncio
     async def test_match_execution_speed(self):
         """Test single match execution time."""
-        game = OddEvenGame(num_rounds=5)
+        game = OddEvenGame(total_rounds=5)
 
         start = time.time()
         for _ in range(5):
@@ -77,7 +77,7 @@ class TestPerformanceMatchExecution:
     async def test_concurrent_matches(self):
         """Test multiple concurrent matches."""
         async def run_match():
-            game = OddEvenGame(num_rounds=5)
+            game = OddEvenGame(total_rounds=5)
             for _ in range(5):
                 game.play_round(5, 3)
             return game.get_winner()
@@ -170,8 +170,8 @@ class TestPerformanceMemory:
             pass
 
         for _ in range(1000):
-            unsub = bus.on("test", noop_handler)
-            unsub()  # Unsubscribe
+            handler_id = bus.on("test", noop_handler)
+            bus.off(handler_id)  # Unsubscribe with just handler_id
 
         # Event bus should not accumulate handlers
         assert True  # If we get here without crash, memory is managed
@@ -245,6 +245,8 @@ class TestPerformanceThroughput:
             engine.matchup_matrix[(p1, p2)]["total_matches"] += 1
 
         duration = time.time() - start
+        # Avoid division by zero for very fast operations
+        duration = max(duration, 0.001)  # Minimum 1ms
         throughput = num_updates / duration
 
         assert throughput > 1000  # At least 1000 updates/second
@@ -255,7 +257,7 @@ class TestPerformanceResponseTime:
 
     def test_game_move_validation_response_time(self):
         """Test move validation is fast."""
-        game = OddEvenGame(num_rounds=10)
+        game = OddEvenGame(total_rounds=10)
 
         times = []
         for _ in range(100):

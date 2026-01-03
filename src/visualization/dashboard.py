@@ -2645,13 +2645,16 @@ class DashboardAPI:
         }
 
         function updateBeliefsChart() {
-            // Get player list from either WebSocket data OR tournament state
-            let players = Object.keys(opponentModelData);
-
-            // If no WebSocket data, try getting players from tournament state standings
-            // Use display_name (Alice, Bob, etc.) not player_id (P01, P02, etc.)
-            if (players.length === 0 && window.tournamentState && window.tournamentState.standings) {
-                players = window.tournamentState.standings.map(s => s.display_name || s.player_id || s.player || s.name);
+            // Get player list and create ID-to-name mapping
+            let players = [];
+            const idToNameMap = {};
+            if (window.tournamentState && window.tournamentState.standings) {
+                window.tournamentState.standings.forEach(s => {
+                    const name = s.display_name || s.player_name || s.player_id || s.player || s.name;
+                    const id = s.player_id || s.player || name;
+                    idToNameMap[id] = name;
+                    players.push(name);
+                });
                 console.log('[Beliefs] Using player names from standings:', players);
             }
 
@@ -2679,13 +2682,15 @@ class DashboardAPI:
                 results.forEach((data, idx) => {
                     if (!data || !data.opponent_models) return;
 
-                    const playerId = players[idx];
+                    const playerName = players[idx];
                     Object.entries(data.opponent_models).forEach(([oppId, model]) => {
                         if (model.time_series && model.time_series.rounds.length > 0) {
+                            // Map opponent ID to display name, fallback to first 8 chars of ID
+                            const oppName = idToNameMap[oppId] || oppId.substring(0, 8);
                             traces.push({
                                 x: model.time_series.rounds,
                                 y: model.time_series.confidence_history,
-                                name: `${playerId.substring(0, 8)} → ${oppId.substring(0, 8)} (${model.predicted_strategy})`,
+                                name: `${playerName} → ${oppName} (${model.predicted_strategy})`,
                                 mode: 'lines+markers',
                                 line: { width: 2 },
                                 marker: { size: 6 }
@@ -2716,10 +2721,16 @@ class DashboardAPI:
         }
 
         function updateConfidenceEvolutionChart() {
-            // Get player list from tournament state standings
+            // Get player list and create ID-to-name mapping
             let players = [];
+            const idToNameMap = {};
             if (window.tournamentState && window.tournamentState.standings) {
-                players = window.tournamentState.standings.map(s => s.display_name || s.player_id || s.player || s.name);
+                window.tournamentState.standings.forEach(s => {
+                    const name = s.display_name || s.player_name || s.player_id || s.player || s.name;
+                    const id = s.player_id || s.player || name;
+                    idToNameMap[id] = name;
+                    players.push(name);
+                });
                 console.log('[Confidence] Using player names from standings:', players);
             }
 
@@ -2746,13 +2757,15 @@ class DashboardAPI:
                 results.forEach((data, idx) => {
                     if (!data || !data.opponent_models) return;
 
-                    const playerId = players[idx];
+                    const playerName = players[idx];
                     Object.entries(data.opponent_models).forEach(([oppId, model]) => {
                         if (model.time_series && model.time_series.rounds.length > 0) {
+                            // Map opponent ID to display name, fallback to first 8 chars of ID
+                            const oppName = idToNameMap[oppId] || oppId.substring(0, 8);
                             traces.push({
                                 x: model.time_series.rounds,
                                 y: model.time_series.confidence_history,
-                                name: `${playerId.substring(0, 8)} → ${oppId.substring(0, 8)}`,
+                                name: `${playerName} → ${oppName}`,
                                 mode: 'lines+markers',
                                 line: { width: 2 },
                                 marker: { size: 6 }
@@ -2785,13 +2798,16 @@ class DashboardAPI:
         }
 
         function updateRegretEvolutionChart() {
-            // Get player list from either WebSocket data OR tournament state
-            let players = Object.keys(regretData);
-
-            // If no WebSocket data, try getting players from tournament state standings
-            // Use display_name (Alice, Bob, etc.) not player_id (P01, P02, etc.)
-            if (players.length === 0 && window.tournamentState && window.tournamentState.standings) {
-                players = window.tournamentState.standings.map(s => s.display_name || s.player_id || s.player || s.name);
+            // Get player list and create ID-to-name mapping
+            let players = [];
+            const idToNameMap = {};
+            if (window.tournamentState && window.tournamentState.standings) {
+                window.tournamentState.standings.forEach(s => {
+                    const name = s.display_name || s.player_name || s.player_id || s.player || s.name;
+                    const id = s.player_id || s.player || name;
+                    idToNameMap[id] = name;
+                    players.push(name);
+                });
                 console.log('[Regret] Using player names from standings:', players);
             }
 
@@ -2819,7 +2835,7 @@ class DashboardAPI:
                 results.forEach((data, idx) => {
                     if (!data || !data.time_series) return;
 
-                    const playerId = players[idx];
+                    const playerName = players[idx];
                     const regretByAction = data.time_series.regret_by_action || {};
                     const rounds = data.time_series.rounds || [];
 
@@ -2833,7 +2849,7 @@ class DashboardAPI:
                             traces.push({
                                 x: rounds.slice(0, regrets.length),
                                 y: regrets,
-                                name: `${playerId.substring(0, 8)} - ${action}`,
+                                name: `${playerName} - ${action}`,
                                 mode: 'lines',
                                 line: { width: 2 }
                             });
@@ -3643,9 +3659,10 @@ Round Difference: ${snap2.round - snap1.round}
         function showWinnerCelebration(winner) {
             const modal = document.getElementById('winner-modal');
 
-            // Populate winner data
-            document.getElementById('winner-avatar').textContent = winner.player_id ? winner.player_id.substring(0, 2).toUpperCase() : '🥇';
-            document.getElementById('winner-name').textContent = winner.display_name || winner.player_id || 'Champion';
+            // Populate winner data with priority on display names
+            const winnerName = winner.display_name || winner.player_name || winner.player_id || 'Champion';
+            document.getElementById('winner-avatar').textContent = winnerName.substring(0, 2).toUpperCase();
+            document.getElementById('winner-name').textContent = winnerName;
             document.getElementById('winner-strategy').textContent = `Strategy: ${winner.strategy || 'Unknown'}`;
             document.getElementById('winner-wins').textContent = winner.wins || 0;
             document.getElementById('winner-points').textContent = winner.points || 0;
@@ -3658,7 +3675,7 @@ Round Difference: ${snap2.round - snap1.round}
             createConfetti();
 
             // Log event
-            addLog(`🏆 Tournament Winner: ${winner.display_name || winner.player_id}`);
+            addLog(`🏆 Tournament Winner: ${winnerName}`);
         }
 
         function createConfetti() {

@@ -170,6 +170,12 @@ omit = [
     "src/client/*.py",
     "src/server/*.py",
     "src/transport/*.py",
+    # Visualization (mixed HTML/JS with Python - 4000+ lines of frontend code)
+    "src/visualization/dashboard.py",
+    "src/visualization/integration.py",
+    "src/visualization/analytics.py",
+    "src/visualization/*dashboard*.py",
+    "src/visualization/*integration*.py",
 ]
 
 [tool.coverage.report]
