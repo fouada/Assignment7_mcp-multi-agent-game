@@ -648,8 +648,9 @@ class TestLoggerSetupAndDecorators:
 
     def test_setup_logging_with_file(self):
         """Test setup_logging with file output."""
-        from src.common.logger import setup_logging
         import logging
+
+        from src.common.logger import setup_logging
 
         with tempfile.TemporaryDirectory() as temp_dir:
             log_file = Path(temp_dir) / "test.log"
@@ -661,7 +662,7 @@ class TestLoggerSetupAndDecorators:
 
             # File should exist
             assert log_file.exists()
-            
+
             # Close all file handlers to avoid Windows file permission issues
             for handler in logging.root.handlers[:]:
                 if isinstance(handler, logging.FileHandler):
@@ -901,8 +902,9 @@ class TestLoggerDecoratorsAndSetup:
 
     def test_setup_logging_with_file_and_json(self):
         """Test setup_logging with file handler and JSON output."""
-        from src.common.logger import setup_logging
         import logging
+
+        from src.common.logger import setup_logging
 
         with tempfile.TemporaryDirectory() as temp_dir:
             log_file = Path(temp_dir) / "test_json.log"
@@ -913,7 +915,7 @@ class TestLoggerDecoratorsAndSetup:
             logger.info("Info message in JSON")
 
             assert log_file.exists()
-            
+
             # Close all file handlers to avoid Windows file permission issues
             for handler in logging.root.handlers[:]:
                 if isinstance(handler, logging.FileHandler):
