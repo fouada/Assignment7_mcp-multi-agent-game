@@ -1120,14 +1120,13 @@ class LeagueManager(BaseGameServer):
             event_bus = get_event_bus()
 
             # Import event types
-            from typing import Union
             from ..common.events.types import (
                 CounterfactualAnalysisEvent,
                 OpponentModelUpdateEvent,
             )
 
             # Recreate the appropriate event object from the data and emit
-            event_obj: Union[OpponentModelUpdateEvent, CounterfactualAnalysisEvent]
+            event_obj: OpponentModelUpdateEvent | CounterfactualAnalysisEvent
             if event_type == "opponent.model.update":
                 event_obj = OpponentModelUpdateEvent(**event_data)
                 logger.info("[LeagueManager] 🔍 DEBUG: Recreated OpponentModelUpdateEvent")
