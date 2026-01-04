@@ -3,11 +3,15 @@ Additional tests to improve tracing.py coverage to 85%+.
 Focuses on uncovered tracing scenarios and edge cases.
 """
 
+import time
+
 import pytest
 
 from src.observability.tracing import (
+    Span,
     SpanContext,
     TracingManager,
+    get_tracing_manager,
 )
 
 
@@ -43,6 +47,142 @@ class TestSpanContextAdvanced:
         assert len(parts[1]) == 32  # Trace ID
         assert len(parts[2]) == 16  # Span ID
         assert parts[3] in ["00", "01"]  # Flags
+
+    def test_span_context_not_sampled(self):
+        """Test span context with sampled=False."""
+        ctx = SpanContext(
+            trace_id="12345678901234567890123456789012", span_id="1234567890123456", sampled=False
+        )
+
+        traceparent = ctx.to_traceparent()
+        assert traceparent.endswith("-00")
+
+    def test_span_context_trace_flags(self):
+        """Test trace flags property."""
+        ctx_sampled = SpanContext("trace", "span", sampled=True)
+        assert ctx_sampled.trace_flags == 1
+
+        ctx_not_sampled = SpanContext("trace", "span", sampled=False)
+        assert ctx_not_sampled.trace_flags == 0
+
+
+class TestSpan:
+    """Test Span class."""
+
+    def test_span_duration_before_end(self):
+        """Test duration_ms before span is ended."""
+        span = Span(
+            trace_id="trace",
+            span_id="span",
+            parent_span_id=None,
+            name="test",
+            start_time=time.time(),
+        )
+
+        # Before ending, duration should be 0
+        assert span.duration_ms == 0.0
+
+    def test_span_duration_after_end(self):
+        """Test duration_ms after span is ended."""
+        start = time.time()
+        span = Span(
+            trace_id="trace",
+            span_id="span",
+            parent_span_id=None,
+            name="test",
+            start_time=start,
+        )
+
+        time.sleep(0.01)
+        span.end()
+
+        # After ending, duration should be positive
+        assert span.duration_ms > 0
+
+    def test_span_set_attribute(self):
+        """Test setting span attributes."""
+        span = Span(
+            trace_id="trace",
+            span_id="span",
+            parent_span_id=None,
+            name="test",
+            start_time=time.time(),
+        )
+
+        span.set_attribute("key", "value")
+        assert span.attributes["key"] == "value"
+
+    def test_span_add_event(self):
+        """Test adding events to span."""
+        span = Span(
+            trace_id="trace",
+            span_id="span",
+            parent_span_id=None,
+            name="test",
+            start_time=time.time(),
+        )
+
+        span.add_event("test_event", {"data": "value"})
+        assert len(span.events) == 1
+        assert span.events[0]["name"] == "test_event"
+        assert span.events[0]["attributes"]["data"] == "value"
+
+    def test_span_set_status(self):
+        """Test setting span status."""
+        span = Span(
+            trace_id="trace",
+            span_id="span",
+            parent_span_id=None,
+            name="test",
+            start_time=time.time(),
+        )
+
+        span.set_status("error", "Something went wrong")
+        assert span.status == "error"
+        assert span.status_message == "Something went wrong"
+        assert span.error_message == "Something went wrong"
+
+    def test_span_to_dict(self):
+        """Test converting span to dictionary."""
+        span = Span(
+            trace_id="trace",
+            span_id="span",
+            parent_span_id="parent",
+            name="test",
+            start_time=time.time(),
+        )
+
+        span.end()
+        span_dict = span.to_dict()
+
+        assert span_dict["trace_id"] == "trace"
+        assert span_dict["span_id"] == "span"
+        assert span_dict["parent_span_id"] == "parent"
+        assert span_dict["name"] == "test"
+        assert span_dict["duration_ms"] > 0
+
+
+class TestTracingManager:
+    """Test TracingManager class."""
+
+    def test_tracing_manager_singleton(self):
+        """Test that TracingManager is a singleton."""
+        manager1 = TracingManager()
+        manager2 = TracingManager()
+        assert manager1 is manager2
+
+    def test_tracing_manager_properties(self):
+        """Test TracingManager properties."""
+        manager = TracingManager()
+        # Properties return bool, float, and str types
+        assert isinstance(manager.enabled, bool)
+        assert isinstance(manager.sample_rate, float)
+        assert isinstance(manager.service_name, str)
+
+    def test_get_tracing_manager(self):
+        """Test get_tracing_manager function."""
+        manager = get_tracing_manager()
+        assert isinstance(manager, TracingManager)
 
 
 class TestTracingManagerConfiguration:

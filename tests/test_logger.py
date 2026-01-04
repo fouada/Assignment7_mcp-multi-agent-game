@@ -330,5 +330,150 @@ class TestGameLogger:
         # No exception means success
 
 
+class TestGameLoggerAdvanced:
+    """Advanced tests for GameLogger."""
+
+    def test_logger_warning_level(self):
+        """Test warning level logging."""
+        logger = get_logger("test_warning")
+        logger.bind(test_id="warn_test")
+        logger.warning("Warning message", severity="high")
+        # Should not raise
+
+    def test_logger_error_level(self):
+        """Test error level logging."""
+        logger = get_logger("test_error")
+        logger.bind(test_id="error_test")
+        logger.error("Error message", code="E001")
+        # Should not raise
+
+    def test_logger_critical_level(self):
+        """Test critical level logging."""
+        logger = get_logger("test_critical")
+        logger.bind(test_id="critical_test")
+        logger.critical("Critical message", system="core")
+        # Should not raise
+
+    def test_logger_with_multiple_extra_args(self):
+        """Test logging with multiple extra arguments."""
+        logger = get_logger("test_multi_extra")
+        logger.info("Multi-arg message", arg1="val1", arg2="val2", arg3="val3")
+        # Should not raise
+
+    def test_logger_unbind_nonexistent_key(self):
+        """Test unbinding a key that doesn't exist."""
+        logger = get_logger("test_unbind_none")
+        logger.bind(key1="value1")
+        logger.unbind("nonexistent_key")  # Should not raise
+        assert "key1" in logger._context
+
+
+class TestJSONFormatterAdvanced:
+    """Advanced tests for JSONFormatter."""
+
+    def test_formatter_with_none_exc_info(self):
+        """Test formatter when exc_info is explicitly None."""
+        from src.common.logger import JSONFormatter
+        import logging
+
+        formatter = JSONFormatter()
+        record = logging.LogRecord(
+            name="test", level=logging.INFO, pathname="test.py",
+            lineno=1, msg="Test", args=(), exc_info=None
+        )
+
+        formatted = formatter.format(record)
+        assert formatted  # Should not crash
+
+
+class TestColorFormatterAdvanced:
+    """Advanced tests for ColorFormatter."""
+
+    def test_color_formatter_debug_level(self):
+        """Test color formatter for DEBUG level."""
+        from src.common.logger import ColorFormatter
+        import logging
+
+        formatter = ColorFormatter()
+        record = logging.LogRecord(
+            name="test", level=logging.DEBUG, pathname="test.py",
+            lineno=1, msg="Debug msg", args=(), exc_info=None
+        )
+
+        formatted = formatter.format(record)
+        assert "Debug msg" in formatted
+
+    def test_color_formatter_without_extra_data(self):
+        """Test color formatter without extra_data attribute."""
+        from src.common.logger import ColorFormatter
+        import logging
+
+        formatter = ColorFormatter()
+        record = logging.LogRecord(
+            name="test", level=logging.WARNING, pathname="test.py",
+            lineno=1, msg="Warning", args=(), exc_info=None
+        )
+        # Don't add extra_data attribute
+
+        formatted = formatter.format(record)
+        assert "Warning" in formatted
+
+
+class TestAgentEventLoggerAdvanced:
+    """Advanced agent event logger tests."""
+
+    def setup_method(self):
+        """Setup temp directory."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.logger = AgentEventLogger("P001", "player", str(self.temp_dir))
+
+    def teardown_method(self):
+        """Cleanup."""
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_agent_logger_multiple_message_types(self):
+        """Test logging multiple message types."""
+        self.logger.message_sent("MOVE_REQUEST", "referee")
+        self.logger.message_sent("HEARTBEAT", "server")
+        self.logger.message_sent("STATUS_UPDATE", "league_manager")
+
+        log_file = self.temp_dir / "agents" / "P001.log.jsonl"
+        with open(log_file) as f:
+            lines = f.readlines()
+
+        assert len(lines) == 3
+
+
+class TestLeagueEventLoggerAdvanced:
+    """Advanced league event logger tests."""
+
+    def setup_method(self):
+        """Setup temp directory."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.logger = LeagueEventLogger("adv_league", str(self.temp_dir))
+
+    def teardown_method(self):
+        """Cleanup."""
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_league_logger_match_complete(self):
+        """Test logging match completion."""
+        self.logger.match_started("M001", "P01", "P02", "REF01")
+
+        log_file = self.temp_dir / "league" / "adv_league" / "matches" / "M001.log.jsonl"
+        assert log_file.exists()
+
+    def test_league_logger_multiple_rounds(self):
+        """Test logging multiple rounds."""
+        for round_id in range(1, 6):
+            self.logger.round_started(round_id, match_count=3)
+
+        log_file = self.temp_dir / "league" / "adv_league" / "events.log.jsonl"
+        with open(log_file) as f:
+            lines = f.readlines()
+
+        assert len(lines) == 5
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

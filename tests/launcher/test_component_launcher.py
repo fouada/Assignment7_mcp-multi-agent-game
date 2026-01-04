@@ -449,3 +449,418 @@ async def test_component_launcher_integration():
     # This would be an end-to-end test
     # For now, we'll mark it as a placeholder
     pass
+
+
+class TestComponentLauncherDashboardEvents:
+    """Test dashboard event handlers in ComponentLauncher."""
+
+    @pytest.mark.asyncio
+    async def test_on_round_started(self, mock_config):
+        """Test round started event handler."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        mock_integration = AsyncMock()
+        mock_integration.on_round_start = AsyncMock()
+        launcher._integration = mock_integration
+
+        # Create mock event
+        event = MagicMock()
+        event.round_number = 1
+
+        # Call handler
+        await launcher._on_round_started(event)
+
+        # Verify integration called
+        mock_integration.on_round_start.assert_awaited_once_with(round_num=1, matches=[])
+
+    @pytest.mark.asyncio
+    async def test_on_round_started_error(self, mock_config):
+        """Test round started event handler with error."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        mock_integration = AsyncMock()
+        mock_integration.on_round_start = AsyncMock(side_effect=Exception("Test error"))
+        launcher._integration = mock_integration
+
+        event = MagicMock()
+        event.round_number = 1
+
+        # Should handle error gracefully
+        await launcher._on_round_started(event)
+
+    @pytest.mark.asyncio
+    async def test_on_player_move(self, mock_config):
+        """Test player move event handler."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        mock_integration = AsyncMock()
+        mock_integration.on_move_decision = AsyncMock()
+        launcher._integration = mock_integration
+
+        event = MagicMock()
+        event.player_id = "player1"
+        event.round_number = 1
+        event.move = 0
+        event.game_id = "game123"
+
+        await launcher._on_player_move(event)
+
+        mock_integration.on_move_decision.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_on_player_move_error(self, mock_config):
+        """Test player move event handler with error."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        mock_integration = AsyncMock()
+        mock_integration.on_move_decision = AsyncMock(side_effect=Exception("Test error"))
+        launcher._integration = mock_integration
+
+        event = MagicMock()
+        event.player_id = "player1"
+        event.round_number = 1
+        event.move = 0
+        event.game_id = "game123"
+
+        await launcher._on_player_move(event)
+
+    @pytest.mark.asyncio
+    async def test_on_round_completed(self, mock_config):
+        """Test round completed event handler."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        mock_integration = AsyncMock()
+        mock_integration.on_round_complete = AsyncMock()
+        launcher._integration = mock_integration
+
+        event = MagicMock()
+        event.round_number = 1
+        event.moves = {"player1": 0, "player2": 1}
+        event.cumulative_scores = {"player1": 1.0, "player2": 0.0}
+
+        await launcher._on_round_completed(event)
+
+        mock_integration.on_round_complete.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_on_round_completed_insufficient_players(self, mock_config):
+        """Test round completed with insufficient players."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        mock_integration = AsyncMock()
+        launcher._integration = mock_integration
+
+        event = MagicMock()
+        event.round_number = 1
+        event.moves = {"player1": 0}  # Only 1 player
+        event.cumulative_scores = {"player1": 1.0}
+
+        # Should handle gracefully
+        await launcher._on_round_completed(event)
+
+    @pytest.mark.asyncio
+    async def test_on_round_completed_error(self, mock_config):
+        """Test round completed event handler with error."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        mock_integration = AsyncMock()
+        mock_integration.on_round_complete = AsyncMock(side_effect=Exception("Test error"))
+        launcher._integration = mock_integration
+
+        event = MagicMock()
+        event.round_number = 1
+        event.moves = {"player1": 0, "player2": 1}
+        event.cumulative_scores = {"player1": 1.0, "player2": 0.0}
+
+        await launcher._on_round_completed(event)
+
+    @pytest.mark.asyncio
+    async def test_on_opponent_model_update(self, mock_config):
+        """Test opponent model update event handler."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        mock_integration = AsyncMock()
+        mock_integration.on_opponent_model_update = AsyncMock()
+        launcher._integration = mock_integration
+
+        event = MagicMock()
+        event.player_id = "player1"
+
+        await launcher._on_opponent_model_update(event)
+
+        mock_integration.on_opponent_model_update.assert_awaited_once_with(event)
+
+    @pytest.mark.asyncio
+    async def test_on_opponent_model_update_no_integration(self, mock_config):
+        """Test opponent model update without integration."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        launcher._integration = None
+
+        event = MagicMock()
+        event.player_id = "player1"
+
+        # Should handle gracefully
+        await launcher._on_opponent_model_update(event)
+
+    @pytest.mark.asyncio
+    async def test_on_opponent_model_update_error(self, mock_config):
+        """Test opponent model update event handler with error."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        mock_integration = AsyncMock()
+        mock_integration.on_opponent_model_update = AsyncMock(side_effect=Exception("Test error"))
+        launcher._integration = mock_integration
+
+        event = MagicMock()
+        event.player_id = "player1"
+
+        await launcher._on_opponent_model_update(event)
+
+    @pytest.mark.asyncio
+    async def test_on_counterfactual_analysis(self, mock_config):
+        """Test counterfactual analysis event handler."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        mock_integration = AsyncMock()
+        mock_integration.on_counterfactual_analysis = AsyncMock()
+        launcher._integration = mock_integration
+
+        event = MagicMock()
+        event.player_id = "player1"
+
+        await launcher._on_counterfactual_analysis(event)
+
+        mock_integration.on_counterfactual_analysis.assert_awaited_once_with(event)
+
+    @pytest.mark.asyncio
+    async def test_on_counterfactual_analysis_no_integration(self, mock_config):
+        """Test counterfactual analysis without integration."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        launcher._integration = None
+
+        event = MagicMock()
+        event.player_id = "player1"
+
+        # Should handle gracefully
+        await launcher._on_counterfactual_analysis(event)
+
+    @pytest.mark.asyncio
+    async def test_on_counterfactual_analysis_error(self, mock_config):
+        """Test counterfactual analysis event handler with error."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        mock_integration = AsyncMock()
+        mock_integration.on_counterfactual_analysis = AsyncMock(side_effect=Exception("Test error"))
+        launcher._integration = mock_integration
+
+        event = MagicMock()
+        event.player_id = "player1"
+
+        await launcher._on_counterfactual_analysis(event)
+
+    @pytest.mark.asyncio
+    async def test_on_match_completed(self, mock_config):
+        """Test match completed event handler."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        mock_integration = AsyncMock()
+        mock_integration.on_match_completed = AsyncMock()
+        launcher._integration = mock_integration
+
+        event = MagicMock()
+        event.match_id = "match123"
+        event.player1_id = "player1"
+        event.player2_id = "player2"
+        event.winner = "player1"
+
+        await launcher._on_match_completed(event)
+
+        mock_integration.on_match_completed.assert_awaited_once_with(event)
+
+    @pytest.mark.asyncio
+    async def test_on_match_completed_no_integration(self, mock_config):
+        """Test match completed without integration."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        launcher._integration = None
+
+        event = MagicMock()
+        event.match_id = "match123"
+
+        # Should handle gracefully
+        await launcher._on_match_completed(event)
+
+    @pytest.mark.asyncio
+    async def test_on_match_completed_error(self, mock_config):
+        """Test match completed event handler with error."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        mock_integration = AsyncMock()
+        mock_integration.on_match_completed = AsyncMock(side_effect=Exception("Test error"))
+        launcher._integration = mock_integration
+
+        event = MagicMock()
+        event.match_id = "match123"
+
+        await launcher._on_match_completed(event)
+
+    @pytest.mark.asyncio
+    async def test_on_standings_updated(self, mock_config):
+        """Test standings updated event handler."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+
+        # Mock dashboard with tournament states
+        mock_dashboard = MagicMock()
+        from dataclasses import dataclass
+        from datetime import datetime
+
+        @dataclass
+        class MockTournamentState:
+            tournament_id: str
+            started_at: datetime
+
+        mock_dashboard.tournament_states = {
+            "tournament1": MockTournamentState("tournament1", datetime.now())
+        }
+        mock_dashboard.connection_manager = AsyncMock()
+        mock_dashboard.connection_manager.broadcast = AsyncMock()
+
+        mock_integration = AsyncMock()
+        mock_integration.dashboard = mock_dashboard
+        launcher._integration = mock_integration
+
+        event = MagicMock()
+        event.round_number = 1
+
+        await launcher._on_standings_updated(event)
+
+        mock_dashboard.connection_manager.broadcast.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_on_standings_updated_no_tournament_states(self, mock_config):
+        """Test standings updated without tournament states."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+
+        mock_dashboard = MagicMock()
+        mock_dashboard.tournament_states = {}
+
+        mock_integration = AsyncMock()
+        mock_integration.dashboard = mock_dashboard
+        launcher._integration = mock_integration
+
+        event = MagicMock()
+        event.round_number = 1
+
+        # Should handle gracefully
+        await launcher._on_standings_updated(event)
+
+    @pytest.mark.asyncio
+    async def test_on_standings_updated_no_integration(self, mock_config):
+        """Test standings updated without integration."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+        launcher._integration = None
+
+        event = MagicMock()
+        event.round_number = 1
+
+        # Should handle gracefully
+        await launcher._on_standings_updated(event)
+
+    @pytest.mark.asyncio
+    async def test_on_standings_updated_error(self, mock_config):
+        """Test standings updated event handler with error."""
+        launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+
+        mock_integration = AsyncMock()
+        mock_integration.dashboard = MagicMock()
+        mock_integration.dashboard.tournament_states = None  # Will cause error
+        launcher._integration = mock_integration
+
+        event = MagicMock()
+        event.round_number = 1
+
+        # Should handle error gracefully
+        await launcher._on_standings_updated(event)
+
+
+class TestComponentLauncherDashboard:
+    """Test dashboard initialization in ComponentLauncher."""
+
+    @pytest.mark.asyncio
+    async def test_start_dashboard(self, mock_config, mock_service_registry, mock_state_sync):
+        """Test starting dashboard."""
+        with patch(
+            "src.launcher.component_launcher.get_service_registry",
+            return_value=mock_service_registry,
+        ):
+            with patch(
+                "src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync
+            ):
+                with patch("src.launcher.component_launcher.LeagueManager") as MockLeagueManager:
+                    with patch("src.visualization.get_dashboard") as mock_get_dashboard:
+                        with patch(
+                            "src.visualization.integration.get_dashboard_integration"
+                        ) as mock_get_integration:
+                            # Setup mocks
+                            mock_league = AsyncMock()
+                            mock_league.name = "league_manager"
+                            mock_league.url = "http://localhost:8000"
+                            mock_league.start = AsyncMock()
+                            mock_league.set_dashboard = MagicMock()
+                            MockLeagueManager.return_value = mock_league
+
+                            mock_dashboard = AsyncMock()
+                            mock_dashboard.start_server_background = AsyncMock()
+                            mock_get_dashboard.return_value = mock_dashboard
+
+                            mock_integration = AsyncMock()
+                            mock_integration.start = AsyncMock()
+                            mock_get_integration.return_value = mock_integration
+
+                            launcher = ComponentLauncher(ComponentType.LEAGUE_MANAGER, mock_config)
+
+                            # Start with dashboard
+                            await launcher.start(enable_dashboard=True, port=8000)
+
+                            # Verify dashboard started
+                            mock_dashboard.start_server_background.assert_awaited_once()
+                            mock_integration.start.assert_awaited_once()
+                            mock_league.set_dashboard.assert_called_once()
+
+                            # Verify event subscriptions
+                            assert launcher.dashboard == mock_dashboard
+                            assert launcher._integration == mock_integration
+
+                            await launcher.stop()
+
+    @pytest.mark.asyncio
+    async def test_start_league_manager_with_custom_dashboard_host(
+        self, mock_config, mock_service_registry, mock_state_sync
+    ):
+        """Test starting league manager with custom dashboard host."""
+        with patch(
+            "src.launcher.component_launcher.get_service_registry",
+            return_value=mock_service_registry,
+        ):
+            with patch(
+                "src.launcher.component_launcher.get_state_sync", return_value=mock_state_sync
+            ):
+                with patch("src.launcher.component_launcher.LeagueManager") as MockLeagueManager:
+                    with patch("src.visualization.get_dashboard") as mock_get_dashboard:
+                        with patch(
+                            "src.visualization.integration.get_dashboard_integration"
+                        ) as mock_get_integration:
+                            with patch.dict("os.environ", {"DASHBOARD_HOST": "0.0.0.0"}):
+                                mock_league = AsyncMock()
+                                mock_league.name = "league_manager"
+                                mock_league.url = "http://localhost:8000"
+                                mock_league.start = AsyncMock()
+                                mock_league.set_dashboard = MagicMock()
+                                MockLeagueManager.return_value = mock_league
+
+                                mock_dashboard = AsyncMock()
+                                mock_dashboard.start_server_background = AsyncMock()
+                                mock_get_dashboard.return_value = mock_dashboard
+
+                                mock_integration = AsyncMock()
+                                mock_integration.start = AsyncMock()
+                                mock_get_integration.return_value = mock_integration
+
+                                launcher = ComponentLauncher(
+                                    ComponentType.LEAGUE_MANAGER, mock_config
+                                )
+
+                                await launcher.start(enable_dashboard=True, port=8000)
+
+                                # Verify dashboard started with custom host
+                                mock_dashboard.start_server_background.assert_awaited_once_with(
+                                    host="0.0.0.0", port=8050
+                                )
+
+                                await launcher.stop()

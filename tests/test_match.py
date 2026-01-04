@@ -733,3 +733,68 @@ EDGE CASES TESTED:
     - Result with tie scores
     - Multiple referee assignments
 """
+
+
+class TestMatchEdgeCasesForCoverage:
+    """Additional edge case tests to improve coverage."""
+
+    def test_match_start_creates_game_if_not_exists(self):
+        """Test that start() creates game if it doesn't exist."""
+        match = Match(
+            match_id="M01",
+            player1=MatchPlayer("P1", "http://localhost:8101", "Player1"),
+            player2=MatchPlayer("P2", "http://localhost:8102", "Player2"),
+        )
+        match.state = MatchState.PLAYERS_READY
+        match.game = None  # Ensure no game exists
+
+        match.start()
+
+        assert match.game is not None
+        assert match.state == MatchState.IN_PROGRESS
+
+    def test_match_complete_with_no_players(self):
+        """Test completing match when players are None."""
+        match = Match(
+            match_id="M01",
+        )
+        # Players are None
+        match.player1 = None
+        match.player2 = None
+
+        result = GameResult(
+            game_id="G01",
+            winner_id="P1",
+            player1_score=3.0,
+            player2_score=2.0,
+            rounds=[],
+            total_rounds=5,
+        )
+
+        match.complete(result)
+
+        # Should complete without error, but final_score won't be set
+        assert match.state == MatchState.COMPLETED
+        assert match.winner_id == "P1"
+
+    def test_get_opponent_player2_is_none(self):
+        """Test get_opponent when player2 is None."""
+        match = Match(
+            match_id="M01",
+            player1=MatchPlayer("P1", "http://localhost:8101", "Player1"),
+            player2=None,
+        )
+
+        with pytest.raises(ValueError, match="Player 2 not set"):
+            match.get_opponent("P1")
+
+    def test_get_opponent_player1_is_none(self):
+        """Test get_opponent when player1 is None."""
+        match = Match(
+            match_id="M01",
+            player1=None,
+            player2=MatchPlayer("P2", "http://localhost:8102", "Player2"),
+        )
+
+        with pytest.raises(ValueError, match="Player 1 not set"):
+            match.get_opponent("P2")

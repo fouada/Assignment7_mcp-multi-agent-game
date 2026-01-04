@@ -295,5 +295,41 @@ class TestMaxFailsTransition:
         assert lifecycle.is_active is False
 
 
+class TestLifecycleCallbacks:
+    """Test lifecycle callbacks with errors."""
+
+    @pytest.mark.asyncio
+    async def test_sync_callback_with_exception(self):
+        """Test that exceptions in sync callbacks are handled."""
+        lifecycle = AgentLifecycleManager("P01", "player")
+
+        def failing_callback(old_state, new_state):
+            raise ValueError("Callback failed")
+
+        lifecycle.on_state_change(failing_callback)
+
+        # Should not raise exception
+        await lifecycle.transition(LifecycleEvent.REGISTER_SUCCESS)
+
+        # State should still transition
+        assert lifecycle.state == AgentState.REGISTERED
+
+    @pytest.mark.asyncio
+    async def test_async_callback_with_exception(self):
+        """Test that exceptions in async callbacks are handled."""
+        lifecycle = AgentLifecycleManager("P01", "player")
+
+        async def failing_async_callback(old_state, new_state):
+            raise ValueError("Async callback failed")
+
+        lifecycle.on_state_change_async(failing_async_callback)
+
+        # Should not raise exception
+        await lifecycle.transition(LifecycleEvent.REGISTER_SUCCESS)
+
+        # State should still transition
+        assert lifecycle.state == AgentState.REGISTERED
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
