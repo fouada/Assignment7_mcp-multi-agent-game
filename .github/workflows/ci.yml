@@ -128,7 +128,7 @@ jobs:
           verbose: true
         continue-on-error: true
 
-      - name: Check coverage threshold (MIT-Level: 80%+)
+      - name: Check coverage threshold (MIT-Level 85%+)
         run: |
           coverage report --fail-under=${{ env.MIN_COVERAGE }}
       
