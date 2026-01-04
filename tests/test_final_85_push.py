@@ -5,16 +5,18 @@ Final Aggressive Push to 85%+
 Many simple, targeted tests to cover remaining gaps.
 """
 
+import tempfile
+
 import pytest
-from src.agents.strategies.classic import PatternStrategy, RandomStrategy
+
+from src.agents.referee import RefereeAgent
 from src.agents.strategies.base import StrategyConfig
-from src.common.config import Config, GameConfig, ServerConfig, RetryConfig
-from src.common.protocol import generate_auth_token, MessageFactory
+from src.agents.strategies.classic import PatternStrategy, RandomStrategy
+from src.common.config import Config, GameConfig, RetryConfig, ServerConfig
+from src.common.protocol import MessageFactory, generate_auth_token
 from src.common.repositories import DataManager
 from src.game.odd_even import GameRole
-from src.agents.referee import RefereeAgent
 from src.observability.health import HealthMonitor, LivenessCheck
-import tempfile
 
 
 class TestMassivePatternCoverage:
@@ -244,7 +246,7 @@ class TestMassiveProtocolCoverage:
 
     def test_protocol_10(self):
         tokens = []
-        for i in range(50):
+        for _i in range(50):
             tokens.append(generate_auth_token("P", "L"))
         assert all("tok_" in t for t in tokens)
 
@@ -407,7 +409,7 @@ class TestMassiveRepositoryCoverage:
 
     def test_repo_8(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            for i in range(3):
+            for _i in range(3):
                 dm = DataManager(tmpdir)
                 dm.standings("test")
 
@@ -415,10 +417,10 @@ class TestMassiveRepositoryCoverage:
         with tempfile.TemporaryDirectory() as tmpdir:
             dm = DataManager(tmpdir)
             leagues = ["L1", "L2", "L3", "L4", "L5"]
-            for l in leagues:
-                dm.standings(l)
-                dm.rounds(l)
-                dm.matches(l)
+            for league_id in leagues:
+                dm.standings(league_id)
+                dm.rounds(league_id)
+                dm.matches(league_id)
 
     def test_repo_10(self):
         with tempfile.TemporaryDirectory() as tmpdir:

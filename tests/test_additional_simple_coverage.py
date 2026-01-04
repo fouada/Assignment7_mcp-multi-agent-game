@@ -9,8 +9,6 @@ to push coverage from 82% to 85%+.
 import tempfile
 from pathlib import Path
 
-import pytest
-
 from src.common.config import Config, GameConfig, LeagueConfig, LLMConfig, RetryConfig, ServerConfig
 from src.common.protocol import (
     Acknowledgement,

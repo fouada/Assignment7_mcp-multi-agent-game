@@ -11,19 +11,16 @@ Target modules:
 - src/observability/health.py (75.75% → 85%)
 """
 
-import tempfile
-from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
 from src.agents.referee import RefereeAgent
-from src.agents.strategies.classic import PatternStrategy, RandomStrategy
 from src.agents.strategies.base import StrategyConfig
+from src.agents.strategies.classic import PatternStrategy, RandomStrategy
 from src.common.config import Config
 from src.game.odd_even import GameRole
 from src.observability.health import HealthMonitor
-
 
 # ==============================================================================
 # Simple Targeted Tests for Remaining Coverage
@@ -219,7 +216,6 @@ class TestHealthMonitorSimple:
             return {"status": "healthy"}
 
         # Create mock check
-        from unittest.mock import Mock
         check = Mock()
         check.check = custom_check
         check.name = "custom"

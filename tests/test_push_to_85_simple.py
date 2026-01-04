@@ -5,13 +5,11 @@ Simple Tests to Push Coverage to 85%+
 Targeted tests for specific uncovered lines in files close to 85%.
 """
 
+
 import pytest
-from unittest.mock import AsyncMock, Mock
 
+from src.common.protocol import AgentState, Timeouts
 from src.middleware.pipeline import MiddlewarePipeline
-from src.middleware.base import Middleware
-from src.common.protocol import Timeouts, AgentState
-
 
 # ==============================================================================
 # Middleware Pipeline Tests (Lines 179, 197, 261, etc.)

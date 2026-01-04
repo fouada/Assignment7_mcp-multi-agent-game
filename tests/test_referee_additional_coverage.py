@@ -12,14 +12,12 @@ Edge Cases Covered:
 - Session cleanup and resource management
 """
 
-import asyncio
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from src.agents.referee import RefereeAgent
 from src.game.match import Match
-from src.game.odd_even import GameRole, OddEvenGame
 
 
 class TestRefereeRegistrationEdgeCases:

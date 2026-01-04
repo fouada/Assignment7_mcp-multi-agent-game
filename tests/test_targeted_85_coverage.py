@@ -5,23 +5,19 @@ Targeted Tests to Reach 85%+ Coverage
 Focused on testable code paths that will increase coverage effectively.
 """
 
-import asyncio
 import tempfile
-from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from src.agents.referee import GameSession, RefereeAgent
-from src.agents.strategies.classic import PatternStrategy, RandomStrategy
+from src.agents.referee import RefereeAgent
 from src.agents.strategies.base import StrategyConfig
+from src.agents.strategies.classic import PatternStrategy, RandomStrategy
 from src.common.config import Config, GameConfig, LeagueConfig, RetryConfig, ServerConfig
 from src.common.protocol import MessageFactory, generate_auth_token
 from src.common.repositories import DataManager
 from src.game.match import Match
 from src.game.odd_even import GameRole
 from src.observability.health import HealthMonitor, LivenessCheck, ReadinessCheck
-
 
 # ==============================================================================
 # Pattern Strategy Advanced Tests

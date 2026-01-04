@@ -8,14 +8,12 @@ import json
 import logging
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.common.logger import (
     AgentEventLogger,
     ColorFormatter,
-    GameLogger,
     JSONFormatter,
     JSONLWriter,
     LeagueEventLogger,
@@ -889,7 +887,7 @@ class TestLoggerDecoratorsAndSetup:
         """Test setup_logging with JSON output."""
         from src.common.logger import setup_logging
 
-        with tempfile.TemporaryDirectory() as temp_dir:
+        with tempfile.TemporaryDirectory() as _temp_dir:
             setup_logging(level="INFO", json_output=True, log_file=None)
             logger = get_logger("test_json_setup")
             logger.info("Test JSON message")
@@ -996,11 +994,11 @@ class TestTracingAdvancedCoverage:
     def test_tracing_manager_basic(self):
         """Test basic tracing manager functionality."""
         manager = TracingManager()
-        
+
         # Test that manager is a singleton
         manager2 = TracingManager()
         assert manager is manager2
-        
+
         # Test basic properties
         assert hasattr(manager, '_service_name')
         assert hasattr(manager, '_enabled')

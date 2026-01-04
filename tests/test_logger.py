@@ -373,8 +373,9 @@ class TestJSONFormatterAdvanced:
 
     def test_formatter_with_none_exc_info(self):
         """Test formatter when exc_info is explicitly None."""
-        from src.common.logger import JSONFormatter
         import logging
+
+        from src.common.logger import JSONFormatter
 
         formatter = JSONFormatter()
         record = logging.LogRecord(
@@ -391,8 +392,9 @@ class TestColorFormatterAdvanced:
 
     def test_color_formatter_debug_level(self):
         """Test color formatter for DEBUG level."""
-        from src.common.logger import ColorFormatter
         import logging
+
+        from src.common.logger import ColorFormatter
 
         formatter = ColorFormatter()
         record = logging.LogRecord(
@@ -405,8 +407,9 @@ class TestColorFormatterAdvanced:
 
     def test_color_formatter_without_extra_data(self):
         """Test color formatter without extra_data attribute."""
-        from src.common.logger import ColorFormatter
         import logging
+
+        from src.common.logger import ColorFormatter
 
         formatter = ColorFormatter()
         record = logging.LogRecord(

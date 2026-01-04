@@ -5,17 +5,18 @@ Massive Coverage Push to Cross 85%
 Hundreds of simple, effective tests covering remaining code paths.
 """
 
-import pytest
-from src.agents.strategies.classic import PatternStrategy, RandomStrategy
-from src.agents.strategies.base import StrategyConfig
-from src.game.odd_even import GameRole
-from src.common.config import Config, GameConfig, ServerConfig, RetryConfig, LLMConfig, LeagueConfig
-from src.common.protocol import generate_auth_token, MessageFactory
-from src.common.repositories import DataManager
-from src.agents.referee import RefereeAgent
-from src.observability.health import HealthMonitor, LivenessCheck, ReadinessCheck
 import tempfile
 
+import pytest
+
+from src.agents.referee import RefereeAgent
+from src.agents.strategies.base import StrategyConfig
+from src.agents.strategies.classic import PatternStrategy, RandomStrategy
+from src.common.config import Config, GameConfig, LeagueConfig, LLMConfig, RetryConfig, ServerConfig
+from src.common.protocol import MessageFactory, generate_auth_token
+from src.common.repositories import DataManager
+from src.game.odd_even import GameRole
+from src.observability.health import HealthMonitor, LivenessCheck, ReadinessCheck
 
 # ==============================================================================
 # Pattern Strategy - 100 variations
@@ -196,7 +197,7 @@ class TestConfig50:
     """50 config variations."""
 
     def test_c01(self):
-        for i in range(10):
+        for _i in range(10):
             c = Config()
             assert c is not None
 

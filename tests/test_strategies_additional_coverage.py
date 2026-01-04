@@ -12,13 +12,11 @@ Edge Cases Covered:
 - Number extraction from various formats
 """
 
-import random
-from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from src.agents.strategies.classic import LLMStrategy, PatternStrategy, RandomStrategy
 from src.agents.strategies.base import StrategyConfig
+from src.agents.strategies.classic import LLMStrategy, PatternStrategy, RandomStrategy
 from src.common.config import LLMConfig
 from src.game.odd_even import GameRole
 

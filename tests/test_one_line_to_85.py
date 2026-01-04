@@ -6,11 +6,12 @@ Simple test to cover one more line and cross 85%.
 """
 
 import pytest
-from src.agents.strategies.classic import PatternStrategy, RandomStrategy
-from src.agents.strategies.base import StrategyConfig
-from src.game.odd_even import GameRole
+
 from src.agents.referee import RefereeAgent
+from src.agents.strategies.base import StrategyConfig
+from src.agents.strategies.classic import PatternStrategy, RandomStrategy
 from src.common.protocol import generate_auth_token
+from src.game.odd_even import GameRole
 
 
 class TestFinalLineTo85:
