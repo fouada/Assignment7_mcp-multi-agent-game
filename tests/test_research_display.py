@@ -6,8 +6,6 @@ Tests the research display functionality to ensure proper
 visualization data is returned.
 """
 
-import pytest
-
 from src.visualization.research_display import ResearchDisplay
 
 
