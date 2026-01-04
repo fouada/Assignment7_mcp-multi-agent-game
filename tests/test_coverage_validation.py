@@ -312,8 +312,8 @@ class TestCoverageValidation:
         assert "run" in config["tool"]["coverage"]
         assert "report" in config["tool"]["coverage"]
 
-        # Verify fail_under is set to 80 (realistic target)
-        assert config["tool"]["coverage"]["report"]["fail_under"] == 80
+        # Verify fail_under is set to 85 (realistic target)
+        assert config["tool"]["coverage"]["report"]["fail_under"] == 85
 
 
 class TestPerformanceStandards:
