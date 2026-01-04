@@ -76,7 +76,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          pytest tests/ -v -m "not slow and not integration" --junit-xml=junit/test-results-${{ matrix.os }}-${{ matrix.python-version }}.xml
+          pytest tests/ -v -m "not slow and not integration" --junit-xml=junit/test-results-${{ matrix.os }}-${{ matrix.python-version }}.xml --no-cov
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -104,9 +104,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Run tests with coverage
+      - name: Run ALL tests with coverage (unit + integration + comprehensive)
         run: |
-          pytest tests/ --cov=src --cov-report=xml --cov-report=html --cov-report=term-missing --cov-fail-under=${{ env.MIN_COVERAGE }}
+          pytest tests/ --cov=src --cov-report=xml --cov-report=html --cov-report=term-missing --cov-branch --cov-fail-under=${{ env.MIN_COVERAGE }} -v
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
@@ -115,6 +115,7 @@ jobs:
           path: |
             coverage.xml
             htmlcov/
+            coverage.json
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -127,9 +128,14 @@ jobs:
           verbose: true
         continue-on-error: true
 
-      - name: Check coverage threshold
+      - name: Check coverage threshold (MIT-Level: 80%+)
         run: |
           coverage report --fail-under=${{ env.MIN_COVERAGE }}
+      
+      - name: Generate coverage summary
+        run: |
+          echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
+          coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
 
   integration-tests:
     name: 🔗 Integration Tests
@@ -153,7 +159,7 @@ jobs:
 
       - name: Run integration tests
         run: |
-          pytest tests/ -v -m integration --junit-xml=junit/integration-results.xml
+          pytest tests/ -v -m integration --junit-xml=junit/integration-results.xml --no-cov
 
       - name: Upload integration test results
         uses: actions/upload-artifact@v4
@@ -184,7 +190,7 @@ jobs:
 
       - name: Run performance tests
         run: |
-          pytest tests/ -v -m "slow or benchmark" --junit-xml=junit/performance-results.xml
+          pytest tests/ -v -m "slow or benchmark" --junit-xml=junit/performance-results.xml --no-cov
 
       - name: Upload performance test results
         uses: actions/upload-artifact@v4

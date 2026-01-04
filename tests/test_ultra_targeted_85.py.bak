@@ -1,0 +1,479 @@
+"""
+Ultra-Targeted Tests for 85%+ Coverage
+=======================================
+
+Simple, focused tests for specific uncovered lines.
+"""
+
+import pytest
+
+from src.common.protocol import (
+    AgentState,
+    BaseMessage,
+    MessageType,
+    Timeouts,
+    generate_auth_token,
+)
+from src.observability.metrics import (
+    Counter,
+    Gauge,
+    Histogram,
+    MetricsCollector,
+    Summary,
+)
+
+
+# ==============================================================================
+# Protocol - Timeouts (Line 61)
+# ==============================================================================
+
+
+class TestTimeoutsUnknownType:
+    """Test Timeouts.get_timeout() with unknown types."""
+
+    def test_unknown_message_type(self):
+        """Unknown message type returns DEFAULT."""
+        timeout = Timeouts.get_timeout("TOTALLY_UNKNOWN")
+        assert timeout == Timeouts.DEFAULT
+
+    def test_none_message_type(self):
+        """None message type returns DEFAULT."""
+        timeout = Timeouts.get_timeout(None)
+        assert timeout == Timeouts.DEFAULT
+
+    def test_empty_message_type(self):
+        """Empty string returns DEFAULT."""
+        timeout = Timeouts.get_timeout("")
+        assert timeout == Timeouts.DEFAULT
+
+    def test_arbitrary_string(self):
+        """Arbitrary string returns DEFAULT."""
+        timeout = Timeouts.get_timeout("xyz123")
+        assert timeout == Timeouts.DEFAULT
+
+
+# ==============================================================================
+# Protocol - AgentState Transitions (Lines 176-183)
+# ==============================================================================
+
+
+class TestAgentStateTransitionMatrix:
+    """Test AgentState.can_transition() comprehensively."""
+
+    def test_init_to_registered_valid(self):
+        """INIT -> REGISTERED is valid."""
+        assert AgentState.can_transition(AgentState.INIT, AgentState.REGISTERED) is True
+
+    def test_init_to_shutdown_valid(self):
+        """INIT -> SHUTDOWN is valid."""
+        assert AgentState.can_transition(AgentState.INIT, AgentState.SHUTDOWN) is True
+
+    def test_init_to_active_invalid(self):
+        """INIT -> ACTIVE is invalid."""
+        assert AgentState.can_transition(AgentState.INIT, AgentState.ACTIVE) is False
+
+    def test_init_to_suspended_invalid(self):
+        """INIT -> SUSPENDED is invalid."""
+        assert AgentState.can_transition(AgentState.INIT, AgentState.SUSPENDED) is False
+
+    def test_registered_to_active_valid(self):
+        """REGISTERED -> ACTIVE is valid."""
+        assert AgentState.can_transition(AgentState.REGISTERED, AgentState.ACTIVE) is True
+
+    def test_registered_to_shutdown_valid(self):
+        """REGISTERED -> SHUTDOWN is valid."""
+        assert AgentState.can_transition(AgentState.REGISTERED, AgentState.SHUTDOWN) is True
+
+    def test_registered_to_init_invalid(self):
+        """REGISTERED -> INIT is invalid."""
+        assert AgentState.can_transition(AgentState.REGISTERED, AgentState.INIT) is False
+
+    def test_registered_to_suspended_invalid(self):
+        """REGISTERED -> SUSPENDED is invalid."""
+        assert AgentState.can_transition(AgentState.REGISTERED, AgentState.SUSPENDED) is False
+
+    def test_active_to_suspended_valid(self):
+        """ACTIVE -> SUSPENDED is valid."""
+        assert AgentState.can_transition(AgentState.ACTIVE, AgentState.SUSPENDED) is True
+
+    def test_active_to_shutdown_valid(self):
+        """ACTIVE -> SHUTDOWN is valid."""
+        assert AgentState.can_transition(AgentState.ACTIVE, AgentState.SHUTDOWN) is True
+
+    def test_active_to_init_invalid(self):
+        """ACTIVE -> INIT is invalid."""
+        assert AgentState.can_transition(AgentState.ACTIVE, AgentState.INIT) is False
+
+    def test_active_to_registered_invalid(self):
+        """ACTIVE -> REGISTERED is invalid."""
+        assert AgentState.can_transition(AgentState.ACTIVE, AgentState.REGISTERED) is False
+
+    def test_suspended_to_active_valid(self):
+        """SUSPENDED -> ACTIVE is valid."""
+        assert AgentState.can_transition(AgentState.SUSPENDED, AgentState.ACTIVE) is True
+
+    def test_suspended_to_shutdown_valid(self):
+        """SUSPENDED -> SHUTDOWN is valid."""
+        assert AgentState.can_transition(AgentState.SUSPENDED, AgentState.SHUTDOWN) is True
+
+    def test_suspended_to_init_invalid(self):
+        """SUSPENDED -> INIT is invalid."""
+        assert AgentState.can_transition(AgentState.SUSPENDED, AgentState.INIT) is False
+
+    def test_suspended_to_registered_invalid(self):
+        """SUSPENDED -> REGISTERED is invalid."""
+        assert AgentState.can_transition(AgentState.SUSPENDED, AgentState.REGISTERED) is False
+
+    def test_shutdown_terminal_to_init(self):
+        """SHUTDOWN -> INIT is invalid (terminal)."""
+        assert AgentState.can_transition(AgentState.SHUTDOWN, AgentState.INIT) is False
+
+    def test_shutdown_terminal_to_registered(self):
+        """SHUTDOWN -> REGISTERED is invalid (terminal)."""
+        assert AgentState.can_transition(AgentState.SHUTDOWN, AgentState.REGISTERED) is False
+
+    def test_shutdown_terminal_to_active(self):
+        """SHUTDOWN -> ACTIVE is invalid (terminal)."""
+        assert AgentState.can_transition(AgentState.SHUTDOWN, AgentState.ACTIVE) is False
+
+    def test_shutdown_terminal_to_suspended(self):
+        """SHUTDOWN -> SUSPENDED is invalid (terminal)."""
+        assert AgentState.can_transition(AgentState.SHUTDOWN, AgentState.SUSPENDED) is False
+
+    def test_shutdown_terminal_to_shutdown(self):
+        """SHUTDOWN -> SHUTDOWN is invalid (terminal)."""
+        assert AgentState.can_transition(AgentState.SHUTDOWN, AgentState.SHUTDOWN) is False
+
+
+# ==============================================================================
+# Protocol - Message Serialization (Lines 296, 302-304)
+# ==============================================================================
+
+
+class TestBaseMessageJSONSerialization:
+    """Test BaseMessage JSON serialization."""
+
+    def test_to_json_basic(self):
+        """BaseMessage.to_json() creates valid JSON string."""
+        msg = BaseMessage(
+            message_type=MessageType.GAME_INVITE,
+            sender="test_sender",
+            league_id="test_league",
+        )
+
+        json_str = msg.to_json()
+        assert isinstance(json_str, str)
+        assert "test_sender" in json_str
+        assert "test_league" in json_str
+
+    def test_from_dict_with_string_enum(self):
+        """BaseMessage.from_dict() handles string message_type."""
+        data = {
+            "message_type": "GAME_INVITE",
+            "sender": "player1",
+            "league_id": "league1",
+        }
+
+        msg = BaseMessage.from_dict(data)
+        assert msg.message_type == MessageType.GAME_INVITE
+        assert msg.sender == "player1"
+        assert msg.league_id == "league1"
+
+    def test_from_dict_with_enum_object(self):
+        """BaseMessage.from_dict() handles MessageType enum."""
+        data = {
+            "message_type": MessageType.HEARTBEAT,
+            "sender": "player2",
+            "league_id": "league2",
+        }
+
+        msg = BaseMessage.from_dict(data)
+        assert msg.message_type == MessageType.HEARTBEAT
+        assert msg.sender == "player2"
+
+
+# ==============================================================================
+# Metrics - MetricsCollector.reset() (Lines 463-468)
+# ==============================================================================
+
+
+class TestMetricsReset:
+    """Test MetricsCollector.reset()."""
+
+    def test_reset_clears_metrics(self):
+        """reset() clears all custom metrics."""
+        collector = MetricsCollector()
+
+        # Add metrics
+        collector.register_counter("custom_counter")
+        collector.increment("custom_counter")
+        collector.register_gauge("custom_gauge")
+        collector.set_gauge("custom_gauge", 100.0)
+
+        # Reset
+        collector.reset()
+
+        # Custom metrics should be gone
+        metrics = collector.get_all_metrics()
+        assert "custom_counter" not in metrics["counters"]
+        assert "custom_gauge" not in metrics["gauges"]
+
+    def test_reset_multiple_times(self):
+        """reset() can be called multiple times."""
+        collector = MetricsCollector()
+
+        for i in range(10):
+            collector.register_counter(f"c{i}")
+            collector.reset()
+
+        # All custom counters should be gone
+        metrics = collector.get_all_metrics()
+        for i in range(10):
+            assert f"c{i}" not in metrics["counters"]
+
+
+# ==============================================================================
+# Metrics - get_counter() (Lines 327-328)
+# ==============================================================================
+
+
+class TestGetCounterNonExistent:
+    """Test get_counter() with non-existent counters."""
+
+    def test_get_nonexistent_counter(self):
+        """get_counter() returns None for non-existent counter."""
+        collector = MetricsCollector()
+        counter = collector.get_counter("does_not_exist")
+        assert counter is None
+
+    def test_get_counter_wrong_labels(self):
+        """get_counter() with wrong labels returns None."""
+        collector = MetricsCollector()
+
+        # Register with labels
+        collector.register_counter("http", labels={"method": "GET"})
+
+        # Query with different labels
+        counter = collector.get_counter("http", labels={"method": "POST"})
+        assert counter is None
+
+    def test_get_counter_exists(self):
+        """get_counter() returns Counter when it exists."""
+        collector = MetricsCollector()
+        collector.register_counter("exists")
+
+        counter = collector.get_counter("exists")
+        assert counter is not None
+        assert isinstance(counter, Counter)
+
+
+# ==============================================================================
+# Metrics - Summary Edge Cases (Lines 166, 172)
+# ==============================================================================
+
+
+class TestSummaryMaxSizeAndEmpty:
+    """Test Summary max_size and empty edge cases."""
+
+    def test_summary_max_size_limit(self):
+        """Summary respects max_size and removes old values."""
+        summary = Summary(name="test", max_size=5)
+
+        # Add 10 values
+        for i in range(10):
+            summary.observe(float(i))
+
+        # Should only have last 5
+        assert len(summary.values) == 5
+        assert 0.0 not in summary.values
+        assert 9.0 in summary.values
+
+    def test_get_quantile_empty_values(self):
+        """get_quantile() returns 0 for empty summary."""
+        summary = Summary(name="empty")
+
+        assert summary.get_quantile(0.5) == 0.0
+        assert summary.get_quantile(0.95) == 0.0
+        assert summary.get_quantile(0.99) == 0.0
+
+    def test_get_quantile_single_value(self):
+        """get_quantile() with single value."""
+        summary = Summary(name="single")
+        summary.observe(42.0)
+
+        # All quantiles return the single value
+        assert summary.get_quantile(0.0) == 42.0
+        assert summary.get_quantile(0.5) == 42.0
+        assert summary.get_quantile(1.0) == 42.0
+
+
+# ==============================================================================
+# Additional Protocol Tests
+# ==============================================================================
+
+
+class TestProtocolMoreCoverage:
+    """More protocol coverage tests."""
+
+    def test_auth_token_many_unique(self):
+        """Generate many unique auth tokens."""
+        tokens = set()
+        for i in range(200):
+            token = generate_auth_token(f"p{i}", "league")
+            tokens.add(token)
+
+        # All should be unique
+        assert len(tokens) == 200
+
+    def test_auth_token_different_leagues(self):
+        """Auth tokens differ for different leagues."""
+        token1 = generate_auth_token("player", "league1")
+        token2 = generate_auth_token("player", "league2")
+
+        assert token1 != token2
+
+    def test_auth_token_different_players(self):
+        """Auth tokens differ for different players."""
+        token1 = generate_auth_token("player1", "league")
+        token2 = generate_auth_token("player2", "league")
+
+        assert token1 != token2
+
+
+# ==============================================================================
+# Additional Metrics Tests
+# ==============================================================================
+
+
+class TestMetricsMoreCoverage:
+    """More metrics coverage tests."""
+
+    def test_histogram_many_observations(self):
+        """Histogram handles many observations."""
+        histogram = Histogram(name="test", buckets=[1.0, 10.0, 100.0])
+
+        for i in range(100):
+            histogram.observe(float(i))
+
+        assert histogram.count == 100
+        assert histogram.sum == sum(range(100))
+
+    def test_gauge_negative_values(self):
+        """Gauge handles negative values."""
+        gauge = Gauge(name="test")
+
+        gauge.set(-100.0)
+        assert gauge.value == -100.0
+
+        gauge.set(-1.0)
+        assert gauge.value == -1.0
+
+    def test_counter_many_increments(self):
+        """Counter handles many increments."""
+        counter = Counter(name="test")
+
+        for _ in range(1000):
+            counter.increment()
+
+        assert counter.value == 1000
+
+    def test_summary_quantile_distribution(self):
+        """Summary quantiles show proper distribution."""
+        summary = Summary(name="dist", max_size=1000)
+
+        # Add 0-99
+        for i in range(100):
+            summary.observe(float(i))
+
+        q25 = summary.get_quantile(0.25)
+        q50 = summary.get_quantile(0.50)
+        q75 = summary.get_quantile(0.75)
+
+        # Should be ordered
+        assert q25 < q50 < q75
+
+
+# ==============================================================================
+# Agent State Comprehensive Tests
+# ==============================================================================
+
+
+class TestAgentStateComprehensive:
+    """Comprehensive agent state tests."""
+
+    def test_all_valid_transitions(self):
+        """Test all documented valid transitions."""
+        valid_transitions = [
+            (AgentState.INIT, AgentState.REGISTERED),
+            (AgentState.INIT, AgentState.SHUTDOWN),
+            (AgentState.REGISTERED, AgentState.ACTIVE),
+            (AgentState.REGISTERED, AgentState.SHUTDOWN),
+            (AgentState.ACTIVE, AgentState.SUSPENDED),
+            (AgentState.ACTIVE, AgentState.SHUTDOWN),
+            (AgentState.SUSPENDED, AgentState.ACTIVE),
+            (AgentState.SUSPENDED, AgentState.SHUTDOWN),
+        ]
+
+        for from_state, to_state in valid_transitions:
+            assert AgentState.can_transition(from_state, to_state) is True
+
+    def test_all_invalid_transitions_from_init(self):
+        """Test invalid transitions from INIT."""
+        invalid = [
+            (AgentState.INIT, AgentState.ACTIVE),
+            (AgentState.INIT, AgentState.SUSPENDED),
+            (AgentState.INIT, AgentState.INIT),
+        ]
+
+        for from_state, to_state in invalid:
+            assert AgentState.can_transition(from_state, to_state) is False
+
+    def test_all_invalid_transitions_from_shutdown(self):
+        """Test all transitions from SHUTDOWN are invalid."""
+        for state in [AgentState.INIT, AgentState.REGISTERED, AgentState.ACTIVE,
+                      AgentState.SUSPENDED, AgentState.SHUTDOWN]:
+            assert AgentState.can_transition(AgentState.SHUTDOWN, state) is False
+
+
+# ==============================================================================
+# More Timeouts Coverage
+# ==============================================================================
+
+
+class TestTimeoutsAllKnownTypes:
+    """Test all known timeout message types."""
+
+    def test_all_request_response_types(self):
+        """Test all known message types return valid timeouts."""
+        types_to_test = [
+            "REFEREE_REGISTER_REQUEST",
+            "REFEREE_REGISTER_RESPONSE",
+            "LEAGUE_REGISTER_REQUEST",
+            "LEAGUE_REGISTER_RESPONSE",
+            "GAME_JOIN_ACK",
+            "GAME_INVITE_RESPONSE",
+            "CHOOSE_PARITY",
+            "CHOOSE_PARITY_CALL",
+            "CHOOSE_PARITY_RESPONSE",
+            "MOVE_REQUEST",
+            "MOVE_RESPONSE",
+            "GAME_OVER",
+            "GAME_END",
+            "MATCH_RESULT_REPORT",
+            "LEAGUE_QUERY",
+        ]
+
+        for msg_type in types_to_test:
+            timeout = Timeouts.get_timeout(msg_type)
+            assert timeout > 0
+            assert timeout >= 5.0  # All timeouts are at least 5 seconds
+
+    def test_timeout_consistency(self):
+        """Same message type always returns same timeout."""
+        msg_type = "GAME_JOIN_ACK"
+
+        timeout1 = Timeouts.get_timeout(msg_type)
+        timeout2 = Timeouts.get_timeout(msg_type)
+        timeout3 = Timeouts.get_timeout(msg_type)
+
+        assert timeout1 == timeout2 == timeout3
