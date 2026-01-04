@@ -276,7 +276,7 @@ class TestTracingManagerComplete:
         # End span
         span.end()
         assert span.end_time is not None
-        assert span.duration_ms > 0
+        assert span.duration_ms >= 0  # >= 0 for Windows time resolution
 
         # Convert to dict
         span_dict = span.to_dict()
@@ -614,7 +614,7 @@ class TestAdditionalCoverageBoost:
         # End span
         span.end()
         assert span.end_time is not None
-        assert span.duration_ms > 0
+        assert span.duration_ms >= 0  # >= 0 for Windows time resolution
 
         # Call end again (should not change end_time)
         first_end_time = span.end_time
@@ -649,6 +649,7 @@ class TestLoggerSetupAndDecorators:
     def test_setup_logging_with_file(self):
         """Test setup_logging with file output."""
         from src.common.logger import setup_logging
+        import logging
 
         with tempfile.TemporaryDirectory() as temp_dir:
             log_file = Path(temp_dir) / "test.log"
@@ -660,6 +661,12 @@ class TestLoggerSetupAndDecorators:
 
             # File should exist
             assert log_file.exists()
+            
+            # Close all file handlers to avoid Windows file permission issues
+            for handler in logging.root.handlers[:]:
+                if isinstance(handler, logging.FileHandler):
+                    handler.close()
+                    logging.root.removeHandler(handler)
 
     def test_log_call_decorator(self):
         """Test log_call decorator."""
@@ -895,6 +902,7 @@ class TestLoggerDecoratorsAndSetup:
     def test_setup_logging_with_file_and_json(self):
         """Test setup_logging with file handler and JSON output."""
         from src.common.logger import setup_logging
+        import logging
 
         with tempfile.TemporaryDirectory() as temp_dir:
             log_file = Path(temp_dir) / "test_json.log"
@@ -905,6 +913,12 @@ class TestLoggerDecoratorsAndSetup:
             logger.info("Info message in JSON")
 
             assert log_file.exists()
+            
+            # Close all file handlers to avoid Windows file permission issues
+            for handler in logging.root.handlers[:]:
+                if isinstance(handler, logging.FileHandler):
+                    handler.close()
+                    logging.root.removeHandler(handler)
 
     def test_setup_logging_different_levels(self):
         """Test setup_logging with different log levels."""

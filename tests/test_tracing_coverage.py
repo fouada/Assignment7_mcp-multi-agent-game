@@ -159,7 +159,7 @@ class TestSpan:
         assert span_dict["span_id"] == "span"
         assert span_dict["parent_span_id"] == "parent"
         assert span_dict["name"] == "test"
-        assert span_dict["duration_ms"] > 0
+        assert span_dict["duration_ms"] >= 0  # >= 0 for Windows time resolution
 
 
 class TestTracingManager:
