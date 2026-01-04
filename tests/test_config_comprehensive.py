@@ -9,12 +9,10 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
-import pytest
-
 from src.common.config import (
-    Config,
     DEFAULT_LLM_MODELS,
     DEFAULT_PORTS,
+    Config,
     GameConfig,
     LeagueConfig,
     LLMConfig,
@@ -101,7 +99,7 @@ class TestConfigPlayerManagement:
         """Test adding player with auto-assigned port."""
         config = Config()
         player = config.add_player("player1")
-        
+
         assert player.name == "player_player1"
         assert player.port == DEFAULT_PORTS["player_base"] + 1
 
@@ -109,7 +107,7 @@ class TestConfigPlayerManagement:
         """Test adding player with explicit port."""
         config = Config()
         player = config.add_player("player1", port=9000)
-        
+
         assert player.name == "player_player1"
         assert player.port == 9000
 
@@ -119,7 +117,7 @@ class TestConfigPlayerManagement:
         player1 = config.add_player("p1")
         player2 = config.add_player("p2")
         player3 = config.add_player("p3")
-        
+
         # Each should get incrementing ports
         assert player2.port == player1.port + 1
         assert player3.port == player2.port + 1
@@ -128,7 +126,7 @@ class TestConfigPlayerManagement:
         """Test getting existing player config."""
         config = Config()
         config.add_player("player1", port=9000)
-        
+
         player = config.get_player_config("player1")
         assert player is not None
         assert player.port == 9000
@@ -325,7 +323,7 @@ class TestConfigToDict:
         """Test converting config with defaults to dict."""
         config = Config()
         data = config.to_dict()
-        
+
         assert "league_manager" in data
         assert "referee" in data
         assert "players" in data
@@ -339,7 +337,7 @@ class TestConfigToDict:
         config = Config()
         config.add_player("player1", port=8101)
         config.add_player("player2", port=8102)
-        
+
         data = config.to_dict()
         assert "player1" in data["players"]
         assert "player2" in data["players"]
@@ -359,7 +357,7 @@ class TestConfigFromDict:
                 "invalid_field": "should_be_ignored",
             }
         }
-        
+
         config = Config.from_dict(data)
         # Should not raise error, invalid field should be filtered
         assert config.league_manager.port == 9000
@@ -372,7 +370,7 @@ class TestGlobalConfigManagement:
         """Test that get_config creates instance."""
         # Reset global config
         set_config(None)  # type: ignore
-        
+
         config = get_config()
         assert config is not None
         assert isinstance(config, Config)
@@ -387,9 +385,9 @@ class TestGlobalConfigManagement:
         """Test that set_config updates global config."""
         new_config = Config()
         new_config.log_level = "DEBUG"
-        
+
         set_config(new_config)
-        
+
         retrieved = get_config()
         assert retrieved.log_level == "DEBUG"
 
@@ -397,21 +395,21 @@ class TestGlobalConfigManagement:
         """Test that get_config loads from file if it exists."""
         # Reset global config
         set_config(None)  # type: ignore
-        
+
         # Create temporary config file
         config_data = {"log_level": "WARNING", "debug": True}
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config" / "servers.json"
             config_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             with open(config_path, "w") as f:
                 json.dump(config_data, f)
-            
+
             # Mock the config paths to include our temp file
             with mock.patch("src.common.config.Path") as mock_path:
                 mock_path.return_value = config_path
-                
+
                 # Since we can't easily mock Path operations, let's just verify
                 # the function handles missing files gracefully
                 config = get_config()
@@ -429,7 +427,7 @@ class TestConfigEdgeCases:
     def test_config_defaults_all_fields(self):
         """Test that all config fields have sensible defaults."""
         config = Config()
-        
+
         # Check all default values
         assert config.league_manager.port == DEFAULT_PORTS["league_manager"]
         assert config.referee.port == DEFAULT_PORTS["referee"]
@@ -448,7 +446,7 @@ class TestConfigEdgeCases:
             "invalid_field": "should_be_removed",
             "another_invalid": 123,
         }
-        
+
         filtered = Config._filter_config_data(data, ServerConfig)
         assert "name" in filtered
         assert "port" in filtered
