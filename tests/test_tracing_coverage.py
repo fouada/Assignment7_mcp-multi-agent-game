@@ -3,6 +3,7 @@ Additional tests to improve tracing.py coverage to 85%+.
 Focuses on uncovered tracing scenarios and edge cases.
 """
 
+import asyncio
 import time
 
 import pytest
@@ -12,6 +13,7 @@ from src.observability.tracing import (
     SpanContext,
     TracingManager,
     get_tracing_manager,
+    trace_function,
 )
 
 
@@ -190,18 +192,28 @@ class TestTracingManagerConfiguration:
 
     def test_tracing_manager_disabled(self):
         """Test tracing when disabled."""
-        # TracingManager singleton doesn't accept enabled parameter
-        pytest.skip("TracingManager __new__() doesn't accept 'enabled' parameter")
+        manager = TracingManager()
+        manager.initialize(enabled=False)
+        
+        # Should not create spans when disabled
+        span = manager.start_span("test_operation")
+        assert span is None
 
     def test_tracing_manager_with_sampling(self):
         """Test tracing with sampling rate."""
-        # TracingManager singleton doesn't accept sampling_rate parameter
-        pytest.skip("TracingManager __new__() doesn't accept 'sampling_rate' parameter")
+        manager = TracingManager()
+        manager.initialize(sample_rate=0.5)
+        
+        # With 50% sampling, should have some variability
+        assert 0.0 <= manager.sample_rate <= 1.0
 
     def test_tracing_manager_100_percent_sampling(self):
         """Test tracing with 100% sampling."""
-        # TracingManager singleton doesn't accept sampling_rate parameter
-        pytest.skip("TracingManager __new__() doesn't accept 'sampling_rate' parameter")
+        manager = TracingManager()
+        manager.initialize(sample_rate=1.0)
+        
+        # Should sample all spans
+        assert manager.sample_rate == 1.0
 
 
 class TestSpanOperations:
@@ -209,176 +221,223 @@ class TestSpanOperations:
 
     def test_start_span_with_invalid_parent(self):
         """Test starting span with invalid parent ID."""
-        pytest.skip("TracingManager __new__() doesn't accept 'enabled' parameter")
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
+        
+        # Create parent context
+        parent_ctx = SpanContext(trace_id="trace123", span_id="span123", sampled=True)
+        span = manager.start_span("child_operation", parent_context=parent_ctx)
+        
+        if span:
+            assert span.trace_id == "trace123"
+            assert span.parent_span_id == "span123"
 
     def test_end_nonexistent_span(self):
         """Test ending a span that doesn't exist."""
-        pytest.skip("TracingManager __new__() doesn't accept 'enabled' parameter")
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True)
+        
+        # Ending None should not raise error
+        manager.end_span(None)
 
     def test_span_with_many_attributes(self):
         """Test span with many attributes."""
-        pytest.skip("TracingManager __new__() doesn't accept 'enabled' parameter")
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
+        
+        span = manager.start_span("test_operation")
+        if span:
+            # Add many attributes
+            for i in range(50):
+                span.set_attribute(f"attr_{i}", f"value_{i}")
+            
+            assert len(span.attributes) >= 50
 
     def test_add_event_to_nonexistent_span(self):
         """Test adding event to nonexistent span."""
-        pytest.skip("TracingManager __new__() doesn't accept 'enabled' parameter")
+        span = Span(
+            trace_id="",
+            span_id="",
+            parent_span_id=None,
+            name="test",
+            start_time=time.time(),
+        )
+        
+        # Should not raise error
+        span.add_event("test_event")
 
     def test_set_status_on_nonexistent_span(self):
         """Test setting status on nonexistent span."""
-        pytest.skip("TracingManager __new__() doesn't accept 'enabled' parameter")
+        span = Span(
+            trace_id="",
+            span_id="",
+            parent_span_id=None,
+            name="test",
+            start_time=time.time(),
+        )
+        
+        # Should not raise error
+        span.set_status("error", "test error")
 
 
-@pytest.mark.skip(reason="TracingManager doesn't accept 'enabled' parameter")
 class TestTraceContextPropagation:
     """Test trace context propagation."""
 
     def test_inject_trace_context_no_active_span(self):
         """Test injecting context when no span is active."""
-        manager = TracingManager(enabled=True)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True)
 
         headers = {}
-        manager.inject_trace_context(headers)
+        result = manager.inject_context(headers)
 
         # Should not add headers without active span
-        assert "traceparent" not in headers or headers["traceparent"] is not None
+        assert "traceparent" not in result or result["traceparent"] is not None
 
     def test_extract_trace_context_empty_headers(self):
         """Test extracting context from empty headers."""
-        manager = TracingManager(enabled=True)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True)
 
-        ctx = manager.extract_trace_context({})
+        ctx = manager.extract_context({})
 
         # Should return None
         assert ctx is None
 
     def test_extract_trace_context_invalid_format(self):
         """Test extracting context with invalid format."""
-        manager = TracingManager(enabled=True)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True)
 
-        ctx = manager.extract_trace_context({"traceparent": "invalid"})
+        ctx = manager.extract_context({"traceparent": "invalid"})
 
         # Should handle gracefully
         assert ctx is None or isinstance(ctx, SpanContext)
 
     def test_propagate_context_across_services(self):
         """Test context propagation simulation."""
-        manager = TracingManager(enabled=True)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
 
         # Service A starts a span
-        span_id = manager.start_span("service_a_operation")
+        span = manager.start_span("service_a_operation")
 
-        # Inject context into headers
-        headers = {}
-        manager.inject_trace_context(headers, span_id)
+        if span:
+            # Inject context into headers
+            headers = {}
+            headers = manager.inject_context(headers)
 
-        # Service B extracts context
-        ctx = manager.extract_trace_context(headers)
+            # Service B extracts context
+            ctx = manager.extract_context(headers)
 
-        if ctx:
-            # Service B starts child span
-            child_span_id = manager.start_span("service_b_operation", parent_span_id=span_id)
+            if ctx:
+                # Service B starts child span
+                child_span = manager.start_span("service_b_operation", parent_context=ctx)
 
-            assert child_span_id is not None
+                assert child_span is not None
 
 
-@pytest.mark.skip(reason="TracingManager doesn't accept 'enabled' parameter")
 class TestTracingDisabled:
     """Test tracing when disabled."""
 
     def test_all_operations_when_disabled(self):
         """Test that all operations work when tracing is disabled."""
-        manager = TracingManager(enabled=False)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=False)
 
         # All these should not raise errors
-        span_id = manager.start_span("operation")
-        manager.add_event(span_id or "dummy", "event")
-        manager.set_span_status(span_id or "dummy", "ok")
-        manager.end_span(span_id or "dummy")
+        span = manager.start_span("operation")
+        assert span is None  # Should return None when disabled
+        
+        manager.end_span(span)
 
         headers = {}
-        manager.inject_trace_context(headers, span_id)
-        manager.extract_trace_context(headers)
+        result = manager.inject_context(headers)
+        assert result is not None
+        
+        ctx = manager.extract_context(headers)
+        assert ctx is None
 
 
-@pytest.mark.skip(reason="TracingManager doesn't accept 'enabled' parameter")
 class TestTracingExport:
     """Test span export functionality."""
 
     def test_export_spans_empty(self):
         """Test exporting when no spans exist."""
-        manager = TracingManager(enabled=True)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True)
 
-        spans = manager.export_spans()
+        spans = manager.export_spans_json()
 
         assert isinstance(spans, list)
 
     def test_export_spans_with_data(self):
         """Test exporting spans with data."""
-        manager = TracingManager(enabled=True)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
 
-        span_id = manager.start_span("test_operation")
-        manager.add_event(span_id, "test_event", {"key": "value"})
-        manager.end_span(span_id)
+        span = manager.start_span("test_operation")
+        if span:
+            span.add_event("test_event", {"key": "value"})
+            manager.end_span(span)
 
-        spans = manager.export_spans()
+        spans = manager.export_spans_json()
 
         # Should have at least one span
         assert len(spans) >= 0
 
 
-@pytest.mark.skip(reason="Functions get_global_tracing_manager, end_span, start_span don't exist")
 class TestGlobalTracingManager:
     """Test global tracing manager."""
 
     def test_global_tracing_manager_singleton(self):
         """Test global tracing manager is singleton."""
-        pass
+        manager1 = get_tracing_manager()
+        manager2 = get_tracing_manager()
+        assert manager1 is manager2
 
     def test_convenience_functions(self):
         """Test convenience functions use global manager."""
-        pass
+        manager = get_tracing_manager()
+        assert isinstance(manager, TracingManager)
+        
+        # Test properties
+        assert isinstance(manager.enabled, bool)
+        assert isinstance(manager.sample_rate, float)
+        assert isinstance(manager.service_name, str)
 
 
-@pytest.mark.skip(reason="TracingManager doesn't accept 'enabled' parameter")
 class TestTraceContextManager:
     """Test trace context manager."""
 
     def test_context_manager_basic(self):
         """Test using trace_context as context manager."""
-        from contextlib import contextmanager
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
 
-        manager = TracingManager(enabled=True)
-
-        @contextmanager
-        def trace_context(name, attributes=None):
-            span_id = manager.start_span(name, attributes=attributes)
-            try:
-                yield span_id
-            finally:
-                if span_id:
-                    manager.end_span(span_id)
-
-        with trace_context("test_operation") as span_id:
+        with manager.span("test_operation") as span:
             # Span should be active
-            assert span_id is not None or span_id is None  # Depending on sampling
+            assert span is not None or span is None  # Depending on sampling
 
     def test_context_manager_with_exception(self):
         """Test context manager with exception."""
-        from contextlib import contextmanager
-
-        manager = TracingManager(enabled=True)
-
-        @contextmanager
-        def trace_context(name, attributes=None):
-            span_id = manager.start_span(name, attributes=attributes)
-            try:
-                yield span_id
-            finally:
-                if span_id:
-                    manager.end_span(span_id)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
 
         try:
-            with trace_context("test_operation"):
+            with manager.span("test_operation") as span:
                 raise ValueError("Test error")
         except ValueError:
             pass
@@ -387,34 +446,26 @@ class TestTraceContextManager:
 
     def test_context_manager_with_attributes(self):
         """Test context manager with attributes."""
-        from contextlib import contextmanager
-
-        manager = TracingManager(enabled=True)
-
-        @contextmanager
-        def trace_context(name, attributes=None):
-            span_id = manager.start_span(name, attributes=attributes)
-            try:
-                yield span_id
-            finally:
-                if span_id:
-                    manager.end_span(span_id)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
 
         attributes = {"key": "value", "number": 42}
 
-        with trace_context("test_operation", attributes=attributes) as span_id:
-            if span_id:
+        with manager.span("test_operation", attributes=attributes) as span:
+            if span:
                 # Add event during span
-                manager.add_event(span_id, "mid_operation")
+                span.add_event("mid_operation")
 
 
-@pytest.mark.skip(reason="TracingManager doesn't accept 'enabled' parameter")
 class TestSpanAttributes:
     """Test span attributes handling."""
 
     def test_span_with_complex_attributes(self):
         """Test span with complex attribute types."""
-        manager = TracingManager(enabled=True)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
 
         attributes = {
             "string": "value",
@@ -425,51 +476,55 @@ class TestSpanAttributes:
             "dict": {"nested": "value"},
         }
 
-        span_id = manager.start_span("test_operation", attributes=attributes)
+        span = manager.start_span("test_operation", attributes=attributes)
 
-        assert span_id is not None
+        assert span is not None
 
     def test_add_event_with_attributes(self):
         """Test adding event with attributes."""
-        manager = TracingManager(enabled=True)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
 
-        span_id = manager.start_span("test_operation")
+        span = manager.start_span("test_operation")
 
-        if span_id:
+        if span:
             event_attrs = {"event_key": "event_value", "count": 5}
-            manager.add_event(span_id, "test_event", event_attrs)
+            span.add_event("test_event", event_attrs)
 
 
-@pytest.mark.skip(reason="TracingManager doesn't accept 'sampling_rate' parameter")
 class TestTracingSampling:
     """Test tracing sampling logic."""
 
     def test_sampling_rate_0_percent(self):
         """Test with 0% sampling rate."""
-        manager = TracingManager(enabled=True, sampling_rate=0.0)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=0.0)
 
         # Create multiple spans - none should be sampled
         for i in range(10):
-            span_id = manager.start_span(f"operation_{i}")
-            if span_id:
-                manager.end_span(span_id)
+            span = manager.start_span(f"operation_{i}")
+            if span:
+                manager.end_span(span)
 
     def test_sampling_rate_100_percent(self):
         """Test with 100% sampling rate."""
-        manager = TracingManager(enabled=True, sampling_rate=1.0)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
 
         # All spans should be sampled
         sampled_count = 0
         for i in range(10):
-            span_id = manager.start_span(f"operation_{i}")
-            if span_id:
+            span = manager.start_span(f"operation_{i}")
+            if span:
                 sampled_count += 1
-                manager.end_span(span_id)
+                manager.end_span(span)
 
         assert sampled_count > 0
 
 
-@pytest.mark.skip(reason="TracingManager doesn't accept 'enabled' or 'sampling_rate' parameters")
 class TestSpanTiming:
     """Test span timing and duration."""
 
@@ -477,52 +532,248 @@ class TestSpanTiming:
         """Test that span tracks duration."""
         import time
 
-        manager = TracingManager(enabled=True, sampling_rate=1.0)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
 
-        span_id = manager.start_span("timed_operation")
+        span = manager.start_span("timed_operation")
 
-        if span_id:
+        if span:
             time.sleep(0.01)  # Small delay
-            manager.end_span(span_id)
+            manager.end_span(span)
 
             # Duration should be tracked
-            manager.export_spans()
-            # Verify spans were created
+            assert span.duration_ms > 0
 
 
-@pytest.mark.skip(reason="TracingManager doesn't accept 'enabled' parameter")
 class TestTracingEdgeCases:
     """Test tracing edge cases."""
 
     def test_concurrent_span_creation(self):
         """Test creating spans concurrently."""
-        manager = TracingManager(enabled=True)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
 
         # Simulate concurrent span creation
-        span_ids = []
+        spans = []
         for i in range(10):
-            span_id = manager.start_span(f"concurrent_{i}")
-            if span_id:
-                span_ids.append(span_id)
+            span = manager.start_span(f"concurrent_{i}")
+            if span:
+                spans.append(span)
 
         # End all spans
-        for span_id in span_ids:
-            manager.end_span(span_id)
+        for span in spans:
+            manager.end_span(span)
 
     def test_deeply_nested_spans(self):
         """Test deeply nested spans."""
-        manager = TracingManager(enabled=True, sampling_rate=1.0)
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
 
-        span_ids = []
-        parent_id = None
+        spans = []
 
         # Create nested spans
         for i in range(5):
-            span_id = manager.start_span(f"level_{i}", parent_span_id=parent_id)
-            if span_id:
-                span_ids.append(span_id)
-                parent_id = span_id
+            span = manager.start_span(f"level_{i}")
+            if span:
+                spans.append(span)
 
         # End in reverse order
-        for span_id in reversed(span_ids):
-            manager.end_span(span_id)
+        for span in reversed(spans):
+            manager.end_span(span)
+
+
+class TestTracingDecorator:
+    """Test the trace_function decorator."""
+
+    def test_trace_function_sync(self):
+        """Test trace decorator on sync function."""
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
+
+        @trace_function("test_sync_operation")
+        def sync_function(x, y):
+            return x + y
+
+        result = sync_function(2, 3)
+        assert result == 5
+
+    def test_trace_function_async(self):
+        """Test trace decorator on async function."""
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
+
+        @trace_function("test_async_operation")
+        async def async_function(x, y):
+            await asyncio.sleep(0.001)
+            return x + y
+
+        result = asyncio.run(async_function(2, 3))
+        assert result == 5
+
+    def test_trace_function_with_attributes(self):
+        """Test trace decorator with custom attributes."""
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
+
+        @trace_function("test_operation", attributes={"type": "calculation"})
+        def func_with_attrs(x):
+            return x * 2
+
+        result = func_with_attrs(5)
+        assert result == 10
+
+
+class TestTracingStatistics:
+    """Test tracing statistics tracking."""
+
+    def test_get_statistics(self):
+        """Test getting tracing statistics."""
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
+
+        # Create some spans
+        span1 = manager.start_span("op1")
+        if span1:
+            manager.end_span(span1)
+
+        stats = manager.get_statistics()
+        assert "total_spans" in stats
+        assert "sampled_spans" in stats
+        assert "dropped_spans" in stats
+        assert "pending_spans" in stats
+        assert "sample_rate" in stats
+        assert "enabled" in stats
+
+
+class TestSpanContextEdgeCases:
+    """Test SpanContext edge cases."""
+
+    def test_span_context_short_ids(self):
+        """Test span context with short IDs."""
+        ctx = SpanContext(trace_id="abc", span_id="def", sampled=True)
+        traceparent = ctx.to_traceparent()
+        
+        # Should still work with short IDs
+        assert "-abc-" in traceparent
+        assert "-def-" in traceparent
+
+    def test_span_context_from_traceparent_invalid_version(self):
+        """Test parsing traceparent with invalid version."""
+        # Version 99 is invalid
+        ctx = SpanContext.from_traceparent("99-12345678901234567890123456789012-1234567890123456-01")
+        assert ctx is None
+
+    def test_span_context_from_traceparent_wrong_part_count(self):
+        """Test parsing traceparent with wrong number of parts."""
+        ctx = SpanContext.from_traceparent("00-trace-span")  # Only 3 parts
+        assert ctx is None
+
+
+class TestTracingContextManagement:
+    """Test context management."""
+
+    def test_async_span_context_manager(self):
+        """Test async span context manager."""
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
+
+        async def test_async():
+            async with manager.async_span("async_operation") as span:
+                if span:
+                    span.set_attribute("key", "value")
+                    span.add_event("test_event")
+                await asyncio.sleep(0.001)
+                return "done"
+
+        result = asyncio.run(test_async())
+        assert result == "done"
+
+    def test_async_span_with_exception(self):
+        """Test async span with exception."""
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
+
+        async def test_async_error():
+            async with manager.async_span("async_operation") as span:
+                raise ValueError("Test error")
+
+        with pytest.raises(ValueError):
+            asyncio.run(test_async_error())
+
+
+class TestTracingExportAndClear:
+    """Test export and clear functionality."""
+
+    def test_get_completed_spans_no_clear(self):
+        """Test getting completed spans without clearing."""
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
+
+        span = manager.start_span("test_op")
+        if span:
+            manager.end_span(span)
+
+        spans1 = manager.get_completed_spans(clear=False)
+        spans2 = manager.get_completed_spans(clear=False)
+        
+        # Should get same spans both times
+        assert len(spans1) == len(spans2)
+
+    def test_export_spans_json_clears(self):
+        """Test that export_spans_json clears by default."""
+        manager = TracingManager()
+        manager.reset()
+        manager.initialize(enabled=True, sample_rate=1.0)
+
+        span = manager.start_span("test_op")
+        if span:
+            manager.end_span(span)
+
+        spans1 = manager.export_spans_json(clear=True)
+        spans2 = manager.export_spans_json(clear=True)
+        
+        # Second call should have no spans if cleared
+        assert len(spans2) == 0
+
+
+class TestTracingInitialization:
+    """Test tracing initialization scenarios."""
+
+    def test_initialize_resets_state(self):
+        """Test that initialization resets state."""
+        manager = TracingManager()
+        manager.initialize(enabled=True, sample_rate=1.0)
+
+        # Create span
+        span = manager.start_span("test_op")
+        if span:
+            manager.end_span(span)
+
+        # Re-initialize
+        manager.initialize(enabled=True, sample_rate=0.5)
+
+        # Previous spans should be cleared
+        spans = manager.export_spans_json()
+        assert len(spans) == 0
+
+    def test_sampling_rate_clamping(self):
+        """Test that sampling rate is clamped to valid range."""
+        manager = TracingManager()
+        
+        # Test > 1.0
+        manager.initialize(sample_rate=2.0)
+        assert manager.sample_rate <= 1.0
+        
+        # Test < 0.0
+        manager.initialize(sample_rate=-0.5)
+        assert manager.sample_rate >= 0.0
