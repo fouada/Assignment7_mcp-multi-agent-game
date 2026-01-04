@@ -294,7 +294,7 @@ class TestCoverageValidation:
             content = f.read()
             assert "pytest" in content
             assert "--cov" in content
-            assert "80" in content  # Coverage threshold
+            assert "85" in content  # Coverage threshold
 
     def test_coverage_config_present(self):
         """Verify coverage configuration is present."""
