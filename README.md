@@ -509,18 +509,18 @@ flowchart TD
     Q4 --> MOVE([Selected Move])
     
     SELECT -->|CFR| C1[Get Regret Values]
-    C1 --> C2[Compute Strategy<br/>σᵢ ∝ max(Rᵢ, 0)]
+    C1 --> C2[Compute Strategy<br/>Based on Regrets]
     C2 --> C3[Sample from<br/>Distribution]
     C3 --> MOVE
     
-    SELECT -->|Bayesian| B1[Update Beliefs<br/>P(θ|x)]
+    SELECT -->|Bayesian| B1[Update Beliefs<br/>Posterior Distribution]
     B1 --> B2[Predict Opponent<br/>Behavior]
     B2 --> B3[Compute Best<br/>Response]
     B3 --> MOVE
     
     SELECT -->|Adaptive| A1[Analyze History]
     A1 --> A2[Detect Patterns]
-    A2 --> A3[Select Counter-<br/>Strategy]
+    A2 --> A3[Select Counter<br/>Strategy]
     A3 --> MOVE
     
     MOVE --> EVAL{Performance<br/>Feedback}
