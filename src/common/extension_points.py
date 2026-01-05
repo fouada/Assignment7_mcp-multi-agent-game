@@ -144,6 +144,10 @@ class Extension:
         return self.provider
 
 
+# Alias for backwards compatibility
+ExtensionProvider = Extension
+
+
 # ============================================================================
 # Extension Registry
 # ============================================================================

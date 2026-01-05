@@ -354,6 +354,27 @@ class LLMRateLimitError(LLMError):
 
 
 # ============================================================================
+# Service/Dependency Errors
+# ============================================================================
+
+
+class ServiceNotFoundError(MCPError):
+    """Service not found in service locator."""
+
+    category = ErrorCategory.PERMANENT
+    retryable = False
+    error_code = "SERVICE_NOT_FOUND"
+
+
+class DependencyResolutionError(MCPError):
+    """Error resolving dependencies."""
+
+    category = ErrorCategory.PERMANENT
+    retryable = False
+    error_code = "DEPENDENCY_RESOLUTION_ERROR"
+
+
+# ============================================================================
 # Utility Functions
 # ============================================================================
 
