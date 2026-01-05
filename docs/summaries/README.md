@@ -8,8 +8,18 @@ This folder contains summary documents and documentation achievement reports.
 
 | Document | Purpose | Audience | Read Time |
 |----------|---------|----------|-----------|
+| [ROOT_ORGANIZATION_COMPLETE.md](ROOT_ORGANIZATION_COMPLETE.md) ⭐ **NEW** | Root directory reorganization | All stakeholders | 10 min |
+| [PROMPT_ENGINEERING_SUMMARY.md](PROMPT_ENGINEERING_SUMMARY.md) ⭐ | Prompt engineering creation summary | Technical, Management | 15 min |
+| [PROMPT_ENGINEERING_COMPLETION_REPORT.md](PROMPT_ENGINEERING_COMPLETION_REPORT.md) ⭐ | Final completion report | All stakeholders | 10 min |
+| [PROMPT_ENGINEERING_MIT_STRUCTURE_COMPLETE.md](PROMPT_ENGINEERING_MIT_STRUCTURE_COMPLETE.md) | PE structure completion | Technical | 10 min |
+| [DOCUMENTATION_REORGANIZATION_FINAL.md](DOCUMENTATION_REORGANIZATION_FINAL.md) | Documentation reorganization | Management | 15 min |
+| [MIT_REORGANIZATION_SUMMARY.md](MIT_REORGANIZATION_SUMMARY.md) | MIT-level reorganization | Technical | 10 min |
+| [MIT_ENHANCEMENT_SUMMARY.md](MIT_ENHANCEMENT_SUMMARY.md) | MIT enhancements | Management | 15 min |
+| [ROOT_REORGANIZATION_PLAN.md](ROOT_REORGANIZATION_PLAN.md) | Root reorganization plan | Technical | 5 min |
 | [DOCUMENTATION_COMPLETE.md](DOCUMENTATION_COMPLETE.md) | Documentation completion status | All stakeholders | 10 min |
-| [DOCUMENTATION_EXCELLENCE_SUMMARY.md](DOCUMENTATION_EXCELLENCE_SUMMARY.md) | Documentation quality metrics & achievements | Management, Reviewers | 15 min |
+| [DOCUMENTATION_EXCELLENCE_SUMMARY.md](DOCUMENTATION_EXCELLENCE_SUMMARY.md) | Documentation quality metrics | Management, Reviewers | 15 min |
+| [MIT_LEVEL_REORGANIZATION_COMPLETE.md](MIT_LEVEL_REORGANIZATION_COMPLETE.md) | MIT-level reorganization | Technical | 10 min |
+| [FINAL_IMPLEMENTATION_SUMMARY.md](FINAL_IMPLEMENTATION_SUMMARY.md) | Implementation completion | Developers | 15 min |
 
 ## 🎯 Documentation Achievements
 

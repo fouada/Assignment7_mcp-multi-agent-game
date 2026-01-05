@@ -32,14 +32,28 @@ research/
 Practical guides for using the system.
 
 ```
+getting-started/
+├── PROMPT_ENGINEERING_START_HERE.md ← ⭐ Gateway to prompt engineering docs
+├── START_HERE.md        ← General quick start
+├── HOW_TO_START_TOURNAMENT.md
+└── [Other quick starts...]
+
 guides/
-├── quick-start/         ← Getting started tutorials
-├── user-guides/         ← Comprehensive user documentation
-├── tutorials/           ← Step-by-step walkthroughs
-└── examples/            ← Code examples and use cases
+├── PROMPT_ENGINEERING_BOOK.md        ← ⭐ Complete guide (50K+ words)
+├── PROMPT_ENGINEERING_QUICK_REFERENCE.md ← Quick cheat sheet
+├── PROMPT_ENGINEERING_VISUAL_SUMMARY.md  ← Visual diagrams
+├── DASHBOARD_USAGE_GUIDE.md
+├── TESTING_INFRASTRUCTURE.md
+└── [Other comprehensive guides...]
 ```
 
 **[→ Browse User Guides](guides/README.md)**
+
+**⭐ Featured: [Prompt Engineering Documentation](getting-started/PROMPT_ENGINEERING_START_HERE.md)** - The world's most comprehensive prompt engineering guide for multi-agent systems
+- 🚀 [Start Here](getting-started/PROMPT_ENGINEERING_START_HERE.md) - Gateway with learning paths
+- 📖 [Complete Book](guides/PROMPT_ENGINEERING_BOOK.md) - 50K+ words, 15+ prompts, 5 research findings
+- ⚡ [Quick Reference](guides/PROMPT_ENGINEERING_QUICK_REFERENCE.md) - Fast access cheat sheet
+- 📊 [Visual Summary](guides/PROMPT_ENGINEERING_VISUAL_SUMMARY.md) - Diagrams and charts
 
 ### 🏗️ Architecture & Design
 System architecture and design documentation.

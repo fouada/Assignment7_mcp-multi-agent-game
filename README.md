@@ -2205,6 +2205,21 @@ git push origin feature/your-feature
 - ✅ Run full test suite before submitting
 - ✅ Keep commits atomic and well-documented
 
+### Prompt Engineering Guide
+
+For comprehensive documentation on LLM integration and prompt engineering:
+
+**🚀 [Start Here: Prompt Engineering Guide](docs/getting-started/PROMPT_ENGINEERING_START_HERE.md)** - Gateway to all prompt engineering documentation
+
+**Core Documentation:**
+- 📖 **[Prompt Engineering Book](docs/guides/PROMPT_ENGINEERING_BOOK.md)** - Complete 50K+ word guide
+  - 15+ production-tested prompts
+  - 5 research findings with statistical validation
+  - Game theory-optimized design patterns
+  - Performance benchmarks and best practices
+- ⚡ **[Quick Reference](docs/guides/PROMPT_ENGINEERING_QUICK_REFERENCE.md)** - Fast access cheat sheet
+- 📊 **[Visual Summary](docs/guides/PROMPT_ENGINEERING_VISUAL_SUMMARY.md)** - Diagrams and charts
+
 ---
 
 ## 📄 License

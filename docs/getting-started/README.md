@@ -4,11 +4,30 @@
 
 This folder contains everything you need to get up and running quickly. Perfect for new users and first-time contributors.
 
+---
+
+## ⭐ Featured: Prompt Engineering
+
+**[→ Prompt Engineering Start Here](PROMPT_ENGINEERING_START_HERE.md)** - Gateway to the world's most comprehensive prompt engineering documentation for multi-agent systems
+
+- 📖 50,000+ words of documentation
+- 🎯 15+ production-tested prompts
+- 🔬 5 research findings with statistical validation
+- 💻 80+ code examples
+- 📊 25+ diagrams
+
+---
+
 ## 📚 Documents
 
 | Document | Purpose | Audience | Read Time |
 |----------|---------|----------|-----------|
+| [PROMPT_ENGINEERING_START_HERE.md](PROMPT_ENGINEERING_START_HERE.md) ⭐ | Gateway to prompt engineering docs | Developers, Researchers | 5 min |
+| [START_HERE.md](START_HERE.md) | General quick start guide | All users | 5 min |
+| [HOW_TO_START_TOURNAMENT.md](HOW_TO_START_TOURNAMENT.md) | Tournament setup guide | Operators | 10 min |
+| [QUICKSTART_MODULAR.md](QUICKSTART_MODULAR.md) | Modular system quick start | Developers | 15 min |
 | [REQUIREMENTS.md](REQUIREMENTS.md) | System requirements & dependencies | All users | 10 min |
+| [SCREENSHOT_GUIDE.md](SCREENSHOT_GUIDE.md) | Visual guide with screenshots | All users | 10 min |
 
 ## 🎯 Quick Start Guide
 

@@ -13,6 +13,15 @@ This folder contains practical guides for developers, operators, and users. Thes
 | [DEVELOPMENT.md](../DEVELOPMENT.md) | Development guide & best practices | Developers | 30 min |
 | [CI_CD_GUIDE.md](../CI_CD_GUIDE.md) | CI/CD setup & configuration | DevOps, Developers | 25 min |
 | [COMMAND_REFERENCE.md](../COMMAND_REFERENCE.md) | Complete command reference | All users | 15 min |
+| [PROMPT_ENGINEERING_BOOK.md](PROMPT_ENGINEERING_BOOK.md) | ⭐ **Complete LLM & Prompt Engineering Guide** | Developers, Researchers | 60 min |
+| [DASHBOARD_COMPLETE_TESTING.md](DASHBOARD_COMPLETE_TESTING.md) | Complete dashboard testing guide | QA, Developers | 25 min |
+| [DASHBOARD_FINAL.md](DASHBOARD_FINAL.md) | Final dashboard user guide | All users | 20 min |
+
+### Troubleshooting
+
+| Document | Purpose | Audience | Read Time |
+|----------|---------|----------|-----------|
+| [troubleshooting/](troubleshooting/README.md) | ⭐ **Fixes & workarounds** | All users | 5-10 min |
 
 ### Dashboard & Visualization
 
@@ -41,6 +50,8 @@ Located in parent docs folder:
 2. **For Dashboard**: See [DASHBOARD_USAGE_GUIDE.md](DASHBOARD_USAGE_GUIDE.md)
 3. **For Testing**: Follow [TESTING_INFRASTRUCTURE.md](TESTING_INFRASTRUCTURE.md)
 4. **For CI/CD**: Read [CI_CD_GUIDE.md](../CI_CD_GUIDE.md)
+5. **For LLM Integration**: Start with [PROMPT_ENGINEERING_START_HERE.md](../getting-started/PROMPT_ENGINEERING_START_HERE.md) ⭐
+   - Then read [PROMPT_ENGINEERING_BOOK.md](PROMPT_ENGINEERING_BOOK.md) for complete guide
 
 ## 🚀 Common Tasks
 
