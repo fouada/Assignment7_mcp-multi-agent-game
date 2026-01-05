@@ -1,3 +1,4 @@
+
 # MCP Multi-Agent Game League System
 
 <div align="center">
