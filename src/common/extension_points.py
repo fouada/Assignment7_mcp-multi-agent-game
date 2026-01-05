@@ -19,34 +19,34 @@ Concepts:
     - Extension Point: A named location where plugins can extend functionality
     - Extension: A plugin-provided implementation for an extension point
     - Provider: Interface that extensions must implement
-    
+
 Example:
     # Define extension point
     registry = get_extension_registry()
-    
+
     # Register extension point
     registry.register_point(
         "strategy.custom",
         provider_type=IStrategy,
         description="Custom game strategies"
     )
-    
+
     # Plugin provides extension
     @extension_provider("strategy.custom", priority=100)
     class MyCustomStrategy(IStrategy):
         def decide_move(self, context):
             return 3
-            
+
     # Use extensions
     strategies = registry.get_extensions("strategy.custom")
     for strategy in strategies:
         move = strategy.decide_move(context)
 """
 
-import inspect
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Generic, TypeVar, get_type_hints
+from typing import Any, Generic, TypeVar
 
 from .logger import get_logger
 
@@ -64,7 +64,7 @@ T = TypeVar("T")
 class ExtensionPoint:
     """
     Definition of an extension point.
-    
+
     Attributes:
         name: Unique identifier for this extension point
         provider_type: Interface/abstract class that extensions must implement
@@ -86,10 +86,10 @@ class ExtensionPoint:
     def validate_extension(self, extension: Any) -> bool:
         """
         Validate an extension for this point.
-        
+
         Args:
             extension: Extension instance to validate
-            
+
         Returns:
             True if valid, False otherwise
         """
@@ -117,7 +117,7 @@ class ExtensionPoint:
 class Extension:
     """
     Registered extension instance.
-    
+
     Attributes:
         point_name: Extension point this extends
         provider: Extension provider instance
@@ -152,27 +152,27 @@ class Extension:
 class ExtensionRegistry:
     """
     Central registry for extension points and extensions.
-    
+
     Manages registration and discovery of extension points and their implementations.
-    
+
     Example:
         # Get registry
         registry = get_extension_registry()
-        
+
         # Register extension point
         registry.register_point(
             "validators.move",
             IValidator,
             description="Move validation logic"
         )
-        
+
         # Register extension
         registry.register_extension(
             "validators.move",
             RangeValidator(),
             priority=100
         )
-        
+
         # Get extensions
         validators = registry.get_extensions("validators.move")
         for validator in validators:
@@ -214,7 +214,7 @@ class ExtensionRegistry:
     ) -> ExtensionPoint:
         """
         Register an extension point.
-        
+
         Args:
             name: Unique extension point identifier
             provider_type: Interface that extensions must implement
@@ -223,10 +223,10 @@ class ExtensionRegistry:
             multiple: Whether multiple extensions are allowed
             required: Whether at least one extension is required
             validation_fn: Optional validation function
-            
+
         Returns:
             Created ExtensionPoint
-            
+
         Example:
             registry.register_point(
                 "validators.move",
@@ -262,7 +262,7 @@ class ExtensionRegistry:
     ) -> bool:
         """
         Register an extension for a point.
-        
+
         Args:
             point_name: Extension point to extend
             provider: Extension provider instance
@@ -270,10 +270,10 @@ class ExtensionRegistry:
             plugin_name: Name of plugin providing this extension
             metadata: Additional metadata
             lazy_factory: Optional lazy initialization factory
-            
+
         Returns:
             True if registered successfully
-            
+
         Example:
             registry.register_extension(
                 "validators.move",
@@ -324,15 +324,15 @@ class ExtensionRegistry:
     def get_extensions(self, point_name: str) -> list[Any]:
         """
         Get all extensions for a point.
-        
+
         Returns extensions in priority order (highest first).
-        
+
         Args:
             point_name: Extension point name
-            
+
         Returns:
             List of extension provider instances
-            
+
         Example:
             validators = registry.get_extensions("validators.move")
             for validator in validators:
@@ -347,11 +347,11 @@ class ExtensionRegistry:
     def get_extension(self, point_name: str, index: int = 0) -> Any | None:
         """
         Get a single extension for a point.
-        
+
         Args:
             point_name: Extension point name
             index: Extension index (0 = highest priority)
-            
+
         Returns:
             Extension provider or None if not found
         """
@@ -363,10 +363,10 @@ class ExtensionRegistry:
     def get_point(self, name: str) -> ExtensionPoint | None:
         """
         Get extension point definition.
-        
+
         Args:
             name: Extension point name
-            
+
         Returns:
             ExtensionPoint or None if not found
         """
@@ -379,11 +379,11 @@ class ExtensionRegistry:
     ) -> list[ExtensionPoint]:
         """
         List extension points matching criteria.
-        
+
         Args:
             tags: Filter by tags (any match)
             provider_type: Filter by provider type
-            
+
         Returns:
             List of matching extension points
         """
@@ -410,7 +410,7 @@ class ExtensionRegistry:
     def validate_required_points(self) -> tuple[bool, list[str]]:
         """
         Validate that all required extension points have extensions.
-        
+
         Returns:
             Tuple of (is_valid, missing_extensions)
         """
@@ -442,21 +442,21 @@ def extension_provider(
 ) -> Callable[[type[T]], type[T]]:
     """
     Decorator to mark a class as an extension provider.
-    
+
     Automatically registers the class when the module is imported.
-    
+
     Args:
         point_name: Extension point to extend
         priority: Extension priority
         plugin_name: Plugin name
         metadata: Additional metadata
-        
+
     Example:
         @extension_provider("strategy.custom", priority=100)
         class MyStrategy(IStrategy):
             def decide_move(self, context):
                 return 3
-                
+
         # Automatically registered when module loads
     """
 
@@ -483,16 +483,16 @@ def extension_provider(
 class TypedExtensionPoint(Generic[T]):
     """
     Type-safe extension point wrapper.
-    
+
     Provides type hints for extension access.
-    
+
     Example:
         # Define typed extension point
         ValidatorPoint = TypedExtensionPoint[IValidator]("validators.move")
-        
+
         # Register (type-checked by IDE)
         ValidatorPoint.register(RangeValidator())
-        
+
         # Get extensions (type is known)
         validators: list[IValidator] = ValidatorPoint.get_all()
     """
@@ -500,7 +500,7 @@ class TypedExtensionPoint(Generic[T]):
     def __init__(self, name: str):
         """
         Initialize typed extension point.
-        
+
         Args:
             name: Extension point name
         """
@@ -542,7 +542,7 @@ _global_registry: ExtensionRegistry | None = None
 def get_extension_registry() -> ExtensionRegistry:
     """
     Get the global extension registry.
-    
+
     Returns:
         Singleton ExtensionRegistry instance
     """
@@ -555,7 +555,7 @@ def get_extension_registry() -> ExtensionRegistry:
 def register_core_extension_points() -> None:
     """
     Register core extension points for the system.
-    
+
     Should be called during system initialization.
     """
     registry = get_extension_registry()

@@ -19,10 +19,10 @@ Example:
     container = DependencyContainer()
     container.register(ILogger, ConsoleLogger, lifetime=Lifetime.SINGLETON)
     container.register(IDatabase, PostgresDatabase, lifetime=Lifetime.SCOPED)
-    
+
     # Resolve dependencies (auto-inject constructor params)
     service = container.resolve(MyService)  # ILogger auto-injected
-    
+
     # Use decorator
     @injectable(IMyService, lifetime=Lifetime.TRANSIENT)
     class MyService:
@@ -31,13 +31,11 @@ Example:
             self.db = db
 """
 
-import inspect
-from abc import ABC
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from threading import Lock
-from typing import Any, Generic, TypeVar, get_type_hints
+from typing import Any, TypeVar, get_type_hints
 
 from .logger import get_logger
 
@@ -68,7 +66,7 @@ class Lifetime(Enum):
 class ServiceDescriptor:
     """
     Describes how to construct a service.
-    
+
     Attributes:
         service_type: Interface or abstract class
         implementation_type: Concrete implementation class
@@ -110,30 +108,30 @@ class ServiceDescriptor:
 class DependencyContainer:
     """
     Dependency injection container.
-    
+
     Manages registration and resolution of services with dependency injection.
     Supports multiple lifetime strategies and automatic constructor injection.
-    
+
     Example:
         # Create container
         container = DependencyContainer()
-        
+
         # Register services
         container.register(ILogger, ConsoleLogger, Lifetime.SINGLETON)
         container.register(ICache, RedisCache, Lifetime.SCOPED)
         container.register_instance(IConfig, config_instance)
-        
+
         # Register with factory
         container.register_factory(
             IDatabase,
             lambda c: PostgresDatabase(c.resolve(IConfig)),
             Lifetime.SINGLETON
         )
-        
+
         # Resolve services (dependencies auto-injected)
         logger = container.resolve(ILogger)
         service = container.resolve(MyService)  # Gets ILogger, ICache auto-injected
-        
+
         # Create scope
         with container.create_scope() as scope:
             scoped_service = scope.resolve(IScopedService)
@@ -142,7 +140,7 @@ class DependencyContainer:
     def __init__(self, parent: "DependencyContainer | None" = None):
         """
         Initialize container.
-        
+
         Args:
             parent: Parent container for scoped resolution
         """
@@ -160,12 +158,12 @@ class DependencyContainer:
     ) -> None:
         """
         Register a service with its implementation.
-        
+
         Args:
             service_type: Interface or abstract class
             implementation_type: Concrete implementation
             lifetime: Service lifetime strategy
-            
+
         Example:
             container.register(ILogger, ConsoleLogger, Lifetime.SINGLETON)
             container.register(IDatabase, PostgresDB, Lifetime.SCOPED)
@@ -187,11 +185,11 @@ class DependencyContainer:
     def register_instance(self, service_type: type[T], instance: T) -> None:
         """
         Register a pre-created instance (always singleton).
-        
+
         Args:
             service_type: Service type
             instance: Pre-created instance
-            
+
         Example:
             config = load_config()
             container.register_instance(IConfig, config)
@@ -214,12 +212,12 @@ class DependencyContainer:
     ) -> None:
         """
         Register a factory function for creating instances.
-        
+
         Args:
             service_type: Service type
             factory: Factory function that receives container and returns instance
             lifetime: Service lifetime strategy
-            
+
         Example:
             container.register_factory(
                 IDatabase,
@@ -239,19 +237,19 @@ class DependencyContainer:
     def resolve(self, service_type: type[T]) -> T:
         """
         Resolve a service instance.
-        
+
         Automatically injects constructor dependencies based on type hints.
-        
+
         Args:
             service_type: Type to resolve
-            
+
         Returns:
             Service instance with dependencies injected
-            
+
         Raises:
             ServiceNotFoundError: If service not registered
             CircularDependencyError: If circular dependency detected
-            
+
         Example:
             logger = container.resolve(ILogger)
             service = container.resolve(MyService)  # Dependencies auto-injected
@@ -330,7 +328,7 @@ class DependencyContainer:
     def _construct_with_injection(self, implementation_type: type[T]) -> T:
         """
         Construct instance with constructor dependency injection.
-        
+
         Inspects constructor type hints and resolves dependencies automatically.
         """
         try:
@@ -363,10 +361,10 @@ class DependencyContainer:
     def try_resolve(self, service_type: type[T]) -> T | None:
         """
         Try to resolve a service, returning None if not found.
-        
+
         Args:
             service_type: Type to resolve
-            
+
         Returns:
             Service instance or None if not registered
         """
@@ -384,12 +382,12 @@ class DependencyContainer:
     def create_scope(self) -> "DependencyContainer":
         """
         Create a child container (scope).
-        
+
         Scoped services will be singletons within this scope.
-        
+
         Returns:
             Child container
-            
+
         Example:
             with container.create_scope() as scope:
                 service = scope.resolve(IScopedService)
@@ -430,19 +428,19 @@ def injectable(
 ) -> Callable[[type[T]], type[T]]:
     """
     Decorator to mark a class as injectable.
-    
+
     Registers the class in the global container when the module is imported.
-    
+
     Args:
         service_type: Interface type (defaults to the class itself)
         lifetime: Service lifetime
-        
+
     Example:
         @injectable(ILogger, Lifetime.SINGLETON)
         class ConsoleLogger:
             def log(self, message: str):
                 print(message)
-                
+
         # Now ILogger is automatically registered
         logger = get_container().resolve(ILogger)
     """
@@ -466,7 +464,7 @@ _global_container: DependencyContainer | None = None
 def get_container() -> DependencyContainer:
     """
     Get the global dependency container.
-    
+
     Returns:
         Global DependencyContainer instance
     """
@@ -479,7 +477,7 @@ def get_container() -> DependencyContainer:
 def set_container(container: DependencyContainer) -> None:
     """
     Set the global dependency container.
-    
+
     Args:
         container: Container to use as global
     """

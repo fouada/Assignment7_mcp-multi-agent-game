@@ -24,11 +24,11 @@ Example:
     # Register services
     ServiceLocator.register("logger", ConsoleLogger())
     ServiceLocator.register("database", lambda: PostgresDB())
-    
+
     # Get services
     logger = ServiceLocator.get("logger")
     db = ServiceLocator.get("database")  # Lazy initialized
-    
+
     # Type-safe access
     logger = ServiceLocator.get_typed("logger", ILogger)
 """
@@ -52,23 +52,23 @@ T = TypeVar("T")
 class ServiceLocator:
     """
     Central registry for service discovery and access.
-    
+
     Provides a global point for accessing services without tight coupling.
     Services can be registered as instances or factories.
-    
+
     Example:
         # Register services
         ServiceLocator.register("config", config_instance)
         ServiceLocator.register("database", DatabaseFactory)
         ServiceLocator.register_singleton("cache", lambda: RedisCache())
-        
+
         # Get services
         config = ServiceLocator.get("config")
         db = ServiceLocator.get("database")
-        
+
         # Type-safe access
         cache = ServiceLocator.get_typed("cache", ICache)
-        
+
         # Check availability
         if ServiceLocator.has("metrics"):
             metrics = ServiceLocator.get("metrics")
@@ -89,19 +89,19 @@ class ServiceLocator:
     ) -> None:
         """
         Register a service.
-        
+
         Args:
             name: Service identifier
             service: Service instance or factory function
             singleton: Whether to cache instance (for factories)
-            
+
         Example:
             # Register instance
             ServiceLocator.register("logger", ConsoleLogger())
-            
+
             # Register factory
             ServiceLocator.register("database", lambda: PostgresDB())
-            
+
             # Register singleton factory
             ServiceLocator.register("cache", lambda: RedisCache(), singleton=True)
         """
@@ -125,13 +125,13 @@ class ServiceLocator:
     ) -> None:
         """
         Register a singleton service with factory.
-        
+
         Factory will be called once on first access.
-        
+
         Args:
             name: Service identifier
             factory: Factory function that creates the service
-            
+
         Example:
             ServiceLocator.register_singleton(
                 "database",
@@ -144,15 +144,15 @@ class ServiceLocator:
     def register_alias(cls, alias: str, target: str) -> None:
         """
         Register an alias for a service.
-        
+
         Args:
             alias: Alias name
             target: Target service name
-            
+
         Example:
             ServiceLocator.register("postgres_db", db_instance)
             ServiceLocator.register_alias("db", "postgres_db")
-            
+
             # Can now access via either name
             db = ServiceLocator.get("db")
         """
@@ -165,16 +165,16 @@ class ServiceLocator:
     def get(cls, name: str) -> Any:
         """
         Get a service by name.
-        
+
         Args:
             name: Service identifier
-            
+
         Returns:
             Service instance
-            
+
         Raises:
             ServiceNotFoundError: If service not registered
-            
+
         Example:
             logger = ServiceLocator.get("logger")
             db = ServiceLocator.get("database")
@@ -209,16 +209,16 @@ class ServiceLocator:
     def get_typed(cls, name: str, service_type: type[T]) -> T:
         """
         Get a service with type casting.
-        
+
         Provides type hints for better IDE support.
-        
+
         Args:
             name: Service identifier
             service_type: Expected service type
-            
+
         Returns:
             Service instance cast to expected type
-            
+
         Example:
             logger = ServiceLocator.get_typed("logger", ILogger)
             db = ServiceLocator.get_typed("database", IDatabase)
@@ -230,13 +230,13 @@ class ServiceLocator:
     def try_get(cls, name: str) -> Any | None:
         """
         Try to get a service, returning None if not found.
-        
+
         Args:
             name: Service identifier
-            
+
         Returns:
             Service instance or None
-            
+
         Example:
             metrics = ServiceLocator.try_get("metrics")
             if metrics:
@@ -251,10 +251,10 @@ class ServiceLocator:
     def has(cls, name: str) -> bool:
         """
         Check if a service is registered.
-        
+
         Args:
             name: Service identifier
-            
+
         Returns:
             True if service is registered
         """
@@ -269,10 +269,10 @@ class ServiceLocator:
     def unregister(cls, name: str) -> bool:
         """
         Unregister a service.
-        
+
         Args:
             name: Service identifier
-            
+
         Returns:
             True if service was registered
         """
@@ -305,7 +305,7 @@ class ServiceLocator:
     def list_services(cls) -> list[str]:
         """
         List all registered service names.
-        
+
         Returns:
             List of service identifiers
         """
@@ -329,10 +329,10 @@ class ServiceLocator:
     def get_service_info(cls, name: str) -> dict[str, Any]:
         """
         Get information about a service.
-        
+
         Args:
             name: Service identifier
-            
+
         Returns:
             Dictionary with service information
         """
@@ -372,26 +372,26 @@ class ServiceLocator:
 class ScopedServiceLocator:
     """
     Scoped service locator for request-scoped services.
-    
+
     Creates a child locator that can override parent services
     and provides automatic cleanup.
-    
+
     Example:
         # Create scope
         with ScopedServiceLocator() as scope:
             # Override service in scope
             scope.register("user", current_user)
-            
+
             # Get service (checks scope first, then parent)
             user = scope.get("user")
-            
+
         # Scope cleaned up automatically
     """
 
     def __init__(self, parent: type[ServiceLocator] | None = None):
         """
         Initialize scoped locator.
-        
+
         Args:
             parent: Parent service locator (defaults to global)
         """
@@ -444,15 +444,14 @@ class ScopedServiceLocator:
 def register_core_services() -> None:
     """
     Register core system services in the service locator.
-    
+
     Should be called during system initialization.
     """
     from .config import get_config
-    from .hooks.hook_manager import get_hook_manager
-    from .plugins.registry import get_plugin_registry
-
     from .events.bus import get_event_bus
     from .extension_points import get_extension_registry
+    from .hooks.hook_manager import get_hook_manager
+    from .plugins.registry import get_plugin_registry
 
     # Register core services
     ServiceLocator.register_singleton("config", get_config)

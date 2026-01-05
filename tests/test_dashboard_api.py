@@ -70,7 +70,7 @@ class TestDashboardStartTournament:
                 }
             }
             mock_standings_response.raise_for_status = Mock()
-            
+
             # Mock get_round_status response
             mock_status_response = Mock()
             mock_status_response.json.return_value = {
@@ -81,7 +81,7 @@ class TestDashboardStartTournament:
                 }
             }
             mock_status_response.raise_for_status = Mock()
-            
+
             # Mock start_league response
             mock_start_response = Mock()
             mock_start_response.json.return_value = {
@@ -92,7 +92,7 @@ class TestDashboardStartTournament:
                 }
             }
             mock_start_response.raise_for_status = Mock()
-            
+
             # Setup mock to return different responses for different calls
             mock_client.return_value.post = AsyncMock(
                 side_effect=[mock_standings_response, mock_status_response, mock_start_response]

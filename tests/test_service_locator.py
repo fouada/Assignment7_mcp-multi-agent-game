@@ -18,7 +18,6 @@ import pytest
 from src.common.exceptions import ServiceNotFoundError
 from src.common.service_locator import ServiceLocator
 
-
 # ============================================================================
 # Test Services
 # ============================================================================
@@ -317,7 +316,7 @@ class TestServiceLocatorLazyLoading:
         assert call_count == 0
 
         # Get service
-        database = ServiceLocator.get("database")
+        ServiceLocator.get("database")
 
         # Factory should be called now
         assert call_count == 1
@@ -596,7 +595,7 @@ class TestIntegration:
 
         # Services should work
         logger.log("Application started")
-        connection_msg = database.connect()
+        database.connect()
         cache.set("status", "running")
 
         assert len(logger.messages) > 0
@@ -630,7 +629,7 @@ class TestIntegration:
 
         # Check for optional service
         if ServiceLocator.has("metrics"):
-            metrics = ServiceLocator.get("metrics")
+            ServiceLocator.get("metrics")
             # Use metrics if available
         else:
             # Gracefully handle missing optional service

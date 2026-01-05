@@ -556,7 +556,7 @@ class LeagueManager(BaseGameServer):
         # Get repeat count from environment variable (default: 3 for more learning data)
         import os
         repeat_count = int(os.getenv("TOURNAMENT_REPEAT", "3"))
-        
+
         player_ids = list(self._players.keys())
         self._schedule = MatchScheduler.create_round_robin_schedule(player_ids, repeat=repeat_count)
 

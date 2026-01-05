@@ -456,20 +456,20 @@ class DashboardAPI:
 
             engine = get_analytics_engine()
             all_models = []
-            
+
             # DEBUG: Log analytics engine state
             logger.info(f"[DEBUG] Analytics engine id: {id(engine)}")
             logger.info(f"[DEBUG] All players: {engine.all_players}")
             logger.info(f"[DEBUG] Opponent models keys: {list(engine.opponent_models.keys())}")
             logger.info(f"[DEBUG] Opponent models raw: {engine.opponent_models}")
-            
+
             # Get all player IDs from analytics engine
             player_ids = list(engine.all_players)
-            
+
             for player_id in player_ids:
                 models = engine.get_all_opponent_models(player_id)
                 logger.info(f"[DEBUG] Player {player_id} has {len(models)} opponent models")
-                for opp_id, model in models.items():
+                for _opp_id, model in models.items():
                     all_models.append({
                         "player_id": player_id,
                         "opponent_id": model.opponent_id,
@@ -481,7 +481,7 @@ class DashboardAPI:
                         "confidence_history": model.confidence_history,
                         "accuracy_history": model.accuracy_history,
                     })
-            
+
             logger.info(f"[DEBUG] Returning {len(all_models)} models")
             return {"models": all_models}
 
@@ -521,10 +521,10 @@ class DashboardAPI:
 
             engine = get_analytics_engine()
             all_cf = []
-            
+
             # Get all player IDs from analytics engine
             player_ids = list(engine.all_players)
-            
+
             for player_id in player_ids:
                 cf = engine.get_counterfactual_analytics(player_id)
                 if cf:
@@ -543,7 +543,7 @@ class DashboardAPI:
                             "nash_equilibrium_distance": cf.nash_equilibrium_distance,
                         },
                     })
-            
+
             return {"counterfactuals": all_cf}
 
         @self.app.post("/api/analytics/test_inject")
@@ -552,7 +552,7 @@ class DashboardAPI:
             from .analytics import get_analytics_engine
 
             engine = get_analytics_engine()
-            
+
             # Inject test opponent model data
             await engine.on_opponent_model_update(
                 player_id="P01",
@@ -562,7 +562,7 @@ class DashboardAPI:
                 predicted_strategy="biased_odd",
                 beliefs={"mean": 0.65, "std": 0.15, "observations": 10}
             )
-            
+
             await engine.on_opponent_model_update(
                 player_id="P01",
                 opponent_id="P03",
@@ -571,7 +571,7 @@ class DashboardAPI:
                 predicted_strategy="balanced",
                 beliefs={"mean": 0.50, "std": 0.20, "observations": 8}
             )
-            
+
             # Inject test counterfactual data
             await engine.on_counterfactual_update(
                 player_id="P02",
@@ -582,9 +582,9 @@ class DashboardAPI:
                 ],
                 cumulative_regret={"EVEN": 2.3, "ODD": -0.8}
             )
-            
+
             logger.info("✅ Test analytics data injected!")
-            
+
             return {
                 "success": True,
                 "message": "Test data injected - refresh charts to see it!"
@@ -692,8 +692,9 @@ class DashboardAPI:
         async def start_league():
             """Start the league tournament (proxy to league manager)."""
             try:
-                import httpx
                 import json
+
+                import httpx
 
                 # Check if we have enough players
                 players_response = await httpx.AsyncClient().post(
@@ -715,13 +716,13 @@ class DashboardAPI:
                     players_text = players_mcp["content"][0].get("text", "{}")
                     players_data = json.loads(players_text)
                     num_players = len(players_data.get("standings", []))
-                    
+
                     if num_players < 2:
                         return {
                             "success": False,
                             "error": f"Cannot start tournament: Need at least 2 players registered (currently have {num_players}). Please register more players."
                         }
-                
+
                 # Check if we have at least one referee
                 status_response = await httpx.AsyncClient().post(
                     "http://localhost:8000/mcp",
@@ -741,8 +742,8 @@ class DashboardAPI:
                 status_mcp = status_result.get("result", {})
                 if "content" in status_mcp and len(status_mcp["content"]) > 0:
                     status_text = status_mcp["content"][0].get("text", "{}")
-                    status_data = json.loads(status_text)
-                    
+                    json.loads(status_text)
+
                     # Note: We assume if league manager is running, at least one referee is available
                     # The league manager itself validates referee requirements
 
@@ -768,7 +769,7 @@ class DashboardAPI:
                 if "content" in mcp_result and len(mcp_result["content"]) > 0:
                     content_text = mcp_result["content"][0].get("text", "{}")
                     data = json.loads(content_text)
-                    
+
                     if data.get("success"):
                         logger.info("[Dashboard] Tournament started successfully")
                         return {
@@ -792,8 +793,9 @@ class DashboardAPI:
         async def run_round():
             """Run the next round (proxy to league manager)."""
             try:
-                import httpx
                 import json
+
+                import httpx
 
                 # Check if tournament is started
                 try:
@@ -812,21 +814,21 @@ class DashboardAPI:
                     )
                     status_response.raise_for_status()
                     status_result = status_response.json()
-                    
+
                     # Parse status
                     status_mcp = status_result.get("result", {})
                     if "content" in status_mcp and len(status_mcp["content"]) > 0:
                         status_text = status_mcp["content"][0].get("text", "{}")
                         status_data = json.loads(status_text)
                         logger.info(f"[Dashboard] Round status: {status_data}")
-                        
+
                         # Check if league is in registration state (not started)
                         if status_data.get("state") == "registration":
                             return {
                                 "success": False,
                                 "error": "Tournament not started yet. Please click 'Start Tournament' first."
                             }
-                        
+
                         # Check if tournament is completed
                         if status_data.get("state") == "completed":
                             return {
@@ -862,7 +864,7 @@ class DashboardAPI:
                 if "content" in mcp_result and len(mcp_result["content"]) > 0:
                     content_text = mcp_result["content"][0].get("text", "{}")
                     data = json.loads(content_text)
-                    
+
                     if data.get("success"):
                         logger.info("[Dashboard] Round started successfully")
                         return {
@@ -886,8 +888,9 @@ class DashboardAPI:
         async def reset_league():
             """Reset the league tournament (proxy to league manager)."""
             try:
-                import httpx
                 import json
+
+                import httpx
 
                 # Check if tournament has been started (not in registration state)
                 status_response = await httpx.AsyncClient().post(
@@ -905,14 +908,14 @@ class DashboardAPI:
                 )
                 status_response.raise_for_status()
                 status_result = status_response.json()
-                
+
                 # Parse status (for logging/debugging only)
                 status_mcp = status_result.get("result", {})
                 if "content" in status_mcp and len(status_mcp["content"]) > 0:
                     status_text = status_mcp["content"][0].get("text", "{}")
                     status_data = json.loads(status_text)
                     logger.info(f"[Dashboard] Current state before reset: {status_data}")
-                
+
                 # Allow reset from any state - no validation needed
 
                 # Call league manager's reset_league tool via MCP
@@ -937,7 +940,7 @@ class DashboardAPI:
                 if "content" in mcp_result and len(mcp_result["content"]) > 0:
                     content_text = mcp_result["content"][0].get("text", "{}")
                     data = json.loads(content_text)
-                    
+
                     if data.get("success"):
                         # Clear dashboard data
                         self.tournament_states.clear()
@@ -969,8 +972,8 @@ class DashboardAPI:
         async def register_player(request: dict):
             """Launch and register a new player in the league."""
             try:
-                import subprocess
                 import asyncio
+                import subprocess
 
                 name = request.get("name", "")
                 port = request.get("port", 0)
@@ -989,11 +992,11 @@ class DashboardAPI:
                     "--port", str(port),
                     "--strategy", strategy
                 ]
-                
+
                 # Get project root directory
                 import os
                 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-                
+
                 # Start process in background
                 process = subprocess.Popen(
                     cmd,
@@ -1002,10 +1005,10 @@ class DashboardAPI:
                     stderr=subprocess.PIPE,
                     start_new_session=True  # Detach from parent
                 )
-                
+
                 # Wait a moment for player to start
                 await asyncio.sleep(2)
-                
+
                 # Check if process is still running
                 if process.poll() is not None:
                     # Process died
@@ -1013,9 +1016,9 @@ class DashboardAPI:
                     error_msg = stderr.decode('utf-8') if stderr else "Player process failed to start"
                     logger.error(f"[Dashboard] Player process failed: {error_msg}")
                     return {"success": False, "error": f"Failed to start player: {error_msg}"}
-                
+
                 logger.info(f"[Dashboard] Player launched successfully: {name} (PID: {process.pid})")
-                
+
                 # Broadcast update to all connected clients
                 await self.connection_manager.broadcast({
                     "type": "player_registered",
@@ -1026,7 +1029,7 @@ class DashboardAPI:
                         "pid": process.pid
                     }
                 })
-                
+
                 return {
                     "success": True,
                     "message": f"Player '{name}' launched and registered successfully",
@@ -1046,8 +1049,8 @@ class DashboardAPI:
         async def register_referee(request: dict):
             """Launch and register a new referee in the league."""
             try:
-                import subprocess
                 import asyncio
+                import subprocess
 
                 referee_id = request.get("referee_id", "")
                 port = request.get("port", 0)
@@ -1064,11 +1067,11 @@ class DashboardAPI:
                     "--id", referee_id,
                     "--port", str(port)
                 ]
-                
+
                 # Get project root directory
                 import os
                 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-                
+
                 # Start process in background
                 process = subprocess.Popen(
                     cmd,
@@ -1077,10 +1080,10 @@ class DashboardAPI:
                     stderr=subprocess.PIPE,
                     start_new_session=True  # Detach from parent
                 )
-                
+
                 # Wait a moment for referee to start
                 await asyncio.sleep(2)
-                
+
                 # Check if process is still running
                 if process.poll() is not None:
                     # Process died
@@ -1088,9 +1091,9 @@ class DashboardAPI:
                     error_msg = stderr.decode('utf-8') if stderr else "Referee process failed to start"
                     logger.error(f"[Dashboard] Referee process failed: {error_msg}")
                     return {"success": False, "error": f"Failed to start referee: {error_msg}"}
-                
+
                 logger.info(f"[Dashboard] Referee launched successfully: {referee_id} (PID: {process.pid})")
-                
+
                 # Broadcast update to all connected clients
                 await self.connection_manager.broadcast({
                     "type": "referee_registered",
@@ -1100,7 +1103,7 @@ class DashboardAPI:
                         "pid": process.pid
                     }
                 })
-                
+
                 return {
                     "success": True,
                     "message": f"Referee '{referee_id}' launched and registered successfully",
@@ -4484,12 +4487,12 @@ Round Difference: ${snap2.round - snap1.round}
                 if (response.success) {
                     addLog(`✅ Player registered: ${name} (${strategy})`, 'success');
                     closeRegisterPlayerModal();
-                    
+
                     // Clear form
                     document.getElementById('player-name').value = '';
                     document.getElementById('player-port').value = '';
                     document.getElementById('player-strategy').value = 'random';
-                    
+
                     alert(`Player '${name}' registered successfully!\\n\\nStrategy: ${strategy}\\nPort: ${port}\\n\\nYou can now start the tournament or register more players.`);
                 } else {
                     addLog(`❌ Failed to register player: ${response.error}`, 'error');
@@ -4525,11 +4528,11 @@ Round Difference: ${snap2.round - snap1.round}
                 if (response.success) {
                     addLog(`✅ Referee registered: ${refereeId}`, 'success');
                     closeRegisterRefereeModal();
-                    
+
                     // Clear form
                     document.getElementById('referee-id').value = '';
                     document.getElementById('referee-port').value = '';
-                    
+
                     alert(`Referee '${refereeId}' registered successfully!\\n\\nPort: ${port}\\n\\nYou can now register players and start the tournament.`);
                 } else {
                     addLog(`❌ Failed to register referee: ${response.error}`, 'error');
@@ -4547,7 +4550,7 @@ Round Difference: ${snap2.round - snap1.round}
         async function loadInitialData() {
             try {
                 console.log('[LoadInitialData] Starting...');
-                
+
                 // Fetch strategy performance data
                 const strategiesResponse = await fetch('/api/analytics/strategies');
                 if (strategiesResponse.ok) {
@@ -4587,7 +4590,7 @@ Round Difference: ${snap2.round - snap1.round}
                 } catch (e) {
                     console.log('[OpponentModels] Error:', e);
                 }
-                
+
                 // Fetch counterfactual data (aggregate endpoint)
                 try {
                     const cfResponse = await fetch('/api/analytics/counterfactuals');
@@ -4614,7 +4617,7 @@ Round Difference: ${snap2.round - snap1.round}
                 } catch (e) {
                     console.log('[Counterfactuals] Error:', e);
                 }
-                
+
                 console.log('[LoadInitialData] Complete');
             } catch (error) {
                 console.error('[LoadInitialData] Error:', error);
@@ -4626,7 +4629,7 @@ Round Difference: ${snap2.round - snap1.round}
         async function manualRefreshCharts() {
             console.log('=== MANUAL REFRESH TRIGGERED ===');
             addLog('🔄 Manually refreshing charts...');
-            
+
             try {
                 await loadInitialData();
                 addLog('✅ Charts refreshed!');
@@ -4635,19 +4638,19 @@ Round Difference: ${snap2.round - snap1.round}
                 addLog('❌ Refresh failed: ' + error.message, 'error');
             }
         }
-        
+
         // Test data injection for diagnostics
         async function testInjectAnalytics() {
             console.log('=== TEST DATA INJECTION ===');
             addLog('🧪 Injecting test analytics data...');
-            
+
             try {
                 const response = await fetch('/api/analytics/test_inject', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'}
                 });
                 const result = await response.json();
-                
+
                 if (result.success) {
                     addLog('✅ Test data injected!');
                     // Refresh charts to display test data
@@ -4660,7 +4663,7 @@ Round Difference: ${snap2.round - snap1.round}
                 addLog('❌ Test injection failed: ' + error.message, 'error');
             }
         }
-        
+
         // Make functions globally accessible
         window.manualRefreshCharts = manualRefreshCharts;
         window.testInjectAnalytics = testInjectAnalytics;
@@ -4676,17 +4679,17 @@ Round Difference: ${snap2.round - snap1.round}
     <div id="register-player-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
         <div style="background: #1e1e2e; padding: 40px; border-radius: 16px; max-width: 500px; width: 90%; border: 2px solid #9b59b6;">
             <h2 style="color: #9b59b6; margin-bottom: 30px; font-size: 28px;">👤 Register New Player</h2>
-            
+
             <div style="margin-bottom: 20px;">
                 <label style="display: block; color: #a0aec0; margin-bottom: 8px; font-weight: 600;">Player Name:</label>
                 <input id="player-name" type="text" placeholder="e.g., Alice" style="width: 100%; padding: 12px; background: #2a2a3a; border: 1px solid #4a4a5a; border-radius: 8px; color: white; font-size: 14px;">
             </div>
-            
+
             <div style="margin-bottom: 20px;">
                 <label style="display: block; color: #a0aec0; margin-bottom: 8px; font-weight: 600;">Port Number:</label>
                 <input id="player-port" type="number" placeholder="e.g., 8101" style="width: 100%; padding: 12px; background: #2a2a3a; border: 1px solid #4a4a5a; border-radius: 8px; color: white; font-size: 14px;">
             </div>
-            
+
             <div style="margin-bottom: 30px;">
                 <label style="display: block; color: #a0aec0; margin-bottom: 8px; font-weight: 600;">Strategy:</label>
                 <select id="player-strategy" style="width: 100%; padding: 12px; background: #2a2a3a; border: 1px solid #4a4a5a; border-radius: 8px; color: white; font-size: 14px;">
@@ -4699,7 +4702,7 @@ Round Difference: ${snap2.round - snap1.round}
                     <option value="tit_for_tat">Tit for Tat</option>
                 </select>
             </div>
-            
+
             <div style="display: flex; gap: 15px;">
                 <button onclick="registerPlayer()" style="flex: 1; padding: 15px; background: #9b59b6; border: none; border-radius: 8px; color: white; font-weight: 700; font-size: 16px; cursor: pointer;">
                     Register Player
@@ -4715,17 +4718,17 @@ Round Difference: ${snap2.round - snap1.round}
     <div id="register-referee-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
         <div style="background: #1e1e2e; padding: 40px; border-radius: 16px; max-width: 500px; width: 90%; border: 2px solid #34495e;">
             <h2 style="color: #34495e; margin-bottom: 30px; font-size: 28px;">🏁 Register New Referee</h2>
-            
+
             <div style="margin-bottom: 20px;">
                 <label style="display: block; color: #a0aec0; margin-bottom: 8px; font-weight: 600;">Referee ID:</label>
                 <input id="referee-id" type="text" placeholder="e.g., REF01" style="width: 100%; padding: 12px; background: #2a2a3a; border: 1px solid #4a4a5a; border-radius: 8px; color: white; font-size: 14px;">
             </div>
-            
+
             <div style="margin-bottom: 30px;">
                 <label style="display: block; color: #a0aec0; margin-bottom: 8px; font-weight: 600;">Port Number:</label>
                 <input id="referee-port" type="number" placeholder="e.g., 8001" style="width: 100%; padding: 12px; background: #2a2a3a; border: 1px solid #4a4a5a; border-radius: 8px; color: white; font-size: 14px;">
             </div>
-            
+
             <div style="display: flex; gap: 15px;">
                 <button onclick="registerReferee()" style="flex: 1; padding: 15px; background: #34495e; border: none; border-radius: 8px; color: white; font-weight: 700; font-size: 16px; cursor: pointer;">
                     Register Referee

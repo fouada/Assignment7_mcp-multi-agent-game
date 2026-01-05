@@ -492,7 +492,7 @@ class AnalyticsEngine:
         # Keep only last 20 matches
         if len(matchup["match_history"]) > 20:
             matchup["match_history"] = matchup["match_history"][-20:]
-        
+
         # Calculate average score differential
         if matchup["total_matches"] > 0:
             avg_score_a = matchup["total_score_a"] / matchup["total_matches"]
@@ -500,7 +500,7 @@ class AnalyticsEngine:
             matchup["avg_score_diff"] = abs(avg_score_a - avg_score_b)
         else:
             matchup["avg_score_diff"] = 0.0
-        
+
         # Track last winner
         matchup["last_winner"] = winner
 

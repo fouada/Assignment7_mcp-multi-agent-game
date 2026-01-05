@@ -13,7 +13,6 @@ Testing:
 Coverage target: 95%+
 """
 
-import pytest
 
 from src.common.extension_points import (
     ExtensionPoint,
@@ -22,7 +21,6 @@ from src.common.extension_points import (
     extension_provider,
     get_extension_registry,
 )
-
 
 # ============================================================================
 # Test Interfaces and Implementations
@@ -323,7 +321,7 @@ class TestPriorityOrdering:
         registry.register_point("strategy.custom", provider_type=IStrategy)
 
         # Register with same priority
-        for i in range(3):
+        for _i in range(3):
             strategy = RandomStrategy()
             registry.register_extension("strategy.custom", strategy, priority=100)
 

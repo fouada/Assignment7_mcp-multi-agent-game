@@ -23,7 +23,6 @@ from src.common.dependency_injection import (
 )
 from src.common.exceptions import DependencyResolutionError
 
-
 # ============================================================================
 # Test Services and Interfaces
 # ============================================================================
@@ -139,7 +138,8 @@ class TestServiceDescriptor:
 
     def test_descriptor_with_factory(self):
         """Test descriptor with factory function."""
-        factory = lambda c: ConsoleLogger()
+        def factory(c):
+            return ConsoleLogger()
         descriptor = ServiceDescriptor(
             service_type=ILogger, factory=factory, lifetime=Lifetime.TRANSIENT
         )
@@ -482,7 +482,7 @@ class TestEdgeCases:
         container.register(ILogger, ConsoleLogger, Lifetime.SINGLETON)
 
         def database_factory(c):
-            logger = c.resolve(ILogger)
+            c.resolve(ILogger)
             # Factory can use resolved dependencies
             return PostgresDatabase()
 

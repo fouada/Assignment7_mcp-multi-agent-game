@@ -266,7 +266,7 @@ class TestScheduleGeneration:
         """Test successful league start with schedule generation."""
         # Set TOURNAMENT_REPEAT to 1 for predictable test results
         monkeypatch.setenv("TOURNAMENT_REPEAT", "1")
-        
+
         manager = LeagueManager(
             league_id="test_league",
             min_players=2,
@@ -724,7 +724,7 @@ class TestLeagueManagerTools:
         """Test get_round_status tool."""
         # Set TOURNAMENT_REPEAT to 1 for predictable test results
         monkeypatch.setenv("TOURNAMENT_REPEAT", "1")
-        
+
         manager = LeagueManager(league_id="test_league", port=8000)
 
         # Register and start
@@ -870,7 +870,7 @@ class TestLeagueManagerEdgeCases:
         """Test getting schedule with match details."""
         # Set TOURNAMENT_REPEAT to 1 for predictable test results
         monkeypatch.setenv("TOURNAMENT_REPEAT", "1")
-        
+
         manager = LeagueManager(league_id="test_league", port=8000)
 
         # Register players
