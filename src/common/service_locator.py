@@ -37,6 +37,7 @@ from collections.abc import Callable
 from threading import Lock
 from typing import Any, TypeVar, cast
 
+from .exceptions import ServiceNotFoundError
 from .logger import get_logger
 
 logger = get_logger(__name__)
@@ -474,8 +475,7 @@ def register_core_services() -> None:
 # ============================================================================
 
 
-class ServiceNotFoundError(Exception):
-    """Service not found in locator."""
+# ServiceNotFoundError is imported from exceptions.py
 
     def __init__(self, name: str):
         self.name = name
