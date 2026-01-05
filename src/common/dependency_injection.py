@@ -261,20 +261,23 @@ class DependencyContainer:
         if service_type in self._thread_local.resolving:
             raise CircularDependencyError(service_type)
 
-        # Try this container first
+        # Look for service descriptor in this container or parent
         descriptor = self._services.get(service_type)
-
-        # Try parent if not found
         if descriptor is None and self._parent:
-            return self._parent.resolve(service_type)
+            # Try to get descriptor from parent
+            descriptor = self._parent._services.get(service_type)
 
         if descriptor is None:
             raise ServiceNotFoundError(service_type)
 
         # Handle different lifetimes
         if descriptor.lifetime == Lifetime.SINGLETON:
+            # Singletons are always resolved from root container
+            if self._parent:
+                return self._parent.resolve(service_type)
             return self._resolve_singleton(service_type, descriptor)
         elif descriptor.lifetime == Lifetime.SCOPED:
+            # Scoped services are singletons within this container
             return self._resolve_scoped(service_type, descriptor)
         else:  # TRANSIENT
             return self._resolve_transient(service_type, descriptor)
