@@ -80,7 +80,7 @@ jobs:
           pytest tests/ -v -m "not slow and not integration" --junit-xml=junit/test-results-${{ matrix.os }}-${{ matrix.python-version }}.xml --no-cov
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: test-results-${{ matrix.os }}-${{ matrix.python-version }}
@@ -110,7 +110,7 @@ jobs:
           pytest tests/ --cov=src --cov-report=xml --cov-report=html --cov-report=term-missing --cov-branch --cov-fail-under=${{ env.MIN_COVERAGE }} -v
 
       - name: Upload coverage reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-reports
           path: |
@@ -163,7 +163,7 @@ jobs:
           pytest tests/ -v -m integration --junit-xml=junit/integration-results.xml --no-cov
 
       - name: Upload integration test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: integration-test-results
@@ -194,7 +194,7 @@ jobs:
           pytest tests/ -v -m "slow or benchmark" --junit-xml=junit/performance-results.xml --no-cov
 
       - name: Upload performance test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: performance-test-results
@@ -232,7 +232,7 @@ jobs:
           bandit -r src/ -f json -o bandit-report.json || true
 
       - name: Upload security reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: security-reports
