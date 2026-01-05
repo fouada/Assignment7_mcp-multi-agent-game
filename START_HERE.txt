@@ -1,0 +1,81 @@
+🎮 DASHBOARD QUICK START - EXACT STEPS
+======================================
+
+YOU HAVE 2 OPTIONS:
+
+OPTION 1: SUPER EASY (Recommended)
+-----------------------------------
+Run this ONE command in a terminal:
+
+    ./quick_start_dashboard.sh
+
+This will:
+✅ Open 6 terminals automatically
+✅ Start everything you need
+✅ Open dashboard in browser
+✅ Everything auto-registers
+
+Then in dashboard:
+  1. Click "Connect"
+  2. Click "🚀 Start Tournament"
+  3. Click "▶️ Run Round" (3 times)
+  4. Done!
+
+
+OPTION 2: MANUAL (Step by Step)
+--------------------------------
+Open 6 separate terminals and run:
+
+Terminal 1 (League Manager):
+    ./launch_league.sh
+
+Terminal 2 (Referee):
+    ./launch_referee.sh --id REF01 --port 8001
+
+Terminal 3 (Player 1):
+    ./launch_player.sh --name Alice --port 8101 --strategy adaptive_bayesian
+
+Terminal 4 (Player 2):
+    ./launch_player.sh --name Bob --port 8102 --strategy regret_matching
+
+Terminal 5 (Player 3):
+    ./launch_player.sh --name Charlie --port 8103 --strategy nash
+
+Terminal 6 (Player 4):
+    ./launch_player.sh --name Dave --port 8104 --strategy random
+
+Then go to: http://localhost:8050
+  1. Click "Connect"
+  2. Click "🚀 Start Tournament"
+  3. Click "▶️ Run Round" (repeat for each round)
+
+
+WHAT'S HAPPENING:
+-----------------
+❌ Dashboard register buttons DON'T create player/referee processes
+✅ Dashboard register buttons CAN register EXISTING processes
+✅ Launch scripts CREATE the processes AND auto-register them
+
+So use launch scripts first, THEN use dashboard for tournament control!
+
+
+DASHBOARD BUTTONS THAT WORK NOW:
+---------------------------------
+After running launch scripts:
+  ✅ Connect - Works
+  ✅ Start Tournament - Works
+  ✅ Run Round - Works
+  ✅ Reset Tournament - Works
+  ✅ Export Data - Works
+
+Don't click these (not needed):
+  ⚠️  Register Player - Launch scripts do this
+  ⚠️  Register Referee - Launch scripts do this
+
+
+BOTTOM LINE:
+------------
+1. Run: ./quick_start_dashboard.sh
+2. Use dashboard to control tournament
+3. That's it!
+

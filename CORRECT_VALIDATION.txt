@@ -1,0 +1,59 @@
+✅ CORRECT VALIDATION RULES IMPLEMENTED
+========================================
+
+🎯 START TOURNAMENT (🚀):
+   Requirements:
+   ✓ At least 2 players must be registered
+   ✓ At least 1 referee must be registered
+   
+   Error messages:
+   - "Cannot start tournament: Need at least 2 players registered (currently have X)"
+   - League manager also validates referee requirements
+
+🎯 RUN ROUND (▶️):
+   Requirements:
+   ✓ Tournament must be started first
+   
+   Error message:
+   - "Tournament not started yet. Please click 'Start Tournament' first."
+
+🎯 RESET TOURNAMENT (🔄):
+   Requirements:
+   ✓ Tournament must be started first
+   
+   Error message:
+   - "Cannot reset: Tournament has not been started yet. Please start the tournament first."
+
+📋 ENFORCED WORKFLOW:
+=====================
+
+Step 1: Register Referee
+   └─> Click "🏁 Register Referee"
+   └─> Fill: ID (REF01), Port (8001)
+
+Step 2: Register Players (minimum 2)
+   └─> Click "👤 Register Player" (repeat for each)
+   └─> Fill: Name, Port, Strategy
+
+Step 3: Start Tournament
+   └─> Click "🚀 Start Tournament"
+   └─> ✓ Validates: 2+ players registered
+   └─> ✓ Validates: 1+ referee registered
+
+Step 4: Run Rounds
+   └─> Click "▶️ Run Round" (repeat for each round)
+   └─> ✓ Validates: Tournament started
+
+Step 5: Reset Tournament
+   └─> Click "🔄 Reset Tournament"
+   └─> ✓ Validates: Tournament was started
+   └─> Returns to Step 3 (players stay registered)
+
+🔄 TO APPLY THESE CHANGES:
+==========================
+1. In Terminal 169: Press Ctrl+C
+2. Run: ./launch_league.sh
+3. In browser: Hard refresh (Cmd+Shift+R or Ctrl+Shift+R)
+4. Test the proper workflow!
+
+✨ ALL BUTTONS NOW HAVE PROPER VALIDATION! ✨

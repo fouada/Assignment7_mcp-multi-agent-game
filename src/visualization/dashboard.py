@@ -449,6 +449,42 @@ class DashboardAPI:
                 "opponent_matchups": analytics.opponent_win_rates,
             }
 
+        @self.app.get("/api/analytics/opponent_models")
+        async def get_all_opponent_models():
+            """Get opponent models for all players (aggregate)."""
+            from .analytics import get_analytics_engine
+
+            engine = get_analytics_engine()
+            all_models = []
+            
+            # DEBUG: Log analytics engine state
+            logger.info(f"[DEBUG] Analytics engine id: {id(engine)}")
+            logger.info(f"[DEBUG] All players: {engine.all_players}")
+            logger.info(f"[DEBUG] Opponent models keys: {list(engine.opponent_models.keys())}")
+            logger.info(f"[DEBUG] Opponent models raw: {engine.opponent_models}")
+            
+            # Get all player IDs from analytics engine
+            player_ids = list(engine.all_players)
+            
+            for player_id in player_ids:
+                models = engine.get_all_opponent_models(player_id)
+                logger.info(f"[DEBUG] Player {player_id} has {len(models)} opponent models")
+                for opp_id, model in models.items():
+                    all_models.append({
+                        "player_id": player_id,
+                        "opponent_id": model.opponent_id,
+                        "current_confidence": model.current_confidence,
+                        "current_accuracy": model.current_accuracy,
+                        "predicted_strategy": model.predicted_strategy,
+                        "convergence_round": model.convergence_round,
+                        "rounds": model.rounds,
+                        "confidence_history": model.confidence_history,
+                        "accuracy_history": model.accuracy_history,
+                    })
+            
+            logger.info(f"[DEBUG] Returning {len(all_models)} models")
+            return {"models": all_models}
+
         @self.app.get("/api/analytics/opponent_models/{player_id}")
         async def get_player_opponent_models(player_id: str):
             """Get all opponent models for a player."""
@@ -476,6 +512,82 @@ class DashboardAPI:
                     }
                     for opp_id, model in models.items()
                 },
+            }
+
+        @self.app.get("/api/analytics/counterfactuals")
+        async def get_all_counterfactuals():
+            """Get counterfactual analytics for all players (aggregate)."""
+            from .analytics import get_analytics_engine
+
+            engine = get_analytics_engine()
+            all_cf = []
+            
+            # Get all player IDs from analytics engine
+            player_ids = list(engine.all_players)
+            
+            for player_id in player_ids:
+                cf = engine.get_counterfactual_analytics(player_id)
+                if cf:
+                    all_cf.append({
+                        "player_id": cf.player_id,
+                        "rounds": cf.rounds,
+                        "regret_by_action": cf.regret_by_action,
+                        "entropy_history": cf.entropy_history,
+                        "cumulative_regret": cf.cumulative_regret_by_action,
+                        "strategy_distribution": cf.strategy_distribution_history[-1]
+                        if cf.strategy_distribution_history
+                        else {},
+                        "metrics": {
+                            "total_regret_minimized": cf.total_regret_minimized,
+                            "strategy_stability": cf.strategy_stability,
+                            "nash_equilibrium_distance": cf.nash_equilibrium_distance,
+                        },
+                    })
+            
+            return {"counterfactuals": all_cf}
+
+        @self.app.post("/api/analytics/test_inject")
+        async def test_inject_analytics():
+            """DIAGNOSTIC: Inject test data to verify analytics display."""
+            from .analytics import get_analytics_engine
+
+            engine = get_analytics_engine()
+            
+            # Inject test opponent model data
+            await engine.on_opponent_model_update(
+                player_id="P01",
+                opponent_id="P02",
+                confidence=0.85,
+                accuracy=0.75,
+                predicted_strategy="biased_odd",
+                beliefs={"mean": 0.65, "std": 0.15, "observations": 10}
+            )
+            
+            await engine.on_opponent_model_update(
+                player_id="P01",
+                opponent_id="P03",
+                confidence=0.72,
+                accuracy=0.68,
+                predicted_strategy="balanced",
+                beliefs={"mean": 0.50, "std": 0.20, "observations": 8}
+            )
+            
+            # Inject test counterfactual data
+            await engine.on_counterfactual_update(
+                player_id="P02",
+                actual_move="EVEN",
+                counterfactuals=[
+                    {"move": "EVEN", "regret": 0.5},
+                    {"move": "ODD", "regret": -1.2}
+                ],
+                cumulative_regret={"EVEN": 2.3, "ODD": -0.8}
+            )
+            
+            logger.info("✅ Test analytics data injected!")
+            
+            return {
+                "success": True,
+                "message": "Test data injected - refresh charts to see it!"
             }
 
         @self.app.get("/api/analytics/counterfactual/{player_id}")
@@ -531,6 +643,8 @@ class DashboardAPI:
                         "avg_score_b": v["total_score_b"] / v["total_matches"]
                         if v["total_matches"] > 0
                         else 0,
+                        "avg_score_diff": v.get("avg_score_diff", 0.0),
+                        "last_winner": v.get("last_winner"),
                         "recent_matches": v["match_history"][-5:],  # Last 5 matches
                     }
                     for k, v in matrix.matrix.items()
@@ -579,6 +693,58 @@ class DashboardAPI:
             """Start the league tournament (proxy to league manager)."""
             try:
                 import httpx
+                import json
+
+                # Check if we have enough players
+                players_response = await httpx.AsyncClient().post(
+                    "http://localhost:8000/mcp",
+                    json={
+                        "jsonrpc": "2.0",
+                        "method": "tools/call",
+                        "params": {
+                            "name": "get_standings",
+                            "arguments": {}
+                        },
+                        "id": 1
+                    },
+                    timeout=5.0
+                )
+                players_result = players_response.json()
+                players_mcp = players_result.get("result", {})
+                if "content" in players_mcp and len(players_mcp["content"]) > 0:
+                    players_text = players_mcp["content"][0].get("text", "{}")
+                    players_data = json.loads(players_text)
+                    num_players = len(players_data.get("standings", []))
+                    
+                    if num_players < 2:
+                        return {
+                            "success": False,
+                            "error": f"Cannot start tournament: Need at least 2 players registered (currently have {num_players}). Please register more players."
+                        }
+                
+                # Check if we have at least one referee
+                status_response = await httpx.AsyncClient().post(
+                    "http://localhost:8000/mcp",
+                    json={
+                        "jsonrpc": "2.0",
+                        "method": "tools/call",
+                        "params": {
+                            "name": "get_round_status",
+                            "arguments": {}
+                        },
+                        "id": 1
+                    },
+                    timeout=5.0
+                )
+                status_response.raise_for_status()
+                status_result = status_response.json()
+                status_mcp = status_result.get("result", {})
+                if "content" in status_mcp and len(status_mcp["content"]) > 0:
+                    status_text = status_mcp["content"][0].get("text", "{}")
+                    status_data = json.loads(status_text)
+                    
+                    # Note: We assume if league manager is running, at least one referee is available
+                    # The league manager itself validates referee requirements
 
                 # Call league manager's start_league tool via MCP
                 response = await httpx.AsyncClient().post(
@@ -597,17 +763,26 @@ class DashboardAPI:
                 response.raise_for_status()
                 result = response.json()
 
-                if result.get("result", {}).get("success"):
-                    logger.info("[Dashboard] Tournament started successfully")
-                    return {
-                        "success": True,
-                        "message": "Tournament started successfully",
-                        "data": result.get("result", {})
-                    }
+                # Parse MCP response format: result.content[0].text contains JSON string
+                mcp_result = result.get("result", {})
+                if "content" in mcp_result and len(mcp_result["content"]) > 0:
+                    content_text = mcp_result["content"][0].get("text", "{}")
+                    data = json.loads(content_text)
+                    
+                    if data.get("success"):
+                        logger.info("[Dashboard] Tournament started successfully")
+                        return {
+                            "success": True,
+                            "message": "Tournament started successfully",
+                            "data": data
+                        }
+                    else:
+                        error_msg = data.get("error", "Unknown error")
+                        logger.error(f"[Dashboard] Start failed: {error_msg}")
+                        return {"success": False, "error": error_msg}
                 else:
-                    error_msg = result.get("result", {}).get("error", "Unknown error")
-                    logger.error(f"[Dashboard] Start failed: {error_msg}")
-                    return {"success": False, "error": error_msg}
+                    logger.error("[Dashboard] Invalid MCP response format")
+                    return {"success": False, "error": "Invalid response format"}
 
             except Exception as e:
                 logger.error(f"[Dashboard] Error starting tournament: {e}", exc_info=True)
@@ -618,6 +793,52 @@ class DashboardAPI:
             """Run the next round (proxy to league manager)."""
             try:
                 import httpx
+                import json
+
+                # Check if tournament is started
+                try:
+                    status_response = await httpx.AsyncClient().post(
+                        "http://localhost:8000/mcp",
+                        json={
+                            "jsonrpc": "2.0",
+                            "method": "tools/call",
+                            "params": {
+                                "name": "get_round_status",
+                                "arguments": {}
+                            },
+                            "id": 1
+                        },
+                        timeout=5.0
+                    )
+                    status_response.raise_for_status()
+                    status_result = status_response.json()
+                    
+                    # Parse status
+                    status_mcp = status_result.get("result", {})
+                    if "content" in status_mcp and len(status_mcp["content"]) > 0:
+                        status_text = status_mcp["content"][0].get("text", "{}")
+                        status_data = json.loads(status_text)
+                        logger.info(f"[Dashboard] Round status: {status_data}")
+                        
+                        # Check if league is in registration state (not started)
+                        if status_data.get("state") == "registration":
+                            return {
+                                "success": False,
+                                "error": "Tournament not started yet. Please click 'Start Tournament' first."
+                            }
+                        
+                        # Check if tournament is completed
+                        if status_data.get("state") == "completed":
+                            return {
+                                "success": False,
+                                "error": "Tournament is completed! All rounds finished. Click 'Reset Tournament' to start a new one."
+                            }
+                except Exception as status_error:
+                    logger.error(f"[Dashboard] Error checking round status: {status_error}")
+                    return {
+                        "success": False,
+                        "error": "League not ready"
+                    }
 
                 # Call league manager's start_next_round tool via MCP
                 response = await httpx.AsyncClient().post(
@@ -636,17 +857,26 @@ class DashboardAPI:
                 response.raise_for_status()
                 result = response.json()
 
-                if result.get("result", {}).get("success"):
-                    logger.info("[Dashboard] Round started successfully")
-                    return {
-                        "success": True,
-                        "message": "Round started successfully",
-                        "data": result.get("result", {})
-                    }
+                # Parse MCP response format
+                mcp_result = result.get("result", {})
+                if "content" in mcp_result and len(mcp_result["content"]) > 0:
+                    content_text = mcp_result["content"][0].get("text", "{}")
+                    data = json.loads(content_text)
+                    
+                    if data.get("success"):
+                        logger.info("[Dashboard] Round started successfully")
+                        return {
+                            "success": True,
+                            "message": "Round started successfully",
+                            "data": data
+                        }
+                    else:
+                        error_msg = data.get("error", "Unknown error")
+                        logger.error(f"[Dashboard] Run round failed: {error_msg}")
+                        return {"success": False, "error": error_msg}
                 else:
-                    error_msg = result.get("result", {}).get("error", "Unknown error")
-                    logger.error(f"[Dashboard] Run round failed: {error_msg}")
-                    return {"success": False, "error": error_msg}
+                    logger.error("[Dashboard] Invalid MCP response format")
+                    return {"success": False, "error": "Invalid response format"}
 
             except Exception as e:
                 logger.error(f"[Dashboard] Error running round: {e}", exc_info=True)
@@ -657,6 +887,33 @@ class DashboardAPI:
             """Reset the league tournament (proxy to league manager)."""
             try:
                 import httpx
+                import json
+
+                # Check if tournament has been started (not in registration state)
+                status_response = await httpx.AsyncClient().post(
+                    "http://localhost:8000/mcp",
+                    json={
+                        "jsonrpc": "2.0",
+                        "method": "tools/call",
+                        "params": {
+                            "name": "get_round_status",
+                            "arguments": {}
+                        },
+                        "id": 1
+                    },
+                    timeout=5.0
+                )
+                status_response.raise_for_status()
+                status_result = status_response.json()
+                
+                # Parse status (for logging/debugging only)
+                status_mcp = status_result.get("result", {})
+                if "content" in status_mcp and len(status_mcp["content"]) > 0:
+                    status_text = status_mcp["content"][0].get("text", "{}")
+                    status_data = json.loads(status_text)
+                    logger.info(f"[Dashboard] Current state before reset: {status_data}")
+                
+                # Allow reset from any state - no validation needed
 
                 # Call league manager's reset_league tool via MCP
                 response = await httpx.AsyncClient().post(
@@ -675,28 +932,187 @@ class DashboardAPI:
                 response.raise_for_status()
                 result = response.json()
 
-                if result.get("result", {}).get("success"):
-                    # Clear dashboard data
-                    self.tournament_states.clear()
-                    self.game_events.clear()
-                    self.strategy_performance.clear()
-                    self.opponent_models.clear()
-                    self.counterfactuals.clear()
+                # Parse MCP response format
+                mcp_result = result.get("result", {})
+                if "content" in mcp_result and len(mcp_result["content"]) > 0:
+                    content_text = mcp_result["content"][0].get("text", "{}")
+                    data = json.loads(content_text)
+                    
+                    if data.get("success"):
+                        # Clear dashboard data
+                        self.tournament_states.clear()
+                        self.game_events.clear()
+                        self.strategy_performance.clear()
+                        self.opponent_models.clear()
+                        self.counterfactuals.clear()
 
-                    # Clear analytics engine
-                    from .analytics import get_analytics_engine
-                    engine = get_analytics_engine()
-                    engine.reset()
+                        # Clear analytics engine
+                        from .analytics import get_analytics_engine
+                        engine = get_analytics_engine()
+                        engine.reset()
 
-                    logger.info("[Dashboard] Tournament reset successful")
-                    return {"success": True, "message": "Tournament reset successfully"}
+                        logger.info("[Dashboard] Tournament reset successful")
+                        return {"success": True, "message": "Tournament reset successfully"}
+                    else:
+                        error_msg = data.get("error", "Unknown error")
+                        logger.error(f"[Dashboard] Reset failed: {error_msg}")
+                        return {"success": False, "error": error_msg}
                 else:
-                    error_msg = result.get("result", {}).get("error", "Unknown error")
-                    logger.error(f"[Dashboard] Reset failed: {error_msg}")
-                    return {"success": False, "error": error_msg}
+                    logger.error("[Dashboard] Invalid MCP response format")
+                    return {"success": False, "error": "Invalid response format"}
 
             except Exception as e:
                 logger.error(f"[Dashboard] Error resetting tournament: {e}", exc_info=True)
+                return {"success": False, "error": str(e)}
+
+        @self.app.post("/api/league/register_player")
+        async def register_player(request: dict):
+            """Launch and register a new player in the league."""
+            try:
+                import subprocess
+                import asyncio
+
+                name = request.get("name", "")
+                port = request.get("port", 0)
+                strategy = request.get("strategy", "random")
+
+                if not name or not port:
+                    return {"success": False, "error": "Name and port are required"}
+
+                logger.info(f"[Dashboard] Launching player: {name} on port {port} with strategy {strategy}")
+
+                # Launch player process in background using launch_player.sh
+                # This will start the player AND auto-register it with the league
+                cmd = [
+                    "./launch_player.sh",
+                    "--name", name,
+                    "--port", str(port),
+                    "--strategy", strategy
+                ]
+                
+                # Get project root directory
+                import os
+                project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                
+                # Start process in background
+                process = subprocess.Popen(
+                    cmd,
+                    cwd=project_root,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    start_new_session=True  # Detach from parent
+                )
+                
+                # Wait a moment for player to start
+                await asyncio.sleep(2)
+                
+                # Check if process is still running
+                if process.poll() is not None:
+                    # Process died
+                    _, stderr = process.communicate()
+                    error_msg = stderr.decode('utf-8') if stderr else "Player process failed to start"
+                    logger.error(f"[Dashboard] Player process failed: {error_msg}")
+                    return {"success": False, "error": f"Failed to start player: {error_msg}"}
+                
+                logger.info(f"[Dashboard] Player launched successfully: {name} (PID: {process.pid})")
+                
+                # Broadcast update to all connected clients
+                await self.connection_manager.broadcast({
+                    "type": "player_registered",
+                    "data": {
+                        "name": name,
+                        "strategy": strategy,
+                        "port": port,
+                        "pid": process.pid
+                    }
+                })
+                
+                return {
+                    "success": True,
+                    "message": f"Player '{name}' launched and registered successfully",
+                    "data": {
+                        "name": name,
+                        "port": port,
+                        "strategy": strategy,
+                        "pid": process.pid
+                    }
+                }
+
+            except Exception as e:
+                logger.error(f"[Dashboard] Error launching player: {e}", exc_info=True)
+                return {"success": False, "error": str(e)}
+
+        @self.app.post("/api/league/register_referee")
+        async def register_referee(request: dict):
+            """Launch and register a new referee in the league."""
+            try:
+                import subprocess
+                import asyncio
+
+                referee_id = request.get("referee_id", "")
+                port = request.get("port", 0)
+
+                if not referee_id or not port:
+                    return {"success": False, "error": "Referee ID and port are required"}
+
+                logger.info(f"[Dashboard] Launching referee: {referee_id} on port {port}")
+
+                # Launch referee process in background using launch_referee.sh
+                # This will start the referee AND auto-register it with the league
+                cmd = [
+                    "./launch_referee.sh",
+                    "--id", referee_id,
+                    "--port", str(port)
+                ]
+                
+                # Get project root directory
+                import os
+                project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                
+                # Start process in background
+                process = subprocess.Popen(
+                    cmd,
+                    cwd=project_root,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    start_new_session=True  # Detach from parent
+                )
+                
+                # Wait a moment for referee to start
+                await asyncio.sleep(2)
+                
+                # Check if process is still running
+                if process.poll() is not None:
+                    # Process died
+                    _, stderr = process.communicate()
+                    error_msg = stderr.decode('utf-8') if stderr else "Referee process failed to start"
+                    logger.error(f"[Dashboard] Referee process failed: {error_msg}")
+                    return {"success": False, "error": f"Failed to start referee: {error_msg}"}
+                
+                logger.info(f"[Dashboard] Referee launched successfully: {referee_id} (PID: {process.pid})")
+                
+                # Broadcast update to all connected clients
+                await self.connection_manager.broadcast({
+                    "type": "referee_registered",
+                    "data": {
+                        "referee_id": referee_id,
+                        "port": port,
+                        "pid": process.pid
+                    }
+                })
+                
+                return {
+                    "success": True,
+                    "message": f"Referee '{referee_id}' launched and registered successfully",
+                    "data": {
+                        "referee_id": referee_id,
+                        "port": port,
+                        "pid": process.pid
+                    }
+                }
+
+            except Exception as e:
+                logger.error(f"[Dashboard] Error launching referee: {e}", exc_info=True)
                 return {"success": False, "error": str(e)}
 
     async def stream_event(self, event: GameEvent):
@@ -1804,6 +2220,8 @@ class DashboardAPI:
     <div class="container">
         <div class="controls">
             <button onclick="connectWebSocket()">Connect</button>
+            <button onclick="showRegisterPlayerModal()" style="background: #9b59b6;">👤 Register Player</button>
+            <button onclick="showRegisterRefereeModal()" style="background: #34495e;">🏁 Register Referee</button>
             <button onclick="startTournament()" style="background: #27ae60;">🚀 Start Tournament</button>
             <button onclick="runRound()" style="background: #3498db;">▶️ Run Round</button>
             <button onclick="clearData()" style="background: #e74c3c;">🔄 Reset Tournament</button>
@@ -1961,7 +2379,10 @@ class DashboardAPI:
         </div>
 
         <div class="card">
-            <h2>📈 Strategy Performance Over Time</h2>
+            <h2>        📈 Strategy Performance Over Time
+            <button onclick="manualRefreshCharts()" style="margin-left: 20px; padding: 8px 16px; background: #667eea; border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 14px;">🔄 Refresh Charts</button>
+            <button onclick="testInjectAnalytics()" style="margin-left: 10px; padding: 8px 16px; background: #f59e0b; border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 14px;">🧪 Test Data</button>
+        </h2>
             <div id="performance-chart" class="chart"></div>
         </div>
 
@@ -2536,13 +2957,18 @@ class DashboardAPI:
 
         function updatePerformanceChart() {
             const traces = Object.values(performanceData).map(perf => ({
-                x: perf.rounds,
-                y: perf.win_rates,
+                x: perf.time_series?.rounds || perf.rounds || [],
+                y: perf.time_series?.win_rates || perf.win_rates || [],
                 type: 'scatter',
                 mode: 'lines+markers',
                 name: perf.strategy_name,
                 line: { width: 2 }
             }));
+
+            if (traces.length === 0 || traces.every(t => t.x.length === 0)) {
+                console.log('[PerformanceChart] No data to display');
+                return;
+            }
 
             const layout = {
                 title: 'Win Rate Over Time',
@@ -2556,6 +2982,7 @@ class DashboardAPI:
             };
 
             Plotly.newPlot('performance-chart', traces, layout, {responsive: true});
+            console.log('[PerformanceChart] Chart updated with', traces.length, 'strategies');
         }
 
         function updateOpponentModelChart() {
@@ -2581,28 +3008,48 @@ class DashboardAPI:
 
         function updateRegretChart() {
             const data = Object.values(regretData);
-            if (data.length === 0) return;
+            if (data.length === 0) {
+                console.log('[RegretChart] No data to display');
+                return;
+            }
 
-            const latest = data[data.length - 1];
+            // Aggregate cumulative regret across all players
+            const allRegrets = {};
+            data.forEach(playerData => {
+                const cumulative = playerData.cumulative_regret || {};
+                Object.entries(cumulative).forEach(([action, regret]) => {
+                    allRegrets[action] = (allRegrets[action] || 0) + regret;
+                });
+            });
+
+            if (Object.keys(allRegrets).length === 0) {
+                console.log('[RegretChart] No regret data available');
+                return;
+            }
+
+            const actions = Object.keys(allRegrets);
+            const regrets = Object.values(allRegrets);
+
             const trace = {
-                x: latest.counterfactuals.map(cf => cf.move),
-                y: latest.counterfactuals.map(cf => cf.regret),
+                x: actions,
+                y: regrets,
                 type: 'bar',
                 marker: {
-                    color: latest.counterfactuals.map(cf => cf.regret > 0 ? '#ef4444' : '#10b981')
+                    color: regrets.map(r => r > 0 ? '#ef4444' : '#10b981')
                 }
             };
 
             const layout = {
-                title: `Regret Analysis (Round ${latest.round})`,
-                xaxis: { title: 'Alternative Move', color: '#a0aec0' },
-                yaxis: { title: 'Regret', color: '#a0aec0' },
+                title: 'Cumulative Regret by Action',
+                xaxis: { title: 'Action', color: '#a0aec0' },
+                yaxis: { title: 'Cumulative Regret', color: '#a0aec0' },
                 plot_bgcolor: '#0f1321',
                 paper_bgcolor: '#0f1321',
                 font: { color: '#e0e0e0' }
             };
 
             Plotly.newPlot('regret-chart', [trace], layout, {responsive: true});
+            console.log('[RegretChart] Chart updated with', actions.length, 'actions');
         }
 
         function addLog(message, level = 'info') {
@@ -3832,8 +4279,8 @@ Round Difference: ${snap2.round - snap1.round}
                     addLog('❌ Failed to run round: ' + errorMsg, 'error');
 
                     // Check if it's "all rounds completed" message
-                    if (errorMsg.includes('All rounds completed') || errorMsg.includes('already completed')) {
-                        alert('All rounds have been completed!\\n\\nReset the tournament to start a new one.');
+                    if (errorMsg.includes('All rounds completed') || errorMsg.includes('already completed') || errorMsg.includes('Tournament is completed')) {
+                        alert('🏆 Tournament Completed!\\n\\n' + errorMsg + '\\n\\nClick "Reset Tournament" to start a new one.');
                     } else {
                         alert('Failed to run round:\\n' + errorMsg);
                     }
@@ -3927,8 +4374,9 @@ Round Difference: ${snap2.round - snap1.round}
                     statusEl.textContent = originalText;
                     statusEl.className = 'connection-status connected';
                     statusEl.style.background = '';
-                    addLog('Failed to reset: ' + (response.result?.error || response.error?.message || 'Unknown error'), 'error');
-                    alert('Failed to reset tournament:\\n' + (response.result?.error || response.error?.message || 'Unknown error'));
+                    const errorMsg = response.error || response.result?.error || response.message || 'Unknown error';
+                    addLog('Failed to reset: ' + errorMsg, 'error');
+                    alert('Failed to reset tournament:\\n' + errorMsg);
                 }
             })
             .catch(error => {
@@ -3996,11 +4444,299 @@ Round Difference: ${snap2.round - snap1.round}
                 });
         }
 
+        // ===== REGISTRATION MODALS =====
+        function showRegisterPlayerModal() {
+            document.getElementById('register-player-modal').style.display = 'flex';
+        }
+
+        function closeRegisterPlayerModal() {
+            document.getElementById('register-player-modal').style.display = 'none';
+        }
+
+        function showRegisterRefereeModal() {
+            document.getElementById('register-referee-modal').style.display = 'flex';
+        }
+
+        function closeRegisterRefereeModal() {
+            document.getElementById('register-referee-modal').style.display = 'none';
+        }
+
+        function registerPlayer() {
+            const name = document.getElementById('player-name').value;
+            const port = parseInt(document.getElementById('player-port').value);
+            const strategy = document.getElementById('player-strategy').value;
+
+            if (!name || !port) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            addLog(`👤 Registering player: ${name} with strategy ${strategy}...`, 'info');
+
+            fetch('/api/league/register_player', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, port, strategy })
+            })
+            .then(r => r.json())
+            .then(response => {
+                console.log('Register player response:', response);
+                if (response.success) {
+                    addLog(`✅ Player registered: ${name} (${strategy})`, 'success');
+                    closeRegisterPlayerModal();
+                    
+                    // Clear form
+                    document.getElementById('player-name').value = '';
+                    document.getElementById('player-port').value = '';
+                    document.getElementById('player-strategy').value = 'random';
+                    
+                    alert(`Player '${name}' registered successfully!\\n\\nStrategy: ${strategy}\\nPort: ${port}\\n\\nYou can now start the tournament or register more players.`);
+                } else {
+                    addLog(`❌ Failed to register player: ${response.error}`, 'error');
+                    alert(`Failed to register player:\\n${response.error}`);
+                }
+            })
+            .catch(error => {
+                console.error('Register player error:', error);
+                addLog(`❌ Error: ${error.message}`, 'error');
+                alert(`Error registering player:\\n${error.message}`);
+            });
+        }
+
+        function registerReferee() {
+            const refereeId = document.getElementById('referee-id').value;
+            const port = parseInt(document.getElementById('referee-port').value);
+
+            if (!refereeId || !port) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            addLog(`🏁 Registering referee: ${refereeId}...`, 'info');
+
+            fetch('/api/league/register_referee', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ referee_id: refereeId, port })
+            })
+            .then(r => r.json())
+            .then(response => {
+                console.log('Register referee response:', response);
+                if (response.success) {
+                    addLog(`✅ Referee registered: ${refereeId}`, 'success');
+                    closeRegisterRefereeModal();
+                    
+                    // Clear form
+                    document.getElementById('referee-id').value = '';
+                    document.getElementById('referee-port').value = '';
+                    
+                    alert(`Referee '${refereeId}' registered successfully!\\n\\nPort: ${port}\\n\\nYou can now register players and start the tournament.`);
+                } else {
+                    addLog(`❌ Failed to register referee: ${response.error}`, 'error');
+                    alert(`Failed to register referee:\\n${response.error}`);
+                }
+            })
+            .catch(error => {
+                console.error('Register referee error:', error);
+                addLog(`❌ Error: ${error.message}`, 'error');
+                alert(`Error registering referee:\\n${error.message}`);
+            });
+        }
+
+        // Load initial analytics data
+        async function loadInitialData() {
+            try {
+                console.log('[LoadInitialData] Starting...');
+                
+                // Fetch strategy performance data
+                const strategiesResponse = await fetch('/api/analytics/strategies');
+                if (strategiesResponse.ok) {
+                    const strategiesData = await strategiesResponse.json();
+                    console.log('[Strategies] Data received:', strategiesData);
+                    if (strategiesData.strategies && strategiesData.strategies.length > 0) {
+                        strategiesData.strategies.forEach(strategy => {
+                            performanceData[strategy.strategy_name] = strategy;
+                        });
+                        updatePerformanceChart();
+                        updateBeliefsChart();
+                        updateLearningCurve();
+                        addLog('✅ Loaded strategy performance data');
+                    } else {
+                        console.log('[Strategies] No data available');
+                    }
+                }
+
+                // Fetch opponent models (aggregate endpoint)
+                try {
+                    const oppResponse = await fetch('/api/analytics/opponent_models');
+                    if (oppResponse.ok) {
+                        const oppData = await oppResponse.json();
+                        console.log('[OpponentModels] Data received:', oppData);
+                        if (oppData.models && oppData.models.length > 0) {
+                            oppData.models.forEach(model => {
+                                const key = `${model.player_id}_${model.opponent_id}`;
+                                opponentModelData[key] = model;
+                            });
+                            updateOpponentModelChart();
+                            updateConfidenceEvolutionChart();
+                            addLog('✅ Loaded opponent model data');
+                        } else {
+                            console.log('[OpponentModels] No data available');
+                        }
+                    }
+                } catch (e) {
+                    console.log('[OpponentModels] Error:', e);
+                }
+                
+                // Fetch counterfactual data (aggregate endpoint)
+                try {
+                    const cfResponse = await fetch('/api/analytics/counterfactuals');
+                    if (cfResponse.ok) {
+                        const cfData = await cfResponse.json();
+                        console.log('[Counterfactuals] Data received:', cfData);
+                        if (cfData.counterfactuals && cfData.counterfactuals.length > 0) {
+                            cfData.counterfactuals.forEach(cf => {
+                                if (cf.rounds && cf.rounds.length > 0) {
+                                    regretData[cf.player_id] = cf;
+                                }
+                            });
+                            if (Object.keys(regretData).length > 0) {
+                                updateRegretChart();
+                                updateRegretEvolutionChart();
+                                addLog('✅ Loaded counterfactual data');
+                            } else {
+                                console.log('[Counterfactuals] No data with rounds available');
+                            }
+                        } else {
+                            console.log('[Counterfactuals] No data available');
+                        }
+                    }
+                } catch (e) {
+                    console.log('[Counterfactuals] Error:', e);
+                }
+                
+                console.log('[LoadInitialData] Complete');
+            } catch (error) {
+                console.error('[LoadInitialData] Error:', error);
+                addLog('⚠️ Some analytics data could not be loaded', 'warning');
+            }
+        }
+
+        // Manual refresh function for debugging
+        async function manualRefreshCharts() {
+            console.log('=== MANUAL REFRESH TRIGGERED ===');
+            addLog('🔄 Manually refreshing charts...');
+            
+            try {
+                await loadInitialData();
+                addLog('✅ Charts refreshed!');
+            } catch (error) {
+                console.error('Refresh error:', error);
+                addLog('❌ Refresh failed: ' + error.message, 'error');
+            }
+        }
+        
+        // Test data injection for diagnostics
+        async function testInjectAnalytics() {
+            console.log('=== TEST DATA INJECTION ===');
+            addLog('🧪 Injecting test analytics data...');
+            
+            try {
+                const response = await fetch('/api/analytics/test_inject', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    addLog('✅ Test data injected!');
+                    // Refresh charts to display test data
+                    await manualRefreshCharts();
+                } else {
+                    addLog('❌ Test injection failed', 'error');
+                }
+            } catch (error) {
+                console.error('Test injection error:', error);
+                addLog('❌ Test injection failed: ' + error.message, 'error');
+            }
+        }
+        
+        // Make functions globally accessible
+        window.manualRefreshCharts = manualRefreshCharts;
+        window.testInjectAnalytics = testInjectAnalytics;
+
         // Auto-connect on load
         window.onload = () => {
             connectWebSocket();
+            loadInitialData();
         };
     </script>
+
+    <!-- Register Player Modal -->
+    <div id="register-player-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: #1e1e2e; padding: 40px; border-radius: 16px; max-width: 500px; width: 90%; border: 2px solid #9b59b6;">
+            <h2 style="color: #9b59b6; margin-bottom: 30px; font-size: 28px;">👤 Register New Player</h2>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; color: #a0aec0; margin-bottom: 8px; font-weight: 600;">Player Name:</label>
+                <input id="player-name" type="text" placeholder="e.g., Alice" style="width: 100%; padding: 12px; background: #2a2a3a; border: 1px solid #4a4a5a; border-radius: 8px; color: white; font-size: 14px;">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; color: #a0aec0; margin-bottom: 8px; font-weight: 600;">Port Number:</label>
+                <input id="player-port" type="number" placeholder="e.g., 8101" style="width: 100%; padding: 12px; background: #2a2a3a; border: 1px solid #4a4a5a; border-radius: 8px; color: white; font-size: 14px;">
+            </div>
+            
+            <div style="margin-bottom: 30px;">
+                <label style="display: block; color: #a0aec0; margin-bottom: 8px; font-weight: 600;">Strategy:</label>
+                <select id="player-strategy" style="width: 100%; padding: 12px; background: #2a2a3a; border: 1px solid #4a4a5a; border-radius: 8px; color: white; font-size: 14px;">
+                    <option value="random">Random</option>
+                    <option value="adaptive_bayesian">Adaptive Bayesian</option>
+                    <option value="regret_matching">Regret Matching (CFR)</option>
+                    <option value="nash">Nash Equilibrium</option>
+                    <option value="quantum_inspired">Quantum Inspired</option>
+                    <option value="minimax">Minimax</option>
+                    <option value="tit_for_tat">Tit for Tat</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 15px;">
+                <button onclick="registerPlayer()" style="flex: 1; padding: 15px; background: #9b59b6; border: none; border-radius: 8px; color: white; font-weight: 700; font-size: 16px; cursor: pointer;">
+                    Register Player
+                </button>
+                <button onclick="closeRegisterPlayerModal()" style="flex: 1; padding: 15px; background: #e74c3c; border: none; border-radius: 8px; color: white; font-weight: 700; font-size: 16px; cursor: pointer;">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Referee Modal -->
+    <div id="register-referee-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: #1e1e2e; padding: 40px; border-radius: 16px; max-width: 500px; width: 90%; border: 2px solid #34495e;">
+            <h2 style="color: #34495e; margin-bottom: 30px; font-size: 28px;">🏁 Register New Referee</h2>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; color: #a0aec0; margin-bottom: 8px; font-weight: 600;">Referee ID:</label>
+                <input id="referee-id" type="text" placeholder="e.g., REF01" style="width: 100%; padding: 12px; background: #2a2a3a; border: 1px solid #4a4a5a; border-radius: 8px; color: white; font-size: 14px;">
+            </div>
+            
+            <div style="margin-bottom: 30px;">
+                <label style="display: block; color: #a0aec0; margin-bottom: 8px; font-weight: 600;">Port Number:</label>
+                <input id="referee-port" type="number" placeholder="e.g., 8001" style="width: 100%; padding: 12px; background: #2a2a3a; border: 1px solid #4a4a5a; border-radius: 8px; color: white; font-size: 14px;">
+            </div>
+            
+            <div style="display: flex; gap: 15px;">
+                <button onclick="registerReferee()" style="flex: 1; padding: 15px; background: #34495e; border: none; border-radius: 8px; color: white; font-weight: 700; font-size: 16px; cursor: pointer;">
+                    Register Referee
+                </button>
+                <button onclick="closeRegisterRefereeModal()" style="flex: 1; padding: 15px; background: #e74c3c; border: none; border-radius: 8px; color: white; font-weight: 700; font-size: 16px; cursor: pointer;">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
         """
@@ -4053,3 +4789,11 @@ async def stream_game_event(
         metadata=metadata,
     )
     await dashboard.stream_event(event)
+
+
+# ============================================================================
+# ASGI App Export for Uvicorn
+# ============================================================================
+
+# Create the app instance for uvicorn to load
+app = get_dashboard().app

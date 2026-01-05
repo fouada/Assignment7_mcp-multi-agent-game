@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chart Test</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Testing Chart Rendering</h1>
+    <div id="test-chart" style="width: 800px; height: 400px; background: #0f1321;"></div>
+    
+    <script>
+        async function testCharts() {
+            console.log('Fetching data...');
+            const response = await fetch('http://localhost:8050/api/analytics/strategies');
+            const data = await response.json();
+            console.log('Data received:', data);
+            
+            if (data.strategies && data.strategies.length > 0) {
+                const traces = data.strategies.map(strategy => ({
+                    x: strategy.time_series.rounds,
+                    y: strategy.time_series.win_rates,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: strategy.strategy_name,
+                    line: { width: 2 }
+                }));
+                
+                console.log('Traces created:', traces);
+                
+                const layout = {
+                    title: 'Win Rate Over Time (TEST)',
+                    xaxis: { title: 'Round' },
+                    yaxis: { title: 'Win Rate' },
+                    plot_bgcolor: '#0f1321',
+                    paper_bgcolor: '#0f1321',
+                    font: { color: '#e0e0e0' }
+                };
+                
+                Plotly.newPlot('test-chart', traces, layout, {responsive: true});
+                console.log('Chart rendered!');
+            }
+        }
+        
+        testCharts();
+    </script>
+</body>
+</html>

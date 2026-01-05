@@ -486,6 +486,7 @@ class DashboardIntegration:
             std_dev_belief = belief_distribution.get('std', belief_distribution.get('std_dev', 0.0))
 
             # Update analytics engine
+            logger.info(f"[Integration] 🔍 DEBUG: Analytics engine id: {id(self.analytics_engine)}")
             await self.analytics_engine.on_opponent_model_update(
                 player_id=player_id,
                 opponent_id=opponent_id,
@@ -494,6 +495,7 @@ class DashboardIntegration:
                 predicted_strategy=predicted_strategy,
                 beliefs=belief_distribution,
             )
+            logger.info(f"[Integration] 🔍 DEBUG: After update, engine has opponent models: {list(self.analytics_engine.opponent_models.keys())}")
 
             # Broadcast to dashboard
             await self.dashboard.connection_manager.broadcast(

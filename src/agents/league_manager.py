@@ -542,8 +542,9 @@ class LeagueManager(BaseGameServer):
 
     async def _start_league(self) -> dict[str, Any]:
         """Start the league."""
-        if self.state != LeagueState.REGISTRATION:
-            return {"success": False, "error": "League already started"}
+        # Accept both REGISTRATION and READY states for starting
+        if self.state not in (LeagueState.REGISTRATION, LeagueState.READY):
+            return {"success": False, "error": "League already started or in invalid state"}
 
         if len(self._players) < self.min_players:
             return {
@@ -552,8 +553,12 @@ class LeagueManager(BaseGameServer):
             }
 
         # Generate schedule
+        # Get repeat count from environment variable (default: 3 for more learning data)
+        import os
+        repeat_count = int(os.getenv("TOURNAMENT_REPEAT", "3"))
+        
         player_ids = list(self._players.keys())
-        self._schedule = MatchScheduler.create_round_robin_schedule(player_ids)
+        self._schedule = MatchScheduler.create_round_robin_schedule(player_ids, repeat=repeat_count)
 
         self.state = LeagueState.READY
 

@@ -60,16 +60,43 @@ class TestDashboardStartTournament:
     async def test_start_tournament_success(self, client):
         """Test successful tournament start."""
         with patch('httpx.AsyncClient') as mock_client:
-            mock_response = Mock()
-            mock_response.json.return_value = {
+            # Mock get_standings response (check for enough players)
+            mock_standings_response = Mock()
+            mock_standings_response.json.return_value = {
                 "result": {
-                    "success": True,
-                    "players": 4,
-                    "rounds": 3
+                    "content": [{
+                        "text": '{"standings": [{"player": "P1"}, {"player": "P2"}]}'
+                    }]
                 }
             }
-            mock_response.raise_for_status = Mock()
-            mock_client.return_value.post = AsyncMock(return_value=mock_response)
+            mock_standings_response.raise_for_status = Mock()
+            
+            # Mock get_round_status response
+            mock_status_response = Mock()
+            mock_status_response.json.return_value = {
+                "result": {
+                    "content": [{
+                        "text": '{"state": "ready"}'
+                    }]
+                }
+            }
+            mock_status_response.raise_for_status = Mock()
+            
+            # Mock start_league response
+            mock_start_response = Mock()
+            mock_start_response.json.return_value = {
+                "result": {
+                    "content": [{
+                        "text": '{"success": true, "players": 4, "rounds": 3}'
+                    }]
+                }
+            }
+            mock_start_response.raise_for_status = Mock()
+            
+            # Setup mock to return different responses for different calls
+            mock_client.return_value.post = AsyncMock(
+                side_effect=[mock_standings_response, mock_status_response, mock_start_response]
+            )
 
             response = client.post("/api/league/start")
 
@@ -143,11 +170,9 @@ class TestDashboardRunRound:
             mock_response = Mock()
             mock_response.json.return_value = {
                 "result": {
-                    "success": True,
-                    "round": 1,
-                    "matches": [
-                        {"match_id": "R1M1", "player_A_id": "P01", "player_B_id": "P02"}
-                    ]
+                    "content": [{
+                        "text": '{"success": true, "round": 1, "matches": [{"match_id": "R1M1", "player_A_id": "P01", "player_B_id": "P02"}]}'
+                    }]
                 }
             }
             mock_response.raise_for_status = Mock()
@@ -168,8 +193,9 @@ class TestDashboardRunRound:
             mock_response = Mock()
             mock_response.json.return_value = {
                 "result": {
-                    "success": False,
-                    "error": "All rounds completed"
+                    "content": [{
+                        "text": '{"success": false, "error": "All rounds completed"}'
+                    }]
                 }
             }
             mock_response.raise_for_status = Mock()
@@ -221,7 +247,9 @@ class TestDashboardResetTournament:
             mock_response = Mock()
             mock_response.json.return_value = {
                 "result": {
-                    "success": True
+                    "content": [{
+                        "text": '{"success": true}'
+                    }]
                 }
             }
             mock_response.raise_for_status = Mock()
@@ -245,7 +273,9 @@ class TestDashboardResetTournament:
             mock_response = Mock()
             mock_response.json.return_value = {
                 "result": {
-                    "success": True
+                    "content": [{
+                        "text": '{"success": true}'
+                    }]
                 }
             }
             mock_response.raise_for_status = Mock()
@@ -254,6 +284,7 @@ class TestDashboardResetTournament:
             response = client.post("/api/league/reset")
 
             assert response.status_code == 200
+            # After reset, dashboard data should be cleared
             assert len(dashboard.tournament_states) == 0
             assert len(dashboard.game_events) == 0
             assert len(dashboard.strategy_performance) == 0
@@ -271,7 +302,9 @@ class TestDashboardResetTournament:
             mock_response = Mock()
             mock_response.json.return_value = {
                 "result": {
-                    "success": True
+                    "content": [{
+                        "text": '{"success": true}'
+                    }]
                 }
             }
             mock_response.raise_for_status = Mock()

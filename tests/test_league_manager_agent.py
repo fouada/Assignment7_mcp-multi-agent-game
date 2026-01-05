@@ -262,8 +262,11 @@ class TestScheduleGeneration:
     """Test schedule generation."""
 
     @pytest.mark.asyncio
-    async def test_start_league_success(self):
+    async def test_start_league_success(self, monkeypatch):
         """Test successful league start with schedule generation."""
+        # Set TOURNAMENT_REPEAT to 1 for predictable test results
+        monkeypatch.setenv("TOURNAMENT_REPEAT", "1")
+        
         manager = LeagueManager(
             league_id="test_league",
             min_players=2,
@@ -285,7 +288,7 @@ class TestScheduleGeneration:
         assert manager.state == LeagueState.READY
         assert len(manager._schedule) > 0
         assert result["players"] == 4
-        assert result["rounds"] == 3  # Round-robin for 4 players = 3 rounds
+        assert result["rounds"] == 3  # Round-robin for 4 players = 3 rounds (with repeat=1)
 
     @pytest.mark.asyncio
     async def test_start_league_insufficient_players(self):
@@ -717,8 +720,11 @@ class TestLeagueManagerTools:
         assert len(result["players"]) == 3
 
     @pytest.mark.asyncio
-    async def test_get_round_status_tool(self):
+    async def test_get_round_status_tool(self, monkeypatch):
         """Test get_round_status tool."""
+        # Set TOURNAMENT_REPEAT to 1 for predictable test results
+        monkeypatch.setenv("TOURNAMENT_REPEAT", "1")
+        
         manager = LeagueManager(league_id="test_league", port=8000)
 
         # Register and start
@@ -860,8 +866,11 @@ class TestLeagueManagerEdgeCases:
         assert manager.is_registration_open is False
 
     @pytest.mark.asyncio
-    async def test_get_schedule_with_matches(self):
+    async def test_get_schedule_with_matches(self, monkeypatch):
         """Test getting schedule with match details."""
+        # Set TOURNAMENT_REPEAT to 1 for predictable test results
+        monkeypatch.setenv("TOURNAMENT_REPEAT", "1")
+        
         manager = LeagueManager(league_id="test_league", port=8000)
 
         # Register players
@@ -879,7 +888,7 @@ class TestLeagueManagerEdgeCases:
         schedule = manager._get_schedule()
 
         assert "schedule" in schedule
-        assert len(schedule["schedule"]) == 3  # 4 players = 3 rounds
+        assert len(schedule["schedule"]) == 3  # 4 players = 3 rounds (with repeat=1)
 
         for round_info in schedule["schedule"]:
             assert "round" in round_info

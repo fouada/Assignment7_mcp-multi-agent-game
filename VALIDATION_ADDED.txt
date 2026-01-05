@@ -1,0 +1,35 @@
+✅ VALIDATION RULES ADDED TO DASHBOARD
+======================================
+
+🎯 START TOURNAMENT Button:
+   ✓ Checks if at least 2 players are registered
+   ✓ Error message: "Need at least 2 players to start tournament (currently have X). Please register more players."
+   ✓ Only works when requirements are met
+
+🎯 RUN ROUND Button:
+   ✓ Checks if tournament has been started
+   ✓ Error message: "Tournament not started yet. Please click 'Start Tournament' first."
+   ✓ Only works after tournament is active
+
+🎯 RESET TOURNAMENT Button:
+   ✓ Checks if players are registered
+   ✓ Error message: "No players registered. Nothing to reset."
+   ✓ Only works when there's something to reset
+
+📋 PROPER WORKFLOW:
+==================
+1. Register Referee (🏁 Register Referee)
+2. Register Players (👤 Register Player) - minimum 2
+3. Start Tournament (🚀 Start Tournament) ← Now validates!
+4. Run Rounds (▶️ Run Round) ← Now validates!
+5. Export Data (optional)
+6. Reset Tournament (🔄 Reset) ← Now validates!
+7. Repeat from step 3!
+
+🔄 TO APPLY THESE CHANGES:
+=========================
+1. Stop league manager (Ctrl+C in Terminal 169)
+2. Restart: ./launch_league.sh
+3. Refresh dashboard (Cmd+Shift+R or Ctrl+Shift+R)
+4. Test the validations!
+

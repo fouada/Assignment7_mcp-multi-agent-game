@@ -259,14 +259,16 @@ class MatchScheduler:
     @staticmethod
     def create_round_robin_schedule(
         player_ids: list[str],
+        repeat: int = 1,
     ) -> list[list[tuple]]:
         """
         Create round-robin schedule.
 
-        Each player plays against every other player once.
+        Each player plays against every other player once (or multiple times if repeat > 1).
 
         Args:
             player_ids: List of player IDs
+            repeat: Number of times to repeat the full round-robin (default: 1)
 
         Returns:
             List of rounds, each containing tuples of (player1, player2)
@@ -282,7 +284,8 @@ class MatchScheduler:
             players.append(None)  # Bye
             n += 1
 
-        rounds = []
+        # Generate one full round-robin
+        single_round_robin = []
 
         # Round-robin algorithm
         for _round_num in range(n - 1):
@@ -296,10 +299,15 @@ class MatchScheduler:
                 if p1 is not None and p2 is not None:
                     round_matches.append((p1, p2))
 
-            rounds.append(round_matches)
+            single_round_robin.append(round_matches)
 
             # Rotate players (keep first player fixed)
             players = [players[0]] + [players[-1]] + players[1:-1]
+
+        # Repeat the round-robin schedule if requested
+        rounds = []
+        for _ in range(repeat):
+            rounds.extend(single_round_robin)
 
         return rounds
 
