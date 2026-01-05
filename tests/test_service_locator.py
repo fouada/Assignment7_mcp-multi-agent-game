@@ -166,7 +166,7 @@ class TestServiceLocatorRetrieval:
 
     def test_get_unregistered_service(self):
         """Test getting an unregistered service raises error."""
-        with pytest.raises((ServiceNotFoundError, KeyError)):
+        with pytest.raises(ServiceNotFoundError, match="Service not found: nonexistent"):
             ServiceLocator.get("nonexistent")
 
     def test_get_with_default(self):
@@ -552,7 +552,7 @@ class TestEdgeCases:
 
     def test_get_with_none_name(self):
         """Test getting service with None name."""
-        with pytest.raises((TypeError, ValueError, ServiceNotFoundError, KeyError)):
+        with pytest.raises(ServiceNotFoundError, match="Service not found: None"):
             ServiceLocator.get(None)  # type: ignore
 
     def test_register_callable_class(self):
