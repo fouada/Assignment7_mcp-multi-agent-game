@@ -34,7 +34,7 @@ Example:
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from threading import Lock, local
+from threading import RLock, local
 from typing import Any, TypeVar, get_type_hints
 
 from .logger import get_logger
@@ -147,7 +147,7 @@ class DependencyContainer:
         self._services: dict[type, ServiceDescriptor] = {}
         self._singletons: dict[type, Any] = {}
         self._parent = parent
-        self._lock = Lock()
+        self._lock = RLock()  # Use reentrant lock to prevent deadlock
         self._thread_local = local()  # Thread-local storage for circular dependency detection
 
     def register(
@@ -298,8 +298,9 @@ class DependencyContainer:
 
     def _resolve_scoped(self, service_type: type[T], descriptor: ServiceDescriptor) -> T:
         """Resolve scoped instance (singleton per scope)."""
-        # Each scope (child container) gets its own singleton
-        # Check if already created in this scope
+        # Scoped services are singletons within a scope (child container)
+        # If we're a child container, use our own singletons dict
+        # If we're the root container, behave like singleton
         if service_type in self._singletons:
             return self._singletons[service_type]
 

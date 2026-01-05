@@ -137,13 +137,13 @@ class TestExtensionProvider:
         """Test basic extension provider creation."""
         strategy = RandomStrategy()
         provider = ExtensionProvider(
-            extension_point="strategy.custom",
+            point_name="strategy.custom",
             provider=strategy,
             priority=100,
             metadata={"author": "test"},
         )
 
-        assert provider.extension_point == "strategy.custom"
+        assert provider.point_name == "strategy.custom"
         assert provider.provider == strategy
         assert provider.priority == 100
         assert provider.metadata["author"] == "test"
@@ -151,10 +151,10 @@ class TestExtensionProvider:
     def test_extension_provider_ordering(self):
         """Test extension providers are ordered by priority."""
         provider1 = ExtensionProvider(
-            extension_point="test", provider=RandomStrategy(), priority=50
+            point_name="test", provider=RandomStrategy(), priority=50
         )
         provider2 = ExtensionProvider(
-            extension_point="test", provider=SmartStrategy(), priority=100
+            point_name="test", provider=SmartStrategy(), priority=100
         )
 
         providers = sorted([provider1, provider2], key=lambda p: p.priority, reverse=True)

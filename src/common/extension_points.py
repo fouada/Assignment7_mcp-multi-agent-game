@@ -306,7 +306,7 @@ class ExtensionRegistry:
         extension = Extension(
             point_name=point_name,
             provider=provider,
-            priority=priority,
+            priority=priority if priority is not None else 0,
             plugin_name=plugin_name,
             metadata=metadata or {},
             lazy_factory=lazy_factory,
@@ -315,8 +315,8 @@ class ExtensionRegistry:
         # Add to registry
         self._extensions[point_name].append(extension)
 
-        # Sort by priority (descending)
-        self._extensions[point_name].sort(key=lambda e: e.priority, reverse=True)
+        # Sort by priority (descending), handling None values
+        self._extensions[point_name].sort(key=lambda e: e.priority if e.priority is not None else 0, reverse=True)
 
         logger.info(
             f"Extension registered: {point_name} (priority={priority}, "
