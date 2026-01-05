@@ -119,6 +119,18 @@ graph LR
 
 ## 📋 Document Overview
 
+### Featured: MIT Highest Level Community Documentation
+
+| Document | Purpose | Audience | Read Time |
+|----------|---------|----------|-----------|
+| [HIGHEST_MIT_LEVEL_COMMUNITY_CONTRIBUTION.md](HIGHEST_MIT_LEVEL_COMMUNITY_CONTRIBUTION.md) ⭐ | Complete MIT-level community guide | All | 60 min |
+| [COMMUNITY_QUICK_REFERENCE.md](COMMUNITY_QUICK_REFERENCE.md) ⚡ | Quick community overview | All | 10 min |
+| [COMMUNITY_CONTRIBUTION_INDEX.md](COMMUNITY_CONTRIBUTION_INDEX.md) 📍 | Navigation guide | All | 5 min |
+| [COMMUNITY_CONTRIBUTION_SUMMARY.md](COMMUNITY_CONTRIBUTION_SUMMARY.md) 📝 | Summary report | Management | 15 min |
+| [COMMUNITY_IMPACT_REPORT.md](COMMUNITY_IMPACT_REPORT.md) 📊 | Impact metrics | Leadership | 45 min |
+
+---
+
 ### 1. [CONTRIBUTING.md](../../CONTRIBUTING.md)
 
 **Purpose**: Complete guide for contributing to this project
@@ -605,7 +617,7 @@ These resources are our contribution to building better communities everywhere.
 
 ---
 
-*Last Updated: December 25, 2025*  
+*Last Updated: January 5, 2026*  
 *Status: Living Documentation*  
 *License: MIT / CC-BY-4.0*
 

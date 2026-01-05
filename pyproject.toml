@@ -42,6 +42,7 @@ dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "pytest-cov>=4.1.0",
+    "pytest-timeout>=2.2.0",
     "ruff>=0.3.0",
     "mypy>=1.8.0",
     "pre-commit>=3.5.0",
@@ -63,6 +64,7 @@ dev-dependencies = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "pytest-cov>=4.1.0",
+    "pytest-timeout>=2.2.0",
     "ruff>=0.3.0",
     "mypy>=1.8.0",
     "pre-commit>=3.5.0",
@@ -85,6 +87,7 @@ packages = ["src"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+timeout = 300
 addopts = [
     "-v",
     "--tb=short",
@@ -94,6 +97,7 @@ addopts = [
     "--cov-report=json",
     "--cov-fail-under=85",
     "--durations=10",
+    "--timeout=60",
 ]
 filterwarnings = [
     "ignore::DeprecationWarning",

@@ -34,7 +34,7 @@ Example:
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from threading import Lock
+from threading import Lock, local
 from typing import Any, TypeVar, get_type_hints
 
 from .logger import get_logger
@@ -148,7 +148,7 @@ class DependencyContainer:
         self._singletons: dict[type, Any] = {}
         self._parent = parent
         self._lock = Lock()
-        self._resolving: set[type] = set()  # Circular dependency detection
+        self._thread_local = local()  # Thread-local storage for circular dependency detection
 
     def register(
         self,
@@ -254,8 +254,11 @@ class DependencyContainer:
             logger = container.resolve(ILogger)
             service = container.resolve(MyService)  # Dependencies auto-injected
         """
-        # Check circular dependencies
-        if service_type in self._resolving:
+        # Check circular dependencies (thread-local)
+        if not hasattr(self._thread_local, "resolving"):
+            self._thread_local.resolving = set()
+        
+        if service_type in self._thread_local.resolving:
             raise CircularDependencyError(service_type)
 
         # Try this container first
@@ -295,8 +298,21 @@ class DependencyContainer:
 
     def _resolve_scoped(self, service_type: type[T], descriptor: ServiceDescriptor) -> T:
         """Resolve scoped instance (singleton per scope)."""
-        # In root container, scoped = singleton
-        return self._resolve_singleton(service_type, descriptor)
+        # Each scope (child container) gets its own singleton
+        # Check if already created in this scope
+        if service_type in self._singletons:
+            return self._singletons[service_type]
+
+        with self._lock:
+            # Double-check after acquiring lock
+            if service_type in self._singletons:
+                return self._singletons[service_type]
+
+            # Create instance for this scope
+            instance = self._create_instance(service_type, descriptor)
+            self._singletons[service_type] = instance
+
+            return instance
 
     def _resolve_transient(self, service_type: type[T], descriptor: ServiceDescriptor) -> T:
         """Resolve transient instance (new every time)."""
@@ -304,8 +320,11 @@ class DependencyContainer:
 
     def _create_instance(self, service_type: type[T], descriptor: ServiceDescriptor) -> T:
         """Create service instance with dependency injection."""
-        # Mark as resolving for circular dependency detection
-        self._resolving.add(service_type)
+        # Mark as resolving for circular dependency detection (thread-local)
+        if not hasattr(self._thread_local, "resolving"):
+            self._thread_local.resolving = set()
+        
+        self._thread_local.resolving.add(service_type)
 
         try:
             # Use existing instance if available
@@ -323,7 +342,7 @@ class DependencyContainer:
             raise ServiceResolutionError(service_type, "No implementation or factory provided")
 
         finally:
-            self._resolving.discard(service_type)
+            self._thread_local.resolving.discard(service_type)
 
     def _construct_with_injection(self, implementation_type: type[T]) -> T:
         """
@@ -415,7 +434,9 @@ class DependencyContainer:
         with self._lock:
             self._services.clear()
             self._singletons.clear()
-            self._resolving.clear()
+            # Clear thread-local resolving set if it exists
+            if hasattr(self._thread_local, "resolving"):
+                self._thread_local.resolving.clear()
 
 
 # ============================================================================

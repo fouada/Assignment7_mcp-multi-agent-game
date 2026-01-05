@@ -8,7 +8,9 @@ This folder contains summary documents and documentation achievement reports.
 
 | Document | Purpose | Audience | Read Time |
 |----------|---------|----------|-----------|
-| [ROOT_ORGANIZATION_COMPLETE.md](ROOT_ORGANIZATION_COMPLETE.md) ⭐ **NEW** | Root directory reorganization | All stakeholders | 10 min |
+| [COMMUNITY_OPEN_SOURCE_MIT_COMPLETE.md](COMMUNITY_OPEN_SOURCE_MIT_COMPLETE.md) ⭐ **NEW** | Community & open source completion | All stakeholders | 15 min |
+| [COST_ANALYSIS_MIT_ORGANIZATION_COMPLETE.md](COST_ANALYSIS_MIT_ORGANIZATION_COMPLETE.md) ⭐ | Cost analysis organization & highlights | Management, Finance | 15 min |
+| [ROOT_ORGANIZATION_COMPLETE.md](ROOT_ORGANIZATION_COMPLETE.md) ⭐ | Root directory reorganization | All stakeholders | 10 min |
 | [PROMPT_ENGINEERING_SUMMARY.md](PROMPT_ENGINEERING_SUMMARY.md) ⭐ | Prompt engineering creation summary | Technical, Management | 15 min |
 | [PROMPT_ENGINEERING_COMPLETION_REPORT.md](PROMPT_ENGINEERING_COMPLETION_REPORT.md) ⭐ | Final completion report | All stakeholders | 10 min |
 | [PROMPT_ENGINEERING_MIT_STRUCTURE_COMPLETE.md](PROMPT_ENGINEERING_MIT_STRUCTURE_COMPLETE.md) | PE structure completion | Technical | 10 min |

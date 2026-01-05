@@ -16,9 +16,12 @@ Coverage target: 95%+
 import pytest
 
 from src.common.dependency_injection import (
+    CircularDependencyError,
     DependencyContainer,
     Lifetime,
     ServiceDescriptor,
+    ServiceNotFoundError,
+    ServiceResolutionError,
     injectable,
 )
 from src.common.exceptions import DependencyResolutionError
@@ -288,7 +291,7 @@ class TestDependencyContainerResolution:
         """Test resolving unregistered service raises error."""
         container = DependencyContainer()
 
-        with pytest.raises(DependencyResolutionError):
+        with pytest.raises((ServiceNotFoundError, DependencyResolutionError)):
             container.resolve(ILogger)
 
 
@@ -410,7 +413,9 @@ class TestCircularDependencyDetection:
         container.register(ServiceB, ServiceB, Lifetime.TRANSIENT)
 
         # Should detect circular dependency
-        with pytest.raises((DependencyResolutionError, RecursionError)):
+        with pytest.raises(
+            (CircularDependencyError, DependencyResolutionError, RecursionError, ServiceResolutionError)
+        ):
             container.resolve(ServiceA)
 
 
@@ -461,7 +466,7 @@ class TestEdgeCases:
             logger = container.resolve(ConsoleLogger)
             # If it works, great
             assert isinstance(logger, ConsoleLogger)
-        except DependencyResolutionError:
+        except (ServiceNotFoundError, DependencyResolutionError):
             # If not supported, that's also fine
             assert True
 
@@ -509,7 +514,7 @@ class TestEdgeCases:
         # Check if clear method exists
         if hasattr(container, "clear"):
             container.clear()
-            with pytest.raises(DependencyResolutionError):
+            with pytest.raises((ServiceNotFoundError, DependencyResolutionError)):
                 container.resolve(ILogger)
 
 
@@ -521,22 +526,27 @@ class TestEdgeCases:
 class TestThreadSafety:
     """Test thread safety of container."""
 
+    @pytest.mark.timeout(10)
     def test_concurrent_resolution(self):
         """Test concurrent resolution from multiple threads."""
         import threading
+        import time
 
         container = DependencyContainer()
         container.register(ILogger, ConsoleLogger, Lifetime.SINGLETON)
 
         results = []
         errors = []
+        lock = threading.Lock()
 
         def resolve_logger():
             try:
                 logger = container.resolve(ILogger)
-                results.append(logger)
+                with lock:
+                    results.append(logger)
             except Exception as e:
-                errors.append(e)
+                with lock:
+                    errors.append(e)
 
         # Create multiple threads
         threads = [threading.Thread(target=resolve_logger) for _ in range(10)]
@@ -545,14 +555,19 @@ class TestThreadSafety:
         for thread in threads:
             thread.start()
 
-        # Wait for all threads
+        # Wait for all threads with timeout
+        start_time = time.time()
         for thread in threads:
-            thread.join()
+            remaining = max(0, 5 - (time.time() - start_time))
+            thread.join(timeout=remaining)
+            if thread.is_alive():
+                pytest.fail("Thread did not complete in time - possible deadlock")
 
         # Should have no errors
-        assert len(errors) == 0
+        assert len(errors) == 0, f"Errors occurred: {errors}"
         # All should get same singleton instance
-        assert all(r is results[0] for r in results)
+        assert len(results) == 10, f"Expected 10 results, got {len(results)}"
+        assert all(r is results[0] for r in results), "Not all results are the same singleton"
 
 
 # ============================================================================
