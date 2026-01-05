@@ -1585,15 +1585,15 @@ This project achieves the **MIT highest level** through:
 ### Key Research Papers
 
 #### 1. Quantum-Inspired Multi-Agent Decision Making
-**Status:** Publication-ready  
+**Status:** Publication-ready
 **Location:** [docs/research/papers/quantum-inspired-decisions.md](docs/research/papers/quantum-inspired-decisions.md)
 
 #### 2. Byzantine Robust Quantum CFR: A Novel Algorithm
-**Status:** Under review  
+**Status:** Under review
 **Location:** [docs/research/papers/brqc-algorithm.md](docs/research/papers/brqc-algorithm.md)
 
 #### 3. O(log n) Convergent Bayesian Opponent Modeling
-**Status:** Published (conference proceedings)  
+**Status:** Published (conference proceedings)
 **Location:** [docs/research/papers/bayesian-opponent-modeling.md](docs/research/papers/bayesian-opponent-modeling.md)
 
 ---
