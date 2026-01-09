@@ -46,7 +46,7 @@ def print_version() -> None:
     """Print version information and exit."""
     print(f"{__title__} v{__version__}")
     print(f"{__description__}")
-    print(f"\nCertifications:")
+    print("\nCertifications:")
     for cert, status in __certifications__.items():
         print(f"  • {cert}: {status}")
     print(f"\nLicense: {__license__}")
