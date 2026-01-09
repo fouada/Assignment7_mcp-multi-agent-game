@@ -257,7 +257,7 @@ class DependencyContainer:
         # Check circular dependencies (thread-local)
         if not hasattr(self._thread_local, "resolving"):
             self._thread_local.resolving = set()
-
+        
         if service_type in self._thread_local.resolving:
             raise CircularDependencyError(service_type)
 
@@ -327,7 +327,7 @@ class DependencyContainer:
         # Mark as resolving for circular dependency detection (thread-local)
         if not hasattr(self._thread_local, "resolving"):
             self._thread_local.resolving = set()
-
+        
         self._thread_local.resolving.add(service_type)
 
         try:

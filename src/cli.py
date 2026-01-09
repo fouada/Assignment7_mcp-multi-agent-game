@@ -231,5 +231,26 @@ Examples:
         sys.exit(1)
 
 
+def main_league() -> None:
+    """Entry point for mcp-league command."""
+    import sys
+    sys.argv = ["mcp-league", "league"] + sys.argv[1:]
+    main()
+
+
+def main_referee() -> None:
+    """Entry point for mcp-referee command."""
+    import sys
+    sys.argv = ["mcp-referee", "referee"] + sys.argv[1:]
+    main()
+
+
+def main_player() -> None:
+    """Entry point for mcp-player command."""
+    import sys
+    sys.argv = ["mcp-player", "player"] + sys.argv[1:]
+    main()
+
+
 if __name__ == "__main__":
     main()

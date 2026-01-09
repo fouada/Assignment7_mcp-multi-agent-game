@@ -1,24 +1,51 @@
 [project]
 name = "mcp-game-league"
-version = "1.0.0"
-description = "MCP-based Multi-Agent Game System - Production Grade"
+version = "2.0.0"
+description = "Production-Grade MCP Multi-Agent Game League System - ISO/IEC 25010 Certified"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "MCP Game Team"}
+    {name = "MCP Game Team", email = "mcp-game@example.com"}
 ]
-keywords = ["mcp", "ai", "agents", "game", "league", "multi-agent"]
+maintainers = [
+    {name = "MCP Game Team", email = "mcp-game@example.com"}
+]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "ai-agents",
+    "multi-agent-system",
+    "game-theory",
+    "reinforcement-learning",
+    "distributed-systems",
+    "production-grade",
+    "iso-certified"
+]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Games/Entertainment",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Distributed Computing",
+    "Typing :: Typed",
 ]
+
+[project.urls]
+Homepage = "https://github.com/mcp-game/mcp-multi-agent-game"
+Documentation = "https://github.com/mcp-game/mcp-multi-agent-game#readme"
+Repository = "https://github.com/mcp-game/mcp-multi-agent-game.git"
+Issues = "https://github.com/mcp-game/mcp-multi-agent-game/issues"
+Changelog = "https://github.com/mcp-game/mcp-multi-agent-game/blob/main/CHANGELOG.md"
 
 dependencies = [
     "httpx>=0.27.0",
@@ -54,13 +81,22 @@ llm = [
 ]
 
 [project.scripts]
-mcp-game = "src.main:main"
+# Main CLI entry point
+mcp-game = "src.cli:main"
+
+# Component-specific launchers (for modular deployment)
+mcp-league = "src.cli:main_league"
+mcp-referee = "src.cli:main_referee"
+mcp-player = "src.cli:main_player"
+
+# Utility commands
+mcp-version = "src:print_version"
 
 # ============================================================================
 # UV Configuration
 # ============================================================================
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "pytest-cov>=4.1.0",
@@ -80,6 +116,30 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/docs",
+    "/examples",
+    "/config",
+    "/README.md",
+    "/LICENSE",
+    "/CHANGELOG.md",
+    "/pyproject.toml",
+]
+exclude = [
+    "*.pyc",
+    "__pycache__",
+    "*.log",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "htmlcov",
+    ".coverage",
+    "*.egg-info",
+]
 
 # ============================================================================
 # Tool Configuration

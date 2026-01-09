@@ -171,16 +171,22 @@ mindmap
 
 ---
 
-## 🚀 Quick Start: 5 Minutes to First Tournament
+## 📦 Installation
 
-### Prerequisites
+### Quick Install (PyPI Package)
 
-- **Python 3.11+** installed
-- **UV** package manager (recommended) or pip
-- Terminal access
-- 8GB RAM minimum
+```bash
+# Install via pip
+pip install mcp-game-league
 
-### Step 1: Install with UV (Recommended)
+# Or using UV (recommended)
+uv pip install mcp-game-league
+
+# Verify installation
+mcp-version
+```
+
+### Development Install (From Source)
 
 ```bash
 # Clone repository
@@ -190,19 +196,57 @@ cd Assignment7_mcp-multi-agent-game
 # Install UV (if not already installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Create environment and install dependencies
-uv venv
+# Install with dependencies
+uv sync
+
+# Activate environment
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-uv pip install -e .
+```
+
+### Docker Install
+
+```bash
+# Pull and run
+docker pull mcpgame/mcp-game-league:latest
+docker-compose up
+```
+
+**📖 For detailed installation instructions, see [INSTALL.md](INSTALL.md)**
+
+---
+
+## 🚀 Quick Start: 5 Minutes to First Tournament
+
+### Prerequisites
+
+- **Python 3.11+** installed
+- **Package installed** (see [Installation](#-installation) above)
+- Terminal access
+- 8GB RAM minimum
+
+### Step 1: Install the Package
+
+```bash
+# Quick install
+pip install mcp-game-league
+
+# Or from source
+git clone <repository-url>
+cd Assignment7_mcp-multi-agent-game
+uv sync
+source .venv/bin/activate
 ```
 
 ### Step 2: Launch the Interactive Dashboard
 
 ```bash
-# Start the web dashboard (Recommended - Visual Interface)
-uv run python -m src.visualization.dashboard
+# Using installed package (recommended)
+mcp-league --dashboard
 
-# Dashboard will open at: http://localhost:8080
+# Or from source with UV
+uv run python -m src.cli league --dashboard
+
+# Dashboard will open at: http://localhost:8050
 ```
 
 **Expected Output:**
